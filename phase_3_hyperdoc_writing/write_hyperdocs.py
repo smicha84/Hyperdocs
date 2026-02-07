@@ -222,7 +222,7 @@ def compose_hyperdoc_block(
     # =========================================================================
     lines.append(f"# ===========================================================================")
     lines.append(f"# HYPERDOC BLOCK: {filename}")
-    lines.append(f"# Session: conv_{SESSION_ID} | Generated: {datetime.utcnow().strftime('%Y-%m-%d')}")
+    lines.append(f"# Session: {SESSION_ID} | Generated: {datetime.utcnow().strftime('%Y-%m-%d')}")
     lines.append(f"# ===========================================================================")
     lines.append(f"#")
     lines.append(f"# @ctx:state={state} @ctx:confidence={confidence} @ctx:emotion={emotion}")
@@ -247,7 +247,7 @@ def compose_hyperdoc_block(
     for item in friction_items:
         lines.append(f"#")
         lines.append(f"# @ctx:friction=\"{item['summary']}\"")
-        lines.append(f"# @ctx:trace=conv_{SESSION_ID}:msg{item['msg_ref']}")
+        lines.append(f"# @ctx:trace={SESSION_ID}:msg{item['msg_ref']}")
         for detail_line in _wrap_comment(item["detail"], 95):
             lines.append(detail_line)
     lines.append(f"#")
@@ -284,7 +284,7 @@ def compose_hyperdoc_block(
     for w in warnings:
         lines.append(f"#")
         lines.append(f"# @ctx:warning=\"[{w['id']}] [{w['severity'].upper()}] {w['warning']}\"")
-        lines.append(f"# @ctx:trace=conv_{SESSION_ID}:msg{w.get('first_discovered', '?')}")
+        lines.append(f"# @ctx:trace={SESSION_ID}:msg{w.get('first_discovered', '?')}")
         if w.get("resolution_index"):
             lines.append(f"#   Resolution at: msg {w['resolution_index']}")
         else:

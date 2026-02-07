@@ -581,7 +581,7 @@ claude_md_analysis = {
     "generator": "agent_7_file_mapper",
     "description": (
         "Analysis of how CLAUDE.md gates and framing affected Claude's behavior "
-        "in session {SESSION_ID} (4269 messages, ~37 hours). Based on grounded evidence "
+        "in session 3b7084d5 (4269 messages, ~37 hours). Based on grounded evidence "
         "from session_summary, grounded_markers, thread_extractions, and idea_graph."
     ),
 

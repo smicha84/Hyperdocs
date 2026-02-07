@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 """
 Claim Extractor — Extract verifiable claims from pipeline outputs.
 
@@ -13,7 +12,7 @@ from pathlib import Path
 from datetime import datetime
 
 BASE = Path(__file__).parent.parent  # output/session_3b7084d5/
-SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
+import os; SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
 
 ALL_FILES = [
     "unified_orchestrator.py", "geological_reader.py", "hyperdoc_pipeline.py",

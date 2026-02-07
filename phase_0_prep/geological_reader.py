@@ -27,13 +27,16 @@ from datetime import datetime
 from typing import Iterator, List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
 
-# Load .env file from project root
+# Load .env file — walk up from current location until we find one
 from dotenv import load_dotenv
-# Path: code/ -> V5/ -> hyperdocs_2/ -> hyperdoc/ -> hooks/ -> .claude/ -> pythonProjectartifact/
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
-load_dotenv(PROJECT_ROOT / ".env")
-# Fallback
-load_dotenv(Path(__file__).parent.parent.parent.parent / ".env")
+_search = Path(__file__).resolve().parent
+for _ in range(10):
+    if (_search / ".env").exists():
+        load_dotenv(_search / ".env")
+        break
+    _search = _search.parent
+else:
+    load_dotenv()  # Try default locations
 
 client = anthropic.Anthropic()
 

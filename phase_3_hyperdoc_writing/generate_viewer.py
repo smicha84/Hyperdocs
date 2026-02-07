@@ -47,7 +47,7 @@ hyperdoc_files = [
 parts = []
 parts.append("""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
-<title>Hyperdocs Pipeline Output — Session 3b7084d5</title>
+<title>Hyperdocs Pipeline Output</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'SF Mono','Menlo',monospace;background:#0a0a0f;color:#c8c8d0;line-height:1.5}
@@ -95,7 +95,7 @@ pre{background:#0a0a0f;border:1px solid #333;padding:12px;overflow-x:auto;font-s
 # Header
 parts.append(f"""<div class="header">
 <h1>Hyperdocs Multi-Agent Extraction Pipeline</h1>
-<div class="sub">Session 3b7084d5 | {stats['total_messages']} messages | {stats['user_messages']} user / {stats['assistant_messages']} assistant</div>
+<div class="sub">{stats['total_messages']} messages | {stats['user_messages']} user / {stats['assistant_messages']} assistant</div>
 <div class="stats-bar">
 <div class="stat"><b>{stats['total_messages']}</b>Messages</div>
 <div class="stat"><b>{len(stats.get('frustration_peaks',[]))}</b>Frustration Peaks</div>

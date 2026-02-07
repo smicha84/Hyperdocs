@@ -469,7 +469,7 @@ class MetadataExtractor:
 
         # Terminal activity (VERIFIED from real data - pasted terminal output)
         # Real patterns: "Last login: ... on ttys000", "ttys001", "ttys002"
-        'terminal_paste': re.compile(r'Last login:.*on ttys\d+|\w+@[\w-]+'),
+        'terminal_paste': re.compile(r'Last login:.*on ttys\d+|stefanmichaelcheck@Mac|stefanmichaelcheck@Stefans-MBP'),
         'terminal_session': re.compile(r'ttys(\d{3})'),  # Extracts the session number
         'python_script_run': re.compile(r'python3?\s+([\w_-]+\.py)'),  # python3 script.py
 

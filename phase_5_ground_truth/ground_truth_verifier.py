@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 """
 Ground Truth Verifier — Run independent Python checks against claims.
 
@@ -20,7 +19,7 @@ BASE = Path(__file__).parent.parent  # output/session_3b7084d5/
 V5_CODE = BASE.parent.parent / ".claude" / "hooks" / "hyperdoc" / "hyperdocs_2" / "V5" / "code"
 HOOKS_DIR = BASE.parent.parent / ".claude" / "hooks" / "hyperdoc"
 PROJECT_ROOT = BASE.parent.parent
-SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
+import os; SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
 
 # Some files live outside V5/code
 ALTERNATE_PATHS = {

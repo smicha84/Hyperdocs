@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
 """
-Thread Analyst: Extract 6 threads + 6 markers from session {SESSION_ID} tier4 messages.
+Thread Analyst: Extract 6 threads + 6 markers from session 3b7084d5 tier4 messages.
 Forensic analysis - honest assessment of Claude behavior including harmful patterns.
 """
 import json
 import re
 import os
 
-INPUT_PATH = os.getenv("HYPERDOCS_TIER4_PATH", "tier4_priority_messages.json")
-OUTPUT_PATH = os.getenv("HYPERDOCS_THREADS_OUTPUT", "thread_extractions.json")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from config import get_session_output_dir
+    _OUT = get_session_output_dir()
+except ImportError:
+    _SID = os.getenv("HYPERDOCS_SESSION_ID", "")
+    _OUT = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", "./output")) / f"session_{_SID[:8]}"
+INPUT_PATH = str(_OUT / "tier4_priority_messages.json")
+OUTPUT_PATH = str(_OUT / "thread_extractions.json")
 
 def reconstruct_content(content):
     """Reconstruct char-per-line formatted content."""

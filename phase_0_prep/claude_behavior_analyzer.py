@@ -530,7 +530,7 @@ def main():
     reader = ClaudeSessionReader(verbose=False)
     analyzer = ClaudeBehaviorAnalyzer()
 
-    project = os.getenv("HYPERDOCS_PROJECT_NAME", "")
+    project = os.getenv("HYPERDOCS_PROJECT_ID", "")
     sessions = reader.load_project_sessions(project_name=project, limit=5)
 
     for session in list(sessions.values())[:2]:

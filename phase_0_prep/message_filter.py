@@ -316,7 +316,7 @@ if __name__ == "__main__":
     print("MESSAGE FILTER - Profiling PERMANENT_ARCHIVE")
     print("=" * 60)
 
-    archive_path = os.getenv("HYPERDOCS_ARCHIVE_PATH", "./PERMANENT_ARCHIVE")
+    archive_path = "" + os.getenv("HYPERDOCS_ARCHIVE_PATH", "") + ""
     results = profile_archive(archive_path, sample_files=10)
 
     print(results['summary'])

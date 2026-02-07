@@ -574,7 +574,7 @@ def main():
             decision_count += 1
 
     output = {
-        "session_id": "3b7084d5",
+        "session_id": os.getenv("HYPERDOCS_SESSION_ID", ""),
         "total_tagged": len(tagged),
         "distributions": {
             "action_vector": dict(sorted(action_dist.items(), key=lambda x: -x[1])),

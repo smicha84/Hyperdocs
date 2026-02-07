@@ -6,26 +6,20 @@ Splits the 8.5 MB enriched session into smaller, focused files that
 extraction agents can read directly via the Read tool.
 """
 
-import json
 import os
 import sys
+import json
 from pathlib import Path
 
-# Find enriched_session.json — look in configured output dir or sibling to this script
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 try:
-    from config import get_output_dir
-    OUT_DIR = get_output_dir()
+    from config import get_session_output_dir
+    OUT_DIR = get_session_output_dir()
 except ImportError:
-    OUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", Path(__file__).parent / "output"))
+    SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
+    OUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", "./output")) / f"session_{SESSION_ID[:8]}"
 
 INPUT = OUT_DIR / "enriched_session.json"
-if not INPUT.exists():
-    # Search for it in any session subdirectory
-    for candidate in OUT_DIR.glob("*/enriched_session.json"):
-        INPUT = candidate
-        OUT_DIR = candidate.parent
-        break
 
 print(f"Reading {INPUT}...")
 with open(INPUT) as f:

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 """
 Hyperdoc Store Initialization — Versioned External Storage
 
@@ -20,7 +19,7 @@ from pathlib import Path
 from datetime import datetime
 
 BASE = Path(__file__).parent
-SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
+import os; SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
 HYPERDOC_V2_DIR = BASE / "hyperdoc_v2"
 DOSSIERS_PATH = BASE / "file_dossiers.json"
 
