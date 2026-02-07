@@ -7,10 +7,25 @@ extraction agents can read directly via the Read tool.
 """
 
 import json
+import os
+import sys
 from pathlib import Path
 
-INPUT = Path(__file__).parent / "output" / "session_3b7084d5" / "enriched_session.json"
-OUT_DIR = INPUT.parent
+# Find enriched_session.json — look in configured output dir or sibling to this script
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from config import get_output_dir
+    OUT_DIR = get_output_dir()
+except ImportError:
+    OUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", Path(__file__).parent / "output"))
+
+INPUT = OUT_DIR / "enriched_session.json"
+if not INPUT.exists():
+    # Search for it in any session subdirectory
+    for candidate in OUT_DIR.glob("*/enriched_session.json"):
+        INPUT = candidate
+        OUT_DIR = candidate.parent
+        break
 
 print(f"Reading {INPUT}...")
 with open(INPUT) as f:

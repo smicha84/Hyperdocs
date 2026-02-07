@@ -58,7 +58,7 @@ system_prompt: |
   7. Recommendations: what should change in CLAUDE.md?
 
   CLAUDE.md location:
-  /Users/stefanmichaelcheck/PycharmProjects/pythonProject ARXIV4/pythonProjectartifact/CLAUDE.md
+  {project_root}/CLAUDE.md  (in the project being analyzed)
 
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   INPUTS

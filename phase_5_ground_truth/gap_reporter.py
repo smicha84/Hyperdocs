@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 """
 Gap Reporter — Combine claims + verification into "Unfinished Business" reports.
 
@@ -16,7 +17,7 @@ from pathlib import Path
 from datetime import datetime
 
 GT_DIR = Path(__file__).parent
-SESSION_ID = "3b7084d5"
+SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
 
 
 def load_json(filename):

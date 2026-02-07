@@ -57,7 +57,7 @@ def generate_block(dossier, filename):
     lines = []
     lines.append(f"# ===========================================================================")
     lines.append(f"# HYPERDOC BLOCK: {filename}")
-    lines.append(f"# Session: conv_3b7084d5 | Generated: 2026-02-06")
+    lines.append(f"# Session: conv_{SESSION_ID} | Generated: 2026-02-06")
     lines.append(f"# ===========================================================================")
     lines.append(f"#")
 

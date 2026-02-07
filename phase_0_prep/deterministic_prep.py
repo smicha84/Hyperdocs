@@ -25,9 +25,8 @@ from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
 
-# Add V5 code to Python path for imports
-V5_CODE = Path(__file__).parent / ".claude" / "hooks" / "hyperdoc" / "hyperdocs_2" / "V5" / "code"
-sys.path.insert(0, str(V5_CODE))
+# Add this directory to Python path for sibling imports
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from claude_session_reader import ClaudeSessionReader, ClaudeMessage, ClaudeSession
 from geological_reader import GeologicalMessage
@@ -36,13 +35,25 @@ from message_filter import MessageFilter
 from claude_behavior_analyzer import ClaudeBehaviorAnalyzer
 
 # ── Configuration ──────────────────────────────────────────────────────────
-SESSION_ID = "3b7084d5-9e6d-41d4-9cc1-bc2b5b71a893"
-SESSION_FILE = (
-    Path.home() / ".claude" / "projects"
-    / "-Users-stefanmichaelcheck-PycharmProjects-pythonProject-ARXIV4-pythonProjectartifact"
-    / f"{SESSION_ID}.jsonl"
-)
-OUTPUT_DIR = Path(__file__).parent / "output" / f"session_{SESSION_ID[:8]}"
+# Import from central config, or use environment variables directly
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from config import get_session_path, get_output_dir, SESSION_ID
+except ImportError:
+    SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
+    def get_session_path():
+        path = os.getenv("HYPERDOCS_CHAT_HISTORY", "")
+        if path and Path(path).exists():
+            return Path(path)
+        print("ERROR: Set HYPERDOCS_CHAT_HISTORY or install config.py")
+        sys.exit(1)
+    def get_output_dir():
+        out = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", "./output")) / f"session_{SESSION_ID[:8]}"
+        out.mkdir(parents=True, exist_ok=True)
+        return out
+
+SESSION_FILE = get_session_path()
+OUTPUT_DIR = get_output_dir()
 
 
 def claude_to_geological(msg: ClaudeMessage, idx: int, source: str) -> GeologicalMessage:

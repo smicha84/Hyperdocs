@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Thread Analyst: Extract 6 threads + 6 markers from session 3b7084d5 tier4 messages.
+Thread Analyst: Extract 6 threads + 6 markers from session {SESSION_ID} tier4 messages.
 Forensic analysis - honest assessment of Claude behavior including harmful patterns.
 """
 import json
 import re
 import os
 
-INPUT_PATH = "/Users/stefanmichaelcheck/PycharmProjects/pythonProject ARXIV4/pythonProjectartifact/output/session_3b7084d5/tier4_priority_messages.json"
-OUTPUT_PATH = "/Users/stefanmichaelcheck/PycharmProjects/pythonProject ARXIV4/pythonProjectartifact/output/session_3b7084d5/thread_extractions.json"
+INPUT_PATH = os.getenv("HYPERDOCS_TIER4_PATH", "tier4_priority_messages.json")
+OUTPUT_PATH = os.getenv("HYPERDOCS_THREADS_OUTPUT", "thread_extractions.json")
 
 def reconstruct_content(content):
     """Reconstruct char-per-line formatted content."""
@@ -564,7 +564,7 @@ def main():
                         extractions[i]['markers']['is_ignored_gem'] = False  # Was addressed
 
     output = {
-        "session_id": "3b7084d5",
+        "session_id": os.getenv("HYPERDOCS_SESSION_ID", ""),
         "total_analyzed": len(extractions),
         "extraction_method": "deterministic_pattern_matching",
         "narrative_arc": {
