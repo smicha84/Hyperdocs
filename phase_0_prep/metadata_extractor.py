@@ -29,13 +29,20 @@ from collections import defaultdict
 from typing import Dict, List, Any, Optional, Set
 from dataclasses import dataclass, field
 
-# Import the adapter
+# Import geological reader (required)
 try:
-    from .display_format_adapter import DisplayFormatAdapter
     from .geological_reader import GeologicalMessage, GeologicalSession
 except ImportError:
-    from display_format_adapter import DisplayFormatAdapter
     from geological_reader import GeologicalMessage, GeologicalSession
+
+# Import display format adapter (optional — only used in standalone main())
+try:
+    from .display_format_adapter import DisplayFormatAdapter
+except ImportError:
+    try:
+        from display_format_adapter import DisplayFormatAdapter
+    except ImportError:
+        DisplayFormatAdapter = None
 
 
 @dataclass
