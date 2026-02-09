@@ -24,6 +24,12 @@ CLAUDE_SESSIONS_DIR = Path.home() / ".claude" / "projects"
 # Chat history input
 CHAT_HISTORY_PATH = os.getenv("HYPERDOCS_CHAT_HISTORY", "")
 
+# Canonical chat history directory (all sessions, never deleted)
+CHAT_HISTORY_DIR = Path(os.getenv(
+    "HYPERDOCS_CHAT_HISTORY_DIR",
+    str(Path.home() / "PERMANENT_CHAT_HISTORY" / "sessions")
+))
+
 # Output directory
 OUTPUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(REPO_ROOT / "output")))
 
@@ -54,6 +60,12 @@ def get_session_file():
 
     if SESSION_ID and PROJECT_ID:
         candidate = CLAUDE_SESSIONS_DIR / PROJECT_ID / f"{SESSION_ID}.jsonl"
+        if candidate.exists():
+            return candidate
+
+    # Check permanent chat history directory
+    if SESSION_ID and CHAT_HISTORY_DIR.exists():
+        candidate = CHAT_HISTORY_DIR / f"{SESSION_ID}.jsonl"
         if candidate.exists():
             return candidate
 

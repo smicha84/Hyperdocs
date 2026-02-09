@@ -134,4 +134,74 @@ for i in range(0, len(tier2plus), batch_size):
 n_batches = (len(tier2plus) + batch_size - 1) // batch_size
 print(f"  batches/: {n_batches} batch files of ~{batch_size} messages each")
 
+# ── 8. Sanitize all output files (remove profanity that triggers API content policy) ─
+profanity_map = {
+    'fuck': '[expletive]', 'Fuck': '[Expletive]', 'FUCK': '[EXPLETIVE]',
+    'fucking': '[expletive]', 'Fucking': '[Expletive]', 'FUCKING': '[EXPLETIVE]',
+    'fucked': '[expletive]', 'fucker': '[expletive]',
+    'shit': '[expletive]', 'Shit': '[Expletive]', 'SHIT': '[EXPLETIVE]',
+    'cunt': '[expletive]', 'CUNT': '[EXPLETIVE]',
+    'bitch': '[expletive]', 'asshole': '[expletive]', 'goddamn': '[expletive]',
+}
+keystroke_map = {
+    'f\\nu\\nc\\nk': '[expletive]', 's\\nh\\ni\\nt': '[expletive]',
+    'c\\nu\\nn\\nt': '[expletive]', 'b\\ni\\nt\\nc\\nh': '[expletive]',
+}
+
+sanitized_count = 0
+for json_file in OUT_DIR.glob("**/*.json"):
+    content = json_file.read_text()
+    original = content
+    for word, repl in profanity_map.items():
+        content = content.replace(word, repl)
+    for ks, repl in keystroke_map.items():
+        content = content.replace(ks, repl)
+    if content != original:
+        json_file.write_text(content)
+        sanitized_count += 1
+
+if sanitized_count:
+    print(f"  sanitized: {sanitized_count} files (profanity removed for API compatibility)")
+
+# ── 9. Create safe metadata-only files for agents ────────────────────
+# Agents cannot read raw message content (triggers API content policy).
+# Safe files contain all metadata signals but strip raw text.
+safe_tier4 = []
+for m in tier4:
+    safe_tier4.append({
+        "index": m.get("index", 0),
+        "role": m.get("role", ""),
+        "timestamp": m.get("timestamp", ""),
+        "content_length": m.get("content_length", 0),
+        "filter_tier": m.get("filter_tier", 0),
+        "filter_signals": m.get("filter_signals", []),
+        "behavior_flags": m.get("behavior_flags", {}),
+        "metadata": m.get("metadata", {}),
+        "content_preview": str(m.get("content", ""))[:200],
+    })
+
+safe_t4_file = OUT_DIR / "safe_tier4.json"
+with open(safe_t4_file, "w") as f:
+    json.dump({"count": len(safe_tier4), "messages": safe_tier4}, f, indent=2, default=str)
+print(f"  safe_tier4.json: {len(safe_tier4)} msgs (metadata + 200-char preview)")
+
+safe_condensed = []
+for m in condensed:
+    safe_condensed.append({
+        "i": m.get("i", m.get("index", 0)),
+        "r": m.get("r", m.get("role", "")),
+        "cl": m.get("cl", m.get("content_length", 0)),
+        "t": m.get("t", m.get("filter_tier", 0)),
+        "ts": m.get("ts", m.get("timestamp", "")),
+        "meta": m.get("meta", m.get("metadata", {})),
+        "signals": m.get("signals", m.get("filter_signals", [])),
+        "behavior": m.get("behavior", m.get("behavior_flags", {})),
+    })
+
+safe_cond_file = OUT_DIR / "safe_condensed.json"
+with open(safe_cond_file, "w") as f:
+    json.dump({"count": len(safe_condensed), "messages": safe_condensed}, f, indent=2, default=str)
+print(f"  safe_condensed.json: {len(safe_condensed)} msgs (metadata only)")
+
 print(f"\nDone. All files in: {OUT_DIR}")
+print(f"IMPORTANT: Agents should read safe_tier4.json and safe_condensed.json, NOT the raw message files.")
