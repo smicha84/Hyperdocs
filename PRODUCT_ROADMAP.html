@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperdocs — Product Roadmap & State Assessment</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232736;
+    --border: #2e3348;
+    --text: #e2e4ed;
+    --text-dim: #8b8fa3;
+    --accent: #6c5ce7;
+    --accent-glow: rgba(108, 92, 231, 0.15);
+    --green: #00b894;
+    --green-dim: rgba(0, 184, 148, 0.15);
+    --yellow: #fdcb6e;
+    --yellow-dim: rgba(253, 203, 110, 0.15);
+    --red: #e17055;
+    --red-dim: rgba(225, 112, 85, 0.15);
+    --blue: #74b9ff;
+    --blue-dim: rgba(116, 185, 255, 0.15);
+    --orange: #e17055;
+    --pink: #fd79a8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    padding: 40px;
+    line-height: 1.6;
+  }
+
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe, #74b9ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 1rem;
+    margin-bottom: 48px;
+  }
+
+  /* ── Section Headers ─────────────────────── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 48px 0 24px 0;
+  }
+  .section-header h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+  .section-header .line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Cards ───────────────────────────────── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--accent); }
+
+  .card-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .big-number {
+    font-size: 2.8rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .big-number.green { color: var(--green); }
+  .big-number.yellow { color: var(--yellow); }
+  .big-number.red { color: var(--red); }
+  .big-number.blue { color: var(--blue); }
+  .big-number.accent { color: var(--accent); }
+
+  .card-detail {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+
+  /* ── Pipeline Status ─────────────────────── */
+  .pipeline {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 32px;
+  }
+  .pipeline-phase {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 12px;
+    text-align: center;
+    position: relative;
+  }
+  .pipeline-phase .phase-num {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .pipeline-phase .phase-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin: 6px 0;
+  }
+  .pipeline-phase .phase-status {
+    font-size: 0.8rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-top: 6px;
+  }
+  .status-verified {
+    background: var(--green-dim);
+    color: var(--green);
+  }
+  .status-assumed {
+    background: var(--yellow-dim);
+    color: var(--yellow);
+  }
+  .status-missing {
+    background: var(--red-dim);
+    color: var(--red);
+  }
+  .status-partial {
+    background: var(--blue-dim);
+    color: var(--blue);
+  }
+
+  .pipeline-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    padding: 0 4px;
+  }
+
+  /* ── Progress Bars ───────────────────────── */
+  .progress-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 12px 0;
+  }
+  .progress-label {
+    width: 180px;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+  .progress-track {
+    flex: 1;
+    height: 24px;
+    background: var(--surface2);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.8s ease;
+  }
+  .progress-fill.green { background: linear-gradient(90deg, #00b894, #55efc4); }
+  .progress-fill.yellow { background: linear-gradient(90deg, #fdcb6e, #ffeaa7); }
+  .progress-fill.red { background: linear-gradient(90deg, #e17055, #fab1a0); }
+  .progress-fill.blue { background: linear-gradient(90deg, #74b9ff, #a29bfe); }
+  .progress-fill.accent { background: linear-gradient(90deg, #6c5ce7, #a29bfe); }
+
+  .progress-pct {
+    width: 50px;
+    text-align: right;
+    font-weight: 600;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  /* ── Workstream Cards ────────────────────── */
+  .workstream {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin: 16px 0;
+    border-left: 4px solid var(--accent);
+  }
+  .workstream.ws-pipeline { border-left-color: var(--green); }
+  .workstream.ws-viz { border-left-color: var(--blue); }
+  .workstream.ws-onboard { border-left-color: var(--yellow); }
+  .workstream.ws-pricing { border-left-color: var(--pink); }
+
+  .ws-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .ws-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+  .ws-tag {
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .ws-tag.critical { background: var(--red-dim); color: var(--red); }
+  .ws-tag.high { background: var(--yellow-dim); color: var(--yellow); }
+  .ws-tag.medium { background: var(--blue-dim); color: var(--blue); }
+
+  .ws-items {
+    list-style: none;
+    padding: 0;
+  }
+  .ws-items li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 0.95rem;
+  }
+  .ws-items li:last-child { border-bottom: none; }
+  .ws-icon {
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* ── Bar Chart ───────────────────────────── */
+  .chart-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin: 16px 0;
+  }
+  .chart-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 200px;
+    padding-bottom: 30px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+  }
+  .bar-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .bar-stack {
+    width: 100%;
+    max-width: 48px;
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  .bar-segment {
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    transition: height 0.5s ease;
+  }
+  .bar-segment:first-child { border-radius: 0 0 3px 3px; }
+  .bar-segment:last-child { border-radius: 3px 3px 0 0; }
+  .bar-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+    text-align: center;
+    position: absolute;
+    bottom: 6px;
+    width: 100%;
+  }
+  .bar-value {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    text-align: center;
+  }
+
+  .chart-legend {
+    display: flex;
+    gap: 20px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  /* ── The Gap Diagram ─────────────────────── */
+  .gap-diagram {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr;
+    gap: 0;
+    align-items: stretch;
+    margin: 16px 0;
+  }
+  .gap-side {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .gap-side h3 {
+    font-size: 1rem;
+    margin-bottom: 16px;
+  }
+  .gap-side.has { border-color: var(--green); }
+  .gap-side.needs { border-color: var(--accent); }
+  .gap-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--text-dim);
+  }
+  .gap-list {
+    list-style: none;
+    padding: 0;
+  }
+  .gap-list li {
+    padding: 6px 0;
+    font-size: 0.9rem;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .gap-list li .icon { flex-shrink: 0; }
+
+  /* ── Message/Marketing ───────────────────── */
+  .hero-message {
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.1), rgba(116, 185, 255, 0.1));
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    margin: 32px 0;
+  }
+  .hero-message h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .hero-message p {
+    color: var(--text-dim);
+    font-size: 1.05rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* ── Tier Cards ──────────────────────────── */
+  .tier-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .tier-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+  }
+  .tier-card.featured {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, var(--surface), var(--accent-glow));
+  }
+  .tier-name {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .tier-price {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .tier-period {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+  .tier-features {
+    list-style: none;
+    padding: 0;
+    text-align: left;
+  }
+  .tier-features li {
+    padding: 6px 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+  }
+  .tier-features li:last-child { border-bottom: none; }
+  .tier-compute {
+    margin-top: 16px;
+    padding: 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  /* ── Donut Chart ─────────────────────────── */
+  .donut-row {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+  }
+  .donut-chart {
+    width: 160px;
+    height: 160px;
+    flex-shrink: 0;
+  }
+  .donut-labels {
+    flex: 1;
+  }
+  .donut-label-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 0.9rem;
+  }
+  .donut-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  /* ── Responsive ──────────────────────────── */
+  @media (max-width: 768px) {
+    body { padding: 20px; }
+    .pipeline { flex-direction: column; gap: 8px; }
+    .pipeline-arrow { transform: rotate(90deg); justify-content: center; }
+    .gap-diagram { grid-template-columns: 1fr; }
+    .gap-arrow { transform: rotate(90deg); padding: 12px 0; }
+    .tier-grid { grid-template-columns: 1fr; }
+    .card-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Hyperdocs — Where We Are</h1>
+<p class="subtitle">Product state assessment &bull; February 9, 2026</p>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION: What We've Built -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>What Exists Today</h2>
+  <div class="line"></div>
+</div>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="card-title">Sessions Processed</div>
+    <div class="big-number green">261</div>
+    <div class="card-detail">137,623 messages across all phases</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Pipeline Output Files</div>
+    <div class="big-number blue">3,300+</div>
+    <div class="card-detail">JSON files across 261 session directories</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Hyperdocs Written</div>
+    <div class="big-number yellow">90 / 456</div>
+    <div class="card-detail">Phase 4b — 366 remaining</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Compute Invested</div>
+    <div class="big-number accent">~$4,000</div>
+    <div class="card-detail">48 hours of Opus processing</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION: Pipeline Status -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>Pipeline Phase Status</h2>
+  <div class="line"></div>
+</div>
+
+<div class="pipeline">
+  <div class="pipeline-phase">
+    <div class="phase-num">Phase 0</div>
+    <div class="phase-name">Deterministic Prep</div>
+    <div class="phase-status status-verified">Verified</div>
+    <div style="color:var(--text-dim);font-size:0.75rem;margin-top:6px">$0 &bull; Python only</div>
+  </div>
+  <div class="pipeline-arrow">→</div>
+  <div class="pipeline-phase">
+    <div class="phase-num">Phase 1</div>
+    <div class="phase-name">Extraction</div>
+    <div class="phase-status status-assumed">261/261 done</div>
+    <div style="color:var(--text-dim);font-size:0.75rem;margin-top:6px">Not re-verified</div>
+  </div>
+  <div class="pipeline-arrow">→</div>
+  <div class="pipeline-phase">
+    <div class="phase-num">Phase 2</div>
+    <div class="phase-name">Synthesis</div>
+    <div class="phase-status status-assumed">261/261 done</div>
+    <div style="color:var(--text-dim);font-size:0.75rem;margin-top:6px">Not re-verified</div>
+  </div>
+  <div class="pipeline-arrow">→</div>
+  <div class="pipeline-phase">
+    <div class="phase-num">Phase 3</div>
+    <div class="phase-name">File Mapper</div>
+    <div class="phase-status status-assumed">261/261 done</div>
+    <div style="color:var(--text-dim);font-size:0.75rem;margin-top:6px">Not re-verified</div>
+  </div>
+  <div class="pipeline-arrow">→</div>
+  <div class="pipeline-phase">
+    <div class="phase-num">Phase 4</div>
+    <div class="phase-name">Hyperdoc Writer</div>
+    <div class="phase-status status-partial">90 / 456</div>
+    <div style="color:var(--text-dim);font-size:0.75rem;margin-top:6px">20% complete</div>
+  </div>
+  <div class="pipeline-arrow">→</div>
+  <div class="pipeline-phase">
+    <div class="phase-num">Phase 5</div>
+    <div class="phase-name">Ground Truth</div>
+    <div class="phase-status status-assumed">Built</div>
+    <div style="color:var(--text-dim);font-size:0.75rem;margin-top:6px">Not re-verified</div>
+  </div>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+  <div style="font-weight:600;margin-bottom:12px;color:var(--red)">Missing from Pipeline</div>
+  <div class="progress-row">
+    <div class="progress-label">Code Similarity Script</div>
+    <div class="progress-track"><div class="progress-fill red" style="width:0%"></div></div>
+    <div class="progress-pct" style="color:var(--red)">0%</div>
+  </div>
+  <div style="color:var(--text-dim);font-size:0.85rem;margin-top:8px">
+    File genealogy detects families by name patterns + idea graph. But <strong>actual code-level overlap comparison</strong> — reading two files and measuring shared logic — was designed but never built as a Python script.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION: The Visualization Gap -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>The Visualization Gap</h2>
+  <div class="line"></div>
+</div>
+
+<div class="gap-diagram">
+  <div class="gap-side has">
+    <h3 style="color:var(--green)">What We Have</h3>
+    <ul class="gap-list">
+      <li><span class="icon">📄</span> 3,300+ JSON output files</li>
+      <li><span class="icon">📄</span> Idea evolution graphs (JSON)</li>
+      <li><span class="icon">📄</span> Semantic primitives (JSON)</li>
+      <li><span class="icon">📄</span> File dossiers (JSON)</li>
+      <li><span class="icon">📄</span> Grounded markers (JSON)</li>
+      <li><span class="icon">📊</span> Statistics (in a PDF)</li>
+      <li><span class="icon">🖥️</span> HTML with colored text</li>
+    </ul>
+  </div>
+  <div class="gap-arrow">→</div>
+  <div class="gap-side needs">
+    <h3 style="color:var(--accent)">What a Customer Needs</h3>
+    <ul class="gap-list">
+      <li><span class="icon">📊</span> Interactive stacked bar charts</li>
+      <li><span class="icon">📈</span> Messages per day/week/month</li>
+      <li><span class="icon">🔄</span> Live execution control panel</li>
+      <li><span class="icon">📋</span> Per-file processing status</li>
+      <li><span class="icon">🧠</span> Opus recommendations displayed</li>
+      <li><span class="icon">📝</span> Full execution logs</li>
+      <li><span class="icon">🗺️</span> File genealogy tree visualization</li>
+      <li><span class="icon">⚡</span> Idea evolution graph (visual)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Example of what visualizations SHOULD look like -->
+<div class="chart-container">
+  <div class="chart-title">Example: Message Volume by Tier (What the Dashboard Should Show)</div>
+  <div class="bar-chart" id="messageChart"></div>
+  <div class="chart-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#e17055"></div> Tier 4 — Priority</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fdcb6e"></div> Tier 3 — Standard</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#74b9ff"></div> Tier 2 — Basic</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#636e72"></div> Tier 1 — Skip</div>
+  </div>
+</div>
+
+<div class="card-grid">
+  <div class="chart-container">
+    <div class="chart-title">Pipeline Processing Breakdown</div>
+    <div class="donut-row">
+      <svg class="donut-chart" viewBox="0 0 160 160">
+        <!-- Phase 0: 100% verified -->
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#232736" stroke-width="20"/>
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#00b894" stroke-width="20"
+          stroke-dasharray="62 315" stroke-dashoffset="0" transform="rotate(-90 80 80)"/>
+        <!-- Phase 1-3: done but unverified -->
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#fdcb6e" stroke-width="20"
+          stroke-dasharray="188 189" stroke-dashoffset="-62" transform="rotate(-90 80 80)"/>
+        <!-- Phase 4: 20% -->
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#74b9ff" stroke-width="20"
+          stroke-dasharray="50 327" stroke-dashoffset="-250" transform="rotate(-90 80 80)"/>
+        <!-- Phase 5: exists -->
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#a29bfe" stroke-width="20"
+          stroke-dasharray="28 349" stroke-dashoffset="-300" transform="rotate(-90 80 80)"/>
+        <text x="80" y="76" text-anchor="middle" fill="#e2e4ed" font-size="22" font-weight="700">83%</text>
+        <text x="80" y="96" text-anchor="middle" fill="#8b8fa3" font-size="10">pipeline done</text>
+      </svg>
+      <div class="donut-labels">
+        <div class="donut-label-item"><div class="donut-swatch" style="background:#00b894"></div> Phase 0 — Verified ✓</div>
+        <div class="donut-label-item"><div class="donut-swatch" style="background:#fdcb6e"></div> Phases 1-3 — Done, unverified</div>
+        <div class="donut-label-item"><div class="donut-swatch" style="background:#74b9ff"></div> Phase 4 — 20% (90/456)</div>
+        <div class="donut-label-item"><div class="donut-swatch" style="background:#a29bfe"></div> Phase 5 — Built, unverified</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-container">
+    <div class="chart-title">Where the Value Is Locked</div>
+    <div style="margin-top:12px">
+      <div class="progress-row">
+        <div class="progress-label">Data collected</div>
+        <div class="progress-track"><div class="progress-fill green" style="width:95%"></div></div>
+        <div class="progress-pct">95%</div>
+      </div>
+      <div class="progress-row">
+        <div class="progress-label">Analysis complete</div>
+        <div class="progress-track"><div class="progress-fill green" style="width:83%"></div></div>
+        <div class="progress-pct">83%</div>
+      </div>
+      <div class="progress-row">
+        <div class="progress-label">Visible to humans</div>
+        <div class="progress-track"><div class="progress-fill red" style="width:5%"></div></div>
+        <div class="progress-pct" style="color:var(--red)">5%</div>
+      </div>
+      <div class="progress-row">
+        <div class="progress-label">Usable by customers</div>
+        <div class="progress-track"><div class="progress-fill red" style="width:2%"></div></div>
+        <div class="progress-pct" style="color:var(--red)">2%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION: The Four Workstreams -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>Path Forward — Four Workstreams</h2>
+  <div class="line"></div>
+</div>
+
+<div class="workstream ws-pipeline">
+  <div class="ws-header">
+    <div class="ws-title">1. Complete the Pipeline</div>
+    <div class="ws-tag high">High Priority</div>
+  </div>
+  <ul class="ws-items">
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> Build code similarity script (compare actual file contents for overlap)</li>
+    <li><span class="ws-icon" style="color:var(--yellow)">?</span> Verify Phases 1-3 outputs are valid (read them, not just check file existence)</li>
+    <li><span class="ws-icon" style="color:var(--yellow)">?</span> Finish Phase 4b — 366 remaining hyperdocs</li>
+    <li><span class="ws-icon" style="color:var(--yellow)">?</span> Re-verify Phase 5 ground truth against current code state</li>
+    <li><span class="ws-icon" style="color:var(--green)">✓</span> Phase 0 — verified, runs clean</li>
+  </ul>
+</div>
+
+<div class="workstream ws-viz">
+  <div class="ws-header">
+    <div class="ws-title">2. Build Real Visualizations</div>
+    <div class="ws-tag critical">Critical — This IS the Product</div>
+  </div>
+  <ul class="ws-items">
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> Interactive dashboard with charts (messages/day, /week, /month)</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> Execution control panel (per-file status, per-JSON progress)</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> File genealogy tree visualization (not JSON — actual tree diagram)</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> Idea evolution graph rendering (nodes, edges, transitions)</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> Opus recommendation display panel</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> Full execution logs with detail drill-down</li>
+  </ul>
+</div>
+
+<div class="workstream ws-onboard">
+  <div class="ws-header">
+    <div class="ws-title">3. Test Onboarding Scenarios</div>
+    <div class="ws-tag medium">Before Launch</div>
+  </div>
+  <ul class="ws-items">
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> User with messy file system (40 files, no structure)</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> User who only wants future sessions (skip historical)</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> User on budget (Haiku-only tier — what do they get?)</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> User with 5 sessions vs. 500 sessions</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> User who cancels mid-processing</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> Error recovery — what happens when an agent fails?</li>
+  </ul>
+</div>
+
+<div class="workstream ws-pricing">
+  <div class="ws-header">
+    <div class="ws-title">4. Define Deployment / Pricing Model</div>
+    <div class="ws-tag medium">Marketing Dependency</div>
+  </div>
+  <ul class="ws-items">
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> What does $19/month actually buy? (compute budget mapping)</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> Tiered analysis: Phase 0 only (free) → Haiku → Sonnet → Opus</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> Deployment planner: show user time × cost × depth trade-offs</li>
+    <li><span class="ws-icon" style="color:var(--red)">✗</span> "What do I get?" preview — before paying, show sample output</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION: The Marketing Message -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>The Core Message</h2>
+  <div class="line"></div>
+</div>
+
+<div class="hero-message">
+  <h2>Context is not impossible.</h2>
+  <p>File by file. Message by message. Every decision, every mistake, every breakthrough — extracted from your chat history and embedded where it matters: in your code.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION: Pricing Concept -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>Pricing Concept — User Constraint Planning</h2>
+  <div class="line"></div>
+</div>
+
+<div class="tier-grid">
+  <div class="tier-card">
+    <div class="tier-name">Insight</div>
+    <div class="tier-price" style="color:var(--green)">$0</div>
+    <div class="tier-period">forever</div>
+    <ul class="tier-features">
+      <li><span style="color:var(--green)">✓</span> Phase 0 — full metadata extraction</li>
+      <li><span style="color:var(--green)">✓</span> Message classification (4 tiers)</li>
+      <li><span style="color:var(--green)">✓</span> Frustration detection</li>
+      <li><span style="color:var(--green)">✓</span> File mention tracking</li>
+      <li><span style="color:var(--text-dim)">—</span> No AI analysis</li>
+    </ul>
+    <div class="tier-compute">Compute: $0 &bull; Pure Python</div>
+  </div>
+
+  <div class="tier-card featured">
+    <div class="tier-name">Standard</div>
+    <div class="tier-price" style="color:var(--accent)">$19</div>
+    <div class="tier-period">per month</div>
+    <ul class="tier-features">
+      <li><span style="color:var(--green)">✓</span> Everything in Insight</li>
+      <li><span style="color:var(--green)">✓</span> Phase 1-2 with Haiku + Sonnet</li>
+      <li><span style="color:var(--green)">✓</span> Idea evolution graph</li>
+      <li><span style="color:var(--green)">✓</span> Semantic primitives</li>
+      <li><span style="color:var(--green)">✓</span> Basic hyperdoc comments</li>
+    </ul>
+    <div class="tier-compute">Compute: ~$2-5/session &bull; Haiku + Sonnet</div>
+  </div>
+
+  <div class="tier-card">
+    <div class="tier-name">Deep Analysis</div>
+    <div class="tier-price" style="color:var(--yellow)">$49</div>
+    <div class="tier-period">per month</div>
+    <ul class="tier-features">
+      <li><span style="color:var(--green)">✓</span> Everything in Standard</li>
+      <li><span style="color:var(--green)">✓</span> Full Opus pipeline (all 6 phases)</li>
+      <li><span style="color:var(--green)">✓</span> Ground truth verification</li>
+      <li><span style="color:var(--green)">✓</span> Code similarity analysis</li>
+      <li><span style="color:var(--green)">✓</span> File genealogy trees</li>
+    </ul>
+    <div class="tier-compute">Compute: ~$15-30/session &bull; Opus</div>
+  </div>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:16px;color:var(--text-dim);font-size:0.9rem">
+  <strong style="color:var(--yellow)">Open question:</strong> The $19/month subscription doesn't cover Opus compute for even one session. Either the subscription covers the platform + visualization (user brings their own API key), or the pricing needs to include compute credits. This decision affects the entire marketing message.
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SECTION: What Happens Next -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>Honest Assessment</h2>
+  <div class="line"></div>
+</div>
+
+<div class="card-grid">
+  <div class="card" style="border-color:var(--green)">
+    <div class="card-title" style="color:var(--green)">What's Strong</div>
+    <ul style="list-style:none;padding:0;font-size:0.9rem">
+      <li style="padding:6px 0;border-bottom:1px solid var(--border)">The pipeline architecture is sound</li>
+      <li style="padding:6px 0;border-bottom:1px solid var(--border)">261 sessions of real data processed</li>
+      <li style="padding:6px 0;border-bottom:1px solid var(--border)">7 semantic primitives are a genuine innovation</li>
+      <li style="padding:6px 0;border-bottom:1px solid var(--border)">The 10 commitments prove the analysis works</li>
+      <li style="padding:6px 0">Nobody else is doing this</li>
+    </ul>
+  </div>
+  <div class="card" style="border-color:var(--red)">
+    <div class="card-title" style="color:var(--red)">What's Missing</div>
+    <ul style="list-style:none;padding:0;font-size:0.9rem">
+      <li style="padding:6px 0;border-bottom:1px solid var(--border)">No way for a human to SEE the results</li>
+      <li style="padding:6px 0;border-bottom:1px solid var(--border)">Code similarity script not built</li>
+      <li style="padding:6px 0;border-bottom:1px solid var(--border)">Onboarding never tested on a real user</li>
+      <li style="padding:6px 0;border-bottom:1px solid var(--border)">Pricing model doesn't account for compute cost</li>
+      <li style="padding:6px 0">366 hyperdocs still unwritten</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+// ── Stacked Bar Chart ──────────────────────────────────────
+const chartData = [
+  { label: 'Dec 19', t1: 1200, t2: 340, t3: 280, t4: 180 },
+  { label: 'Dec 26', t1: 1800, t2: 520, t3: 410, t4: 250 },
+  { label: 'Jan 2', t1: 2400, t2: 680, t3: 550, t4: 320 },
+  { label: 'Jan 9', t1: 3100, t2: 890, t3: 720, t4: 480 },
+  { label: 'Jan 16', t1: 2800, t2: 810, t3: 650, t4: 410 },
+  { label: 'Jan 23', t1: 3500, t2: 1020, t3: 840, t4: 560 },
+  { label: 'Jan 30', t1: 4200, t2: 1200, t3: 980, t4: 650 },
+  { label: 'Feb 6', t1: 5800, t2: 1680, t3: 1350, t4: 920 },
+];
+
+const maxVal = Math.max(...chartData.map(d => d.t1 + d.t2 + d.t3 + d.t4));
+const chart = document.getElementById('messageChart');
+
+chartData.forEach(d => {
+  const total = d.t1 + d.t2 + d.t3 + d.t4;
+  const group = document.createElement('div');
+  group.className = 'bar-group';
+  group.style.position = 'relative';
+
+  const value = document.createElement('div');
+  value.className = 'bar-value';
+  value.textContent = (total / 1000).toFixed(1) + 'k';
+
+  const stack = document.createElement('div');
+  stack.className = 'bar-stack';
+
+  const segments = [
+    { val: d.t1, color: '#636e72' },
+    { val: d.t2, color: '#74b9ff' },
+    { val: d.t3, color: '#fdcb6e' },
+    { val: d.t4, color: '#e17055' },
+  ];
+
+  segments.forEach(s => {
+    const seg = document.createElement('div');
+    seg.className = 'bar-segment';
+    seg.style.height = (s.val / maxVal * 170) + 'px';
+    seg.style.background = s.color;
+    stack.appendChild(seg);
+  });
+
+  const label = document.createElement('div');
+  label.className = 'bar-label';
+  label.textContent = d.label;
+
+  group.appendChild(value);
+  group.appendChild(stack);
+  group.appendChild(label);
+  chart.appendChild(group);
+});
+</script>
+
+</body>
+</html>
