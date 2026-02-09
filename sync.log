@@ -2,3 +2,6 @@
  1 file changed, 0 insertions(+), 0 deletions(-)
  create mode 100644 sync.log
 fatal: could not read Username for 'https://github.com': Device not configured
+[main 8aece65] Auto-sync:  1 file changed, 4 insertions(+)
+ 1 file changed, 4 insertions(+)
+fatal: could not read Username for 'https://github.com': Device not configured
