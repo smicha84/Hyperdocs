@@ -1,0 +1,4 @@
+[main 80075bb] Auto-sync:  1 file changed, 0 insertions(+), 0 deletions(-)
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+ create mode 100644 sync.log
+fatal: could not read Username for 'https://github.com': Device not configured
