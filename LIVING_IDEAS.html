@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperdocs — Living Ideas Document</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232736;
+    --border: #2e3348;
+    --text: #e2e4ed;
+    --text-dim: #8b8fa3;
+    --user: #fd79a8;
+    --user-dim: rgba(253, 121, 168, 0.12);
+    --user-border: rgba(253, 121, 168, 0.3);
+    --claude: #74b9ff;
+    --claude-dim: rgba(116, 185, 255, 0.12);
+    --claude-border: rgba(116, 185, 255, 0.3);
+    --shared: #00b894;
+    --shared-dim: rgba(0, 184, 148, 0.12);
+    --shared-border: rgba(0, 184, 148, 0.3);
+    --accent: #6c5ce7;
+    --yellow: #fdcb6e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    padding: 40px;
+    line-height: 1.7;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, #fd79a8, #a29bfe, #74b9ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: var(--text-dim); font-size: 0.95rem; margin-bottom: 12px; }
+  .updated { color: var(--yellow); font-size: 0.8rem; margin-bottom: 40px; display: block; }
+
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    margin: 48px 0 20px 0;
+  }
+  .section-header h2 { font-size: 1.3rem; font-weight: 600; white-space: nowrap; }
+  .section-header .line { flex: 1; height: 1px; background: var(--border); }
+  .section-header .count {
+    font-size: 0.8rem; padding: 2px 10px; border-radius: 12px;
+    background: var(--surface2); color: var(--text-dim);
+  }
+
+  .idea-list { list-style: none; padding: 0; }
+
+  .idea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 10px 0;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .idea:hover { border-color: var(--accent); }
+  .idea.user { border-left-color: var(--user); background: var(--user-dim); }
+  .idea.claude { border-left-color: var(--claude); background: var(--claude-dim); }
+  .idea.shared { border-left-color: var(--shared); background: var(--shared-dim); }
+
+  .idea-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .idea-title { font-weight: 600; font-size: 1rem; }
+  .idea-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag {
+    font-size: 0.7rem; padding: 2px 8px; border-radius: 10px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .tag.product { background: rgba(108, 92, 231, 0.2); color: #a29bfe; }
+  .tag.technical { background: rgba(116, 185, 255, 0.2); color: #74b9ff; }
+  .tag.vision { background: rgba(253, 203, 110, 0.2); color: #fdcb6e; }
+  .tag.marketing { background: rgba(253, 121, 168, 0.2); color: #fd79a8; }
+  .tag.architecture { background: rgba(0, 184, 148, 0.2); color: #00b894; }
+  .tag.priority { background: rgba(225, 112, 85, 0.3); color: #fab1a0; }
+
+  .idea-body { color: var(--text-dim); font-size: 0.9rem; }
+  .idea-body strong { color: var(--text); }
+
+  .stat-bar {
+    display: flex; gap: 24px; padding: 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 32px;
+  }
+  .stat { text-align: center; flex: 1; }
+  .stat-num { font-size: 2rem; font-weight: 700; }
+  .stat-num.user-c { color: var(--user); }
+  .stat-num.claude-c { color: var(--claude); }
+  .stat-num.shared-c { color: var(--shared); }
+  .stat-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .legend {
+    display: flex; gap: 24px; margin-bottom: 32px; flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-dim); }
+  .legend-swatch { width: 16px; height: 4px; border-radius: 2px; }
+
+  .quote {
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.08), rgba(116, 185, 255, 0.08));
+    border: 1px solid var(--accent);
+    border-radius: 12px; padding: 24px; margin: 24px 0;
+    text-align: center; font-size: 1.1rem; font-style: italic;
+  }
+  .quote .attr { font-size: 0.8rem; color: var(--text-dim); margin-top: 8px; font-style: normal; }
+
+  @media (max-width: 768px) {
+    body { padding: 20px; }
+    .stat-bar { flex-wrap: wrap; }
+    .idea-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Hyperdocs — Living Ideas</h1>
+<p class="subtitle">Every idea from our discussion, organized by origin. Updated in real time.</p>
+<span class="updated">Last updated: February 9, 2026 — Session: Testing the 10 Commitments</span>
+
+<div class="stat-bar">
+  <div class="stat">
+    <div class="stat-num user-c">19</div>
+    <div class="stat-label">Stefan's Ideas</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num claude-c">15</div>
+    <div class="stat-label">Claude's Ideas</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num shared-c">6</div>
+    <div class="stat-label">Shared / Converged</div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:var(--user)"></div> Stefan's idea</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:var(--claude)"></div> Claude's idea</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:var(--shared)"></div> Converged together</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- CODE SIMILARITY -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>Code Similarity Engine</h2>
+  <div class="line"></div>
+  <span class="count">9 ideas</span>
+</div>
+
+<ul class="idea-list">
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Code matching must be completely unobstructed</span>
+      <div class="idea-tags"><span class="tag architecture">Architecture</span><span class="tag priority">Priority</span></div>
+    </div>
+    <div class="idea-body">Do NOT let genealogy pre-filter which files get compared. Compare everything against everything. The most valuable discoveries are files that don't look related by name but share significant code. <strong>Independence from genealogy is a design constraint.</strong></div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Code similarity explains why individually-passing files break together</span>
+      <div class="idea-tags"><span class="tag vision">Vision</span><span class="tag priority">Priority</span></div>
+    </div>
+    <div class="idea-body">6 files each pass their own tests. App breaks. Code similarity finds the interface drift — a module in one file that needs to align with modules in other files doesn't match. <strong>This is the core use case.</strong> Not archaeology. Live diagnostics.</div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Code similarity should run all the time</span>
+      <div class="idea-tags"><span class="tag product">Product</span></div>
+    </div>
+    <div class="idea-body">Like a type checker — you don't run it once. An analysis step can easily turn into an ongoing real-time scan. But dead apps in standby mode need to be <strong>leveled up</strong> to real-time. They can get there, but there's a progression.</div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Name overlap without code overlap is its own signal</span>
+      <div class="idea-tags"><span class="tag technical">Technical</span></div>
+    </div>
+    <div class="idea-body">Files with matching names but no matching code means someone rewrote from scratch. Did they lose important logic? Also: files with <1% code match across all other files tells a lot — either truly independent or disconnected from the system it should be part of.</div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Taxonomy of similarity patterns — index them all</span>
+      <div class="idea-tags"><span class="tag architecture">Architecture</span></div>
+    </div>
+    <div class="idea-body">As long as we can index all similarity pattern types, and use Opus to read them and get full context for each file, that will be enough to understand the patterns. The taxonomy is the foundation.</div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Archaeology mode for dead apps</span>
+      <div class="idea-tags"><span class="tag product">Product</span><span class="tag marketing">Marketing</span></div>
+    </div>
+    <div class="idea-body">Users with lots of dead apps want to bring them back to life. The archaeological scan tells them what they have. <strong>Framing matters</strong> — how you present "here's your dead code" determines whether users feel empowered or overwhelmed.</div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">Similarity taxonomy: 8 pattern types</span>
+      <div class="idea-tags"><span class="tag technical">Technical</span></div>
+    </div>
+    <div class="idea-body">Function clone, structural mirror, partial extraction, template variant, evolution pair, import fingerprint, dead copy, logic overlap. Each pattern type has different implications for what to do about it.</div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">Two modes: full scan + incremental</span>
+      <div class="idea-tags"><span class="tag architecture">Architecture</span></div>
+    </div>
+    <div class="idea-body">Full scan: compare everything against everything (batch, run once). Incremental: re-compare changed files against known relationships (real-time, on every edit via PostToolUse hook). Mode 1 first, Mode 2 makes it a product.</div>
+  </li>
+
+  <li class="idea shared">
+    <div class="idea-header">
+      <span class="idea-title">Code similarity is independent of chat history</span>
+      <div class="idea-tags"><span class="tag product">Product</span><span class="tag architecture">Architecture</span></div>
+    </div>
+    <div class="idea-body">This engine reads source code, not conversations. A user who never processes a single session can still use it. <strong>Standalone capability</strong> that integrates with but doesn't depend on the rest of the pipeline. Dependency flows: similarity → genealogy → visualizations.</div>
+  </li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- LEVELING / PROGRESSION -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>The Leveling System</h2>
+  <div class="line"></div>
+  <span class="count">3 ideas</span>
+</div>
+
+<ul class="idea-list">
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Apps in standby mode can't jump to real-time</span>
+      <div class="idea-tags"><span class="tag vision">Vision</span><span class="tag priority">Priority</span></div>
+    </div>
+    <div class="idea-body">You can't just real-time past apps that are in standby mode. They can get there, but they have to be <strong>leveled up</strong>. There's a progression from dead → understood → enhanced → monitored.</div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Analysis naturally evolves into real-time scans</span>
+      <div class="idea-tags"><span class="tag product">Product</span></div>
+    </div>
+    <div class="idea-body">An analysis step can easily turn into an ongoing real-time scan. The transition from batch to continuous is natural — but it requires the foundational analysis to exist first.</div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">Codebase maturity levels</span>
+      <div class="idea-tags"><span class="tag product">Product</span></div>
+    </div>
+    <div class="idea-body">Level 0: Dead app on disk. Level 1: Archaeological scan (similarity + genealogy). Level 2: Chat history processed (semantic primitives, idea graph). Level 3: Hyperdocs embedded. Level 4: Real-time monitoring. Each level builds on the previous.</div>
+  </li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- VISUALIZATIONS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>Visualizations & Dashboard</h2>
+  <div class="line"></div>
+  <span class="count">8 ideas</span>
+</div>
+
+<ul class="idea-list">
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Tableau-quality data visualizations, not styled text</span>
+      <div class="idea-tags"><span class="tag product">Product</span><span class="tag priority">Priority</span></div>
+    </div>
+    <div class="idea-body">Stacked bar charts (messages per day/week/month). Interactive control panels. File genealogy trees. Idea evolution graphs. Every log detailed. All analyses visible. <strong>"Multi-color text on black background is not a visualization."</strong></div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Control panel showing execution per file</span>
+      <div class="idea-tags"><span class="tag product">Product</span></div>
+    </div>
+    <div class="idea-body">Every file as it's executed on every JSON/data file. All the analyses, implications, Opus recommendations. A paying customer should see every step of processing.</div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Manufacturing site tour — the system IS the experience</span>
+      <div class="idea-tags"><span class="tag vision">Vision</span><span class="tag marketing">Marketing</span></div>
+    </div>
+    <div class="idea-body">Design the pipeline visualization like a factory tour that gets visitors all the time. Transparent, impressive, reassuring. <strong>Show exactly how hyperdocs are made.</strong> Can be as cool or as boring as we want.</div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Production line → production surface (parallel agents)</span>
+      <div class="idea-tags"><span class="tag vision">Vision</span></div>
+    </div>
+    <div class="idea-body">When multiple agents work simultaneously, the production line becomes a production surface. Visualize in 3D with Three.js. Messages flowing through stations, branching to parallel agents, converging at synthesis.</div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">3 production-ready visualizations already exist</span>
+      <div class="idea-tags"><span class="tag technical">Technical</span></div>
+    </div>
+    <div class="idea-body">hyperdocs_dashboard.html (580KB, D3, real data), pipeline_visualization.html (352KB, D3, metrics), code_graph_studio.html (119KB, force graph). 5 others are broken/dead and should be removed or rebuilt.</div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">The visualization IS the product</span>
+      <div class="idea-tags"><span class="tag product">Product</span></div>
+    </div>
+    <div class="idea-body">95% of data collected, 97% analysis complete, 5% visible to humans, 2% usable by customers. The gap between "technically done" and "product" IS the visualization. Without it, only Claude can read the output.</div>
+  </li>
+
+  <li class="idea shared">
+    <div class="idea-header">
+      <span class="idea-title">Pipeline trace as visualization foundation</span>
+      <div class="idea-tags"><span class="tag technical">Technical</span><span class="tag product">Product</span></div>
+    </div>
+    <div class="idea-body">Traced 3 messages through all 8 phases. A frustrated user message became a 0.99-confidence architectural constraint. <strong>Visualizing THIS transformation is the most compelling demo possible.</strong> Show the input, every station, and the output.</div>
+  </li>
+
+  <li class="idea shared">
+    <div class="idea-header">
+      <span class="idea-title">Chained visualization of the entire production line</span>
+      <div class="idea-tags"><span class="tag product">Product</span><span class="tag vision">Vision</span></div>
+    </div>
+    <div class="idea-body">Look at messages from different sessions and see the process for that text at each step. This shows whether steps need reordering, whether more layers are needed, and how to visualize the full chain.</div>
+  </li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PRODUCT & MARKETING -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>Product & Marketing</h2>
+  <div class="line"></div>
+  <span class="count">9 ideas</span>
+</div>
+
+<div class="quote">
+  "Context is not impossible. We can do it file by file... message by message."
+  <div class="attr">— Stefan, core marketing message</div>
+</div>
+
+<ul class="idea-list">
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">The system has to be its own experience</span>
+      <div class="idea-tags"><span class="tag vision">Vision</span><span class="tag priority">Priority</span></div>
+    </div>
+    <div class="idea-body">A system that deviates everyone will be shitty unless it's its own experience. The AI world is the most adaptive industry ever. <strong>The key has to fit the keyhole.</strong> Dialing back ambition to match what actually works.</div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Help users plan deployments based on time, money, data</span>
+      <div class="idea-tags"><span class="tag product">Product</span><span class="tag marketing">Marketing</span></div>
+    </div>
+    <div class="idea-body">Users who realize Opus is too expensive. Users who only want future work. Users with messy file systems. Help them plan based on any combination of constraints. The product adapts to the user's reality.</div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">User preferences affect marketing — discover as you build</span>
+      <div class="idea-tags"><span class="tag marketing">Marketing</span></div>
+    </div>
+    <div class="idea-body">As aspects of user preferences and constraints emerge during development, they inform the marketing message. The purest message is about context management. Everything else is a constraint to work around.</div>
+  </li>
+
+  <li class="idea user">
+    <div class="idea-header">
+      <span class="idea-title">Multiple onboarding scenarios must be tested</span>
+      <div class="idea-tags"><span class="tag product">Product</span></div>
+    </div>
+    <div class="idea-body">Messy file system. Future-only (skip historical). Budget user (Haiku only). 5 sessions vs. 500 sessions. Cancels mid-processing. Agent failures. Each scenario needs to work before launch.</div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">Pricing tension: $19/month vs. compute costs</span>
+      <div class="idea-tags"><span class="tag product">Product</span></div>
+    </div>
+    <div class="idea-body">$19/month doesn't cover Opus compute for even one session (~$15-30). Either the subscription covers platform + visualization (user brings API key), or pricing includes compute credits. This decision affects the entire marketing message.</div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">The 10 commitments are the most valuable output</span>
+      <div class="idea-tags"><span class="tag vision">Vision</span></div>
+    </div>
+    <div class="idea-body">Evidence-based behavioral constraints derived from statistical analysis of real failures. Not rules — consequences. Each traces to a specific finding from 261 sessions. <strong>The pipeline's output isn't just documentation — it's behavioral infrastructure.</strong></div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">Semantic primitives are genuinely innovative</span>
+      <div class="idea-tags"><span class="tag vision">Vision</span></div>
+    </div>
+    <div class="idea-body">Everyone else doing "chat history analysis" does summarization. This system does structured extraction of the <strong>psychology of the development process</strong>. Seven dimensions per message. Action vectors, confidence, emotion, intent, friction, decisions, disclosure pointers. That's different.</div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">Hyperdoc quality is real — B+ with A+ standouts</span>
+      <div class="idea-tags"><span class="tag technical">Technical</span></div>
+    </div>
+    <div class="idea-body">456/456 complete. Not boilerplate. P01 enforcer hyperdoc is genuine forensic analysis citing specific messages, tracing causality, documenting what's broken and why. Input: 1.4KB metadata. Output: 30KB+ archaeological report. Substantial value-add.</div>
+  </li>
+
+  <li class="idea shared">
+    <div class="idea-header">
+      <span class="idea-title">The product message: show users their own story</span>
+      <div class="idea-tags"><span class="tag marketing">Marketing</span><span class="tag vision">Vision</span></div>
+    </div>
+    <div class="idea-body">"Here's what happened in your sessions. Here's where things went wrong. Here's what your AI forgot. Here's what you should read before your next session." Context is not impossible — and here's the proof, rendered in your own code.</div>
+  </li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PIPELINE & ARCHITECTURE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>Pipeline & Architecture</h2>
+  <div class="line"></div>
+  <span class="count">5 ideas</span>
+</div>
+
+<ul class="idea-list">
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">Pipeline state: 97% complete, 25 partial sessions</span>
+      <div class="idea-tags"><span class="tag technical">Technical</span></div>
+    </div>
+    <div class="idea-body">284 sessions, 6,135 JSONs, 456 hyperdocs, 341 enhanced files, 492 inputs, 13 genealogy families. 259 sessions fully complete (19 files each). 25 partial. Phase 5 ground truth needs re-run. 3 cron jobs keeping everything synced.</div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">The transformation proof: frustration → constraint</span>
+      <div class="idea-tags"><span class="tag technical">Technical</span><span class="tag vision">Vision</span></div>
+    </div>
+    <div class="idea-body">Traced message 1108 ("ALWAYS WITH LLM!!!!!!!") through 8 phases. Entered as raw text with caps_ratio 0.89 and tier 4. Exited as GM-003: "LLM-first is mandatory" at 0.99 confidence. <strong>A frustrated outburst became a verifiable architectural constraint.</strong></div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">Code similarity feeds three downstream systems</span>
+      <div class="idea-tags"><span class="tag architecture">Architecture</span></div>
+    </div>
+    <div class="idea-body">Similarity results feed into: (1) genealogy as a grounding signal, (2) ground truth verifier as a consistency check, (3) hyperdocs as per-file warnings about interface drift. One engine, three consumers.</div>
+  </li>
+
+  <li class="idea shared">
+    <div class="idea-header">
+      <span class="idea-title">Build code similarity BEFORE visualizations</span>
+      <div class="idea-tags"><span class="tag architecture">Architecture</span><span class="tag priority">Priority</span></div>
+    </div>
+    <div class="idea-body">The dependency chain: code similarity script → enriched genealogy → trustworthy visualizations. Building visualizations first means visualizing incomplete data. The script is the missing station on the production line.</div>
+  </li>
+
+  <li class="idea shared">
+    <div class="idea-header">
+      <span class="idea-title">Interface drift detection as product differentiator</span>
+      <div class="idea-tags"><span class="tag product">Product</span><span class="tag vision">Vision</span></div>
+    </div>
+    <div class="idea-body">"Your app doesn't work because these two files disagree about how data flows between them, and here's exactly where they diverge." Nobody else offers this. It's integration testing at the semantic level — not "do tests pass?" but "do these files agree?"</div>
+  </li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- RECOMMENDED NEXT WORK -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>Recommended Next Work</h2>
+  <div class="line"></div>
+  <span class="count">Claude's recommendations</span>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin:0 0 16px 0;font-size:0.9rem;color:var(--text-dim)">
+  Ordered by dependency — each item unblocks the ones below it. Items marked <span style="color:var(--user)">NEEDS DISCUSSION</span> require your input before starting. Items marked <span style="color:var(--shared)">READY TO BUILD</span> have enough clarity to begin.
+</div>
+
+<ol class="idea-list" style="list-style:none;counter-reset:work">
+  <li class="idea claude" style="counter-increment:work;position:relative">
+    <div style="position:absolute;left:-8px;top:16px;width:24px;height:24px;border-radius:50%;background:var(--claude);color:var(--bg);font-weight:700;font-size:0.75rem;display:flex;align-items:center;justify-content:center">1</div>
+    <div class="idea-header" style="padding-left:24px">
+      <span class="idea-title">Build the code similarity engine — full scan mode</span>
+      <div class="idea-tags"><span class="tag priority">Priority</span><span style="background:rgba(0,184,148,0.2);color:#00b894" class="tag">Ready to Build</span></div>
+    </div>
+    <div class="idea-body" style="padding-left:24px">
+      <strong>Why now:</strong> This is the missing station in the production line. Everything downstream (genealogy enrichment, ground truth, visualizations) becomes more trustworthy once code similarity exists. Pure Python — AST parsing, <code>difflib.SequenceMatcher</code>, import fingerprinting. No LLM needed for measurement.<br><br>
+      <strong>Scope:</strong> Compare all 341 enhanced Python files against each other. Produce a JSON index with per-pair similarity scores, pattern type classification, and flagged interface mismatches. Unobstructed — no genealogy pre-filtering.<br><br>
+      <strong>Output:</strong> <code>code_similarity_index.json</code> — every non-trivial pair with scores and pattern types. Stored in <code>~/PERMANENT_HYPERDOCS/indexes/</code>.<br><br>
+      <strong>Estimated effort:</strong> One Python script, ~200-300 lines. Runs in minutes (no API calls).
+    </div>
+  </li>
+
+  <li class="idea claude" style="counter-increment:work;position:relative">
+    <div style="position:absolute;left:-8px;top:16px;width:24px;height:24px;border-radius:50%;background:var(--claude);color:var(--bg);font-weight:700;font-size:0.75rem;display:flex;align-items:center;justify-content:center">2</div>
+    <div class="idea-header" style="padding-left:24px">
+      <span class="idea-title">Enrich genealogy with code similarity results</span>
+      <div class="idea-tags"><span class="tag architecture">Architecture</span><span style="background:rgba(0,184,148,0.2);color:#00b894" class="tag">Ready to Build</span></div>
+    </div>
+    <div class="idea-body" style="padding-left:24px">
+      <strong>Why now:</strong> Once the similarity index exists, <code>cross_session_genealogy.py</code> gains a 5th signal — actual code overlap. The 13 existing families get verified or challenged. New families that name-matching missed get discovered.<br><br>
+      <strong>Scope:</strong> Add code similarity as an input to the genealogy detector. Update <code>cross_session_genealogy.json</code> with enriched families. Re-generate <code>genealogy_dashboard.html</code>.<br><br>
+      <strong>Depends on:</strong> Item 1 (code similarity index must exist first).
+    </div>
+  </li>
+
+  <li class="idea claude" style="counter-increment:work;position:relative">
+    <div style="position:absolute;left:-8px;top:16px;width:24px;height:24px;border-radius:50%;background:var(--claude);color:var(--bg);font-weight:700;font-size:0.75rem;display:flex;align-items:center;justify-content:center">3</div>
+    <div class="idea-header" style="padding-left:24px">
+      <span class="idea-title">Clean up the 5 broken HTML visualizations</span>
+      <div class="idea-tags"><span class="tag technical">Technical</span><span style="background:rgba(0,184,148,0.2);color:#00b894" class="tag">Ready to Build</span></div>
+    </div>
+    <div class="idea-body" style="padding-left:24px">
+      <strong>Why now:</strong> 5 HTML files are broken/dead (CORS errors, missing files, never completed). They confuse anyone browsing the output. Remove or rebuild them so only working visualizations remain.<br><br>
+      <strong>The 5:</strong> <code>code_graph_visualization.html</code> (superseded), <code>hyperdoc_awareness_viewer.html</code> (requires servers), <code>hyperdoc_transparency_dashboard.html</code> (never completed), <code>timeline.html</code> (ghost file), <code>session_513d4807/hyperdocs_dashboard.html</code> (empty template).<br><br>
+      <strong>The 3 that stay:</strong> <code>hyperdocs_dashboard.html</code>, <code>pipeline_visualization.html</code>, <code>code_graph_studio.html</code>. All working, D3-powered, real data.<br><br>
+      <strong>Depends on:</strong> Nothing. Can run in parallel with items 1-2.
+    </div>
+  </li>
+
+  <li class="idea claude" style="counter-increment:work;position:relative">
+    <div style="position:absolute;left:-8px;top:16px;width:24px;height:24px;border-radius:50%;background:var(--claude);color:var(--bg);font-weight:700;font-size:0.75rem;display:flex;align-items:center;justify-content:center">4</div>
+    <div class="idea-header" style="padding-left:24px">
+      <span class="idea-title">Build the production line visualization</span>
+      <div class="idea-tags"><span class="tag product">Product</span><span class="tag vision">Vision</span><span style="background:rgba(253,121,168,0.2);color:#fd79a8" class="tag">Needs Discussion</span></div>
+    </div>
+    <div class="idea-body" style="padding-left:24px">
+      <strong>Why now:</strong> The pipeline tracer proved the transformation story is compelling (frustration → 0.99 constraint). This visualization shows a message entering the pipeline, transforming at each station, and coming out as embedded knowledge. The "manufacturing site tour."<br><br>
+      <strong>Open questions:</strong>
+      <ul style="margin:8px 0 0 20px;list-style:disc">
+        <li>Start with 2D (D3 flow diagram) or go straight to 3D (Three.js)?</li>
+        <li>Show one message at a time, or animate multiple messages flowing simultaneously?</li>
+        <li>Include code similarity as a station, or show it as a parallel track?</li>
+        <li>Static (loads sample data) or live (connects to actual pipeline runs)?</li>
+      </ul><br>
+      <strong>Depends on:</strong> Items 1-2 (so the production line includes all stations, including code similarity).
+    </div>
+  </li>
+
+  <li class="idea claude" style="counter-increment:work;position:relative">
+    <div style="position:absolute;left:-8px;top:16px;width:24px;height:24px;border-radius:50%;background:var(--claude);color:var(--bg);font-weight:700;font-size:0.75rem;display:flex;align-items:center;justify-content:center">5</div>
+    <div class="idea-header" style="padding-left:24px">
+      <span class="idea-title">Complete the 25 partial sessions</span>
+      <div class="idea-tags"><span class="tag technical">Technical</span><span style="background:rgba(0,184,148,0.2);color:#00b894" class="tag">Ready to Build</span></div>
+    </div>
+    <div class="idea-body" style="padding-left:24px">
+      <strong>Why now:</strong> 25 sessions have between 5-14 files instead of the full 19. Cross-session analysis works with holes. Need to investigate why they're partial (rate limits? content policy? short sessions?) and re-run missing phases.<br><br>
+      <strong>Scope:</strong> Diagnose each partial session. Re-run missing phases using batch_orchestrator. Fill the gaps.<br><br>
+      <strong>Depends on:</strong> Nothing. Can run in parallel. But lower priority than items 1-4 because the 259 complete sessions provide enough data.
+    </div>
+  </li>
+
+  <li class="idea claude" style="counter-increment:work;position:relative">
+    <div style="position:absolute;left:-8px;top:16px;width:24px;height:24px;border-radius:50%;background:var(--claude);color:var(--bg);font-weight:700;font-size:0.75rem;display:flex;align-items:center;justify-content:center">6</div>
+    <div class="idea-header" style="padding-left:24px">
+      <span class="idea-title">Define the leveling system for onboarding</span>
+      <div class="idea-tags"><span class="tag product">Product</span><span style="background:rgba(253,121,168,0.2);color:#fd79a8" class="tag">Needs Discussion</span></div>
+    </div>
+    <div class="idea-body" style="padding-left:24px">
+      <strong>Why now:</strong> This connects your insight about "apps can't jump to real-time" with the onboarding problem. Before we build the installer/concierge, we need to define what each level means and what triggers the progression.<br><br>
+      <strong>Open questions:</strong>
+      <ul style="margin:8px 0 0 20px;list-style:disc">
+        <li>How does a user know what level their app is at?</li>
+        <li>Is leveling up automatic or does the user choose?</li>
+        <li>What does each level cost? (Level 0 = free, Level 4 = Opus continuous)</li>
+        <li>Can a user stay at Level 1 forever and still get value?</li>
+      </ul><br>
+      <strong>Depends on:</strong> Items 1-2 (so we know what Level 1 actually produces).
+    </div>
+  </li>
+
+  <li class="idea claude" style="counter-increment:work;position:relative">
+    <div style="position:absolute;left:-8px;top:16px;width:24px;height:24px;border-radius:50%;background:var(--claude);color:var(--bg);font-weight:700;font-size:0.75rem;display:flex;align-items:center;justify-content:center">7</div>
+    <div class="idea-header" style="padding-left:24px">
+      <span class="idea-title">Resolve the pricing model</span>
+      <div class="idea-tags"><span class="tag marketing">Marketing</span><span style="background:rgba(253,121,168,0.2);color:#fd79a8" class="tag">Needs Discussion</span></div>
+    </div>
+    <div class="idea-body" style="padding-left:24px">
+      <strong style="color:var(--shared)">RESOLVED:</strong> Users bring their own API key and choose their own model. The subscription covers the platform + visualizations. Compute is the user's cost, not ours. This is the BYOK (bring your own key) model. <strong>Non-issue.</strong>
+    </div>
+  </li>
+</ol>
+
+<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin:24px 0;font-size:0.9rem">
+  <strong style="color:var(--shared)">Parallelism opportunity:</strong> Items 1, 3, and 5 have no dependencies on each other. They can all start immediately. Item 2 follows item 1. Item 4 follows items 1-2. Items 6-7 are discussion items that can happen alongside any build work.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- NOTES -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section-header">
+  <h2>Session Notes</h2>
+  <div class="line"></div>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin:16px 0;font-size:0.9rem;color:var(--text-dim)">
+  <strong style="color:var(--text)">Feb 9, 2026 — Session: Testing the 10 Commitments</strong><br><br>
+  Started by testing the global CLAUDE.md (10 behavioral commitments) on the Hyperdocs GitHub repo clone. Fixed 2 bugs in Phase 0 (missing <code>import os</code>). Ran Phase 0 successfully. Discovered my memory was stale (said 90/456 hyperdocs, actual: 456/456). Three parallel agents explored: pipeline transformation trace, visualization quality audit, hyperdoc quality check. Deep discussion about code similarity engine — evolved from "find duplicates" to "detect interface drift" to "continuous monitoring." Key design constraint from Stefan: code matching must be unobstructed by genealogy. Key insight: apps need to be "leveled up" from standby to real-time — you can't skip the archaeological step.
+</div>
+
+</body>
+</html>
