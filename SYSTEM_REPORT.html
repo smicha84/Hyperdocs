@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperdocs — System Report</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #232736; --border: #2e3348;
+    --text: #e2e4ed; --dim: #8b8fa3; --green: #00b894; --green-dim: rgba(0,184,148,0.12);
+    --yellow: #fdcb6e; --yellow-dim: rgba(253,203,110,0.12); --red: #e17055;
+    --red-dim: rgba(225,112,85,0.12); --blue: #74b9ff; --blue-dim: rgba(116,185,255,0.12);
+    --accent: #6c5ce7; --accent-dim: rgba(108,92,231,0.12); --pink: #fd79a8;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif; padding:40px; line-height:1.6; }
+  .container { max-width:1200px; margin:0 auto; }
+  h1 { font-size:2.2rem; font-weight:700; margin-bottom:4px; background:linear-gradient(135deg,#6c5ce7,#a29bfe,#74b9ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .sub { color:var(--dim); font-size:0.95rem; margin-bottom:40px; }
+  .section { margin:48px 0 24px; display:flex; align-items:center; gap:12px; }
+  .section h2 { font-size:1.3rem; font-weight:600; white-space:nowrap; }
+  .section .line { flex:1; height:1px; background:var(--border); }
+  .grid { display:grid; gap:16px; }
+  .g2 { grid-template-columns:1fr 1fr; }
+  .g3 { grid-template-columns:repeat(3,1fr); }
+  .g4 { grid-template-columns:repeat(4,1fr); }
+  .g5 { grid-template-columns:repeat(5,1fr); }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; }
+  .card:hover { border-color:var(--accent); }
+  .card-label { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--dim); margin-bottom:8px; }
+  .big { font-size:2.4rem; font-weight:700; line-height:1; }
+  .detail { color:var(--dim); font-size:0.85rem; margin-top:6px; }
+
+  /* Level bar */
+  .level-bar { display:flex; gap:4px; margin:20px 0; }
+  .level-block { flex:1; padding:12px 8px; border-radius:8px; text-align:center; font-size:0.75rem; border:1px solid var(--border); }
+  .level-block.filled { border-color:var(--green); }
+  .level-block.filled .lvl-num { color:var(--green); }
+  .level-block.current { border-color:var(--accent); background:var(--accent-dim); }
+  .level-block.current .lvl-num { color:var(--accent); font-weight:700; }
+  .level-block.empty { opacity:0.4; }
+  .lvl-num { font-size:1.4rem; font-weight:700; color:var(--dim); }
+  .lvl-name { color:var(--dim); margin-top:2px; }
+
+  /* Phase pipeline */
+  .pipeline { display:flex; gap:3px; margin:16px 0; }
+  .phase { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 10px; position:relative; }
+  .phase-num { font-size:0.65rem; color:var(--dim); text-transform:uppercase; letter-spacing:0.1em; }
+  .phase-name { font-weight:600; font-size:0.9rem; margin:4px 0; }
+  .phase-files { font-size:0.75rem; color:var(--dim); }
+  .phase-cost { font-size:0.7rem; padding:2px 6px; border-radius:8px; display:inline-block; margin-top:6px; }
+  .cost-free { background:var(--green-dim); color:var(--green); }
+  .cost-opus { background:var(--accent-dim); color:#a29bfe; }
+  .cost-mixed { background:var(--yellow-dim); color:var(--yellow); }
+  .arrow { display:flex; align-items:center; color:var(--dim); font-size:1rem; padding:0 2px; }
+
+  /* File cards */
+  .file-row { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); align-items:flex-start; font-size:0.85rem; }
+  .file-row:last-child { border-bottom:none; }
+  .file-name { font-family:'SF Mono',monospace; font-weight:500; min-width:240px; flex-shrink:0; }
+  .file-lines { color:var(--dim); min-width:60px; text-align:right; flex-shrink:0; }
+  .file-desc { color:var(--dim); flex:1; }
+  .file-status { min-width:80px; text-align:right; flex-shrink:0; font-size:0.75rem; padding:2px 8px; border-radius:8px; }
+  .s-verified { background:var(--green-dim); color:var(--green); }
+  .s-working { background:var(--blue-dim); color:var(--blue); }
+  .s-built { background:var(--yellow-dim); color:var(--yellow); }
+  .s-stub { background:var(--surface2); color:var(--dim); }
+  .s-fixed { background:rgba(253,121,168,0.15); color:var(--pink); }
+
+  /* Bar chart */
+  .bar-row { display:flex; align-items:center; gap:12px; margin:8px 0; }
+  .bar-label { width:140px; font-size:0.85rem; flex-shrink:0; }
+  .bar-track { flex:1; height:22px; background:var(--surface2); border-radius:5px; overflow:hidden; position:relative; }
+  .bar-fill { height:100%; border-radius:5px; transition:width 0.6s ease; }
+  .bar-val { width:55px; text-align:right; font-weight:600; font-size:0.85rem; flex-shrink:0; }
+
+  /* Donut */
+  .donut-wrap { display:flex; gap:28px; align-items:center; }
+  .donut-labels .dl { display:flex; align-items:center; gap:8px; padding:5px 0; font-size:0.85rem; }
+  .dl-dot { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+
+  /* Agent cards */
+  .agent { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:8px; padding:14px 16px; margin:8px 0; }
+  .agent-name { font-weight:600; font-size:0.95rem; }
+  .agent-model { font-size:0.7rem; padding:2px 6px; border-radius:8px; display:inline-block; margin-left:8px; }
+  .agent-out { font-size:0.8rem; color:var(--dim); margin-top:4px; }
+
+  /* Infrastructure */
+  .infra-row { display:flex; gap:12px; padding:10px 16px; border-bottom:1px solid var(--border); align-items:center; font-size:0.85rem; }
+  .infra-icon { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.8rem; flex-shrink:0; }
+  .infra-name { font-weight:500; min-width:200px; }
+  .infra-detail { color:var(--dim); flex:1; }
+  .infra-status { font-size:0.75rem; padding:2px 8px; border-radius:8px; }
+
+  @media(max-width:900px) { .g2,.g3,.g4,.g5 { grid-template-columns:1fr; } .pipeline { flex-direction:column; } .arrow { transform:rotate(90deg); justify-content:center; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Hyperdocs System Report</h1>
+<p class="sub">Complete implementation status &bull; February 9, 2026 &bull; Level 5: VERIFIED</p>
+
+<!-- ═══ HERO STATS ═══ -->
+<div class="grid g5">
+  <div class="card"><div class="card-label">Python Files</div><div class="big" style="color:var(--accent)">34</div><div class="detail">11,945 lines total</div></div>
+  <div class="card"><div class="card-label">Agent Definitions</div><div class="big" style="color:var(--blue)">10</div><div class="detail">9 Opus/Sonnet + 1 Haiku</div></div>
+  <div class="card"><div class="card-label">Sessions Processed</div><div class="big" style="color:var(--green)">284</div><div class="detail">259 fully complete</div></div>
+  <div class="card"><div class="card-label">Hyperdocs Written</div><div class="big" style="color:var(--green)">456</div><div class="detail">14 MB across all files</div></div>
+  <div class="card"><div class="card-label">Credibility</div><div class="big" style="color:var(--yellow)">73%</div><div class="detail">22,812 checks / 261 sessions</div></div>
+</div>
+
+<!-- ═══ MATURITY LEVEL ═══ -->
+<div class="section"><h2>Maturity Level</h2><div class="line"></div></div>
+<div class="level-bar">
+  <div class="level-block filled"><div class="lvl-num">0</div><div class="lvl-name">Dormant</div></div>
+  <div class="level-block filled"><div class="lvl-num">1</div><div class="lvl-name">Scanned</div></div>
+  <div class="level-block filled"><div class="lvl-num">2</div><div class="lvl-name">Enriched</div></div>
+  <div class="level-block filled"><div class="lvl-num">3</div><div class="lvl-name">Analyzed</div></div>
+  <div class="level-block filled"><div class="lvl-num">4</div><div class="lvl-name">Documented</div></div>
+  <div class="level-block current"><div class="lvl-num">5</div><div class="lvl-name">Verified</div></div>
+  <div class="level-block empty"><div class="lvl-num">6</div><div class="lvl-name">Live</div></div>
+</div>
+<div class="card" style="margin-top:12px">
+  <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:0.85rem">
+    <div><span style="color:var(--green)">Similarity index:</span> 7.9 MB (14,176 matches)</div>
+    <div><span style="color:var(--green)">Phase 0-3:</span> 259 sessions complete</div>
+    <div><span style="color:var(--green)">Hyperdocs:</span> 456 / 456</div>
+    <div><span style="color:var(--green)">Ground truth:</span> 261 sessions verified</div>
+    <div><span style="color:var(--dim)">Real-time hooks:</span> Built but not wired (Level 6 blocker)</div>
+  </div>
+</div>
+
+<!-- ═══ PIPELINE ═══ -->
+<div class="section"><h2>The Pipeline</h2><div class="line"></div></div>
+<div class="pipeline">
+  <div class="phase"><div class="phase-num">Phase 0</div><div class="phase-name">Deterministic Prep</div><div class="phase-files">7 scripts</div><span class="phase-cost cost-free">$0</span></div>
+  <div class="arrow">→</div>
+  <div class="phase"><div class="phase-num">Phase 1</div><div class="phase-name">Extraction</div><div class="phase-files">4 parallel agents</div><span class="phase-cost cost-opus">Opus</span></div>
+  <div class="arrow">→</div>
+  <div class="phase"><div class="phase-num">Phase 2</div><div class="phase-name">Synthesis</div><div class="phase-files">2 agents + 2 scripts</div><span class="phase-cost cost-mixed">Opus + $0</span></div>
+  <div class="arrow">→</div>
+  <div class="phase"><div class="phase-num">Phase 3</div><div class="phase-name">Hyperdoc Writing</div><div class="phase-files">1 mapper + N writers</div><span class="phase-cost cost-opus">Opus</span></div>
+  <div class="arrow">→</div>
+  <div class="phase"><div class="phase-num">Phase 4</div><div class="phase-name">Insertion</div><div class="phase-files">4 scripts</div><span class="phase-cost cost-free">$0</span></div>
+  <div class="arrow">→</div>
+  <div class="phase"><div class="phase-num">Phase 5</div><div class="phase-name">Ground Truth</div><div class="phase-files">4 scripts</div><span class="phase-cost cost-free">$0</span></div>
+</div>
+<div style="text-align:center;color:var(--dim);font-size:0.8rem;margin-top:4px">Code Similarity Engine runs independently (reads source files, not chat history) — $0</div>
+
+<!-- ═══ PHASE 0 ═══ -->
+<div class="section"><h2>Phase 0 — Deterministic Prep</h2><div class="line"></div></div>
+<div class="grid g2">
+  <div class="card">
+    <div class="card-label">What it does</div>
+    <div style="color:var(--dim);font-size:0.9rem">Loads a Claude Code session JSONL file and extracts 50+ metadata signals per message using pure Python. No LLM calls. Classifies every message into 4 tiers (skip/basic/standard/priority). Detects frustration, errors, file mentions, terminal activity, and Claude behavior patterns.</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Outputs</div>
+    <div style="font-size:0.9rem">
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>enriched_session.json</strong> — All messages with full metadata</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>session_summary.json</strong> — Aggregate stats, tier distribution</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>safe_tier4.json</strong> — Priority messages (metadata only, API-safe)</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>safe_condensed.json</strong> — All messages (metadata only)</div>
+      <div style="padding:4px 0"><strong>+ 5 more</strong> — batches, emergency contexts, user messages</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="margin-top:12px">
+  <div class="card-label">7 Scripts (3,094 lines)</div>
+  <div class="file-row"><span class="file-name">metadata_extractor.py</span><span class="file-lines">908</span><span class="file-desc">50+ regex patterns. Files, errors, frustration, terminal, server, profanity, emergency intervention detection.</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">claude_behavior_analyzer.py</span><span class="file-lines">548</span><span class="file-desc">Context damage detection: confusion, forgetting, assumptions, rushing, overconfidence. Prevention alerts.</span><span class="file-status s-fixed">Fixed</span></div>
+  <div class="file-row"><span class="file-name">geological_reader.py</span><span class="file-lines">449</span><span class="file-desc">JSONL parser. deterministic_parse_message() for free parsing. Has Opus code (not used by Phase 0).</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">claude_session_reader.py</span><span class="file-lines">380</span><span class="file-desc">Parses Claude Code JSONL into ClaudeMessage/ClaudeSession dataclasses. Token usage, thinking blocks.</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">message_filter.py</span><span class="file-lines">331</span><span class="file-desc">4-tier classification with keyword-weighted scoring. Frustration, failure, pivot, architecture signals.</span><span class="file-status s-fixed">Fixed</span></div>
+  <div class="file-row"><span class="file-name">deterministic_prep.py</span><span class="file-lines">271</span><span class="file-desc">Main entry point. Orchestrates all extractors. Verified: runs clean on sample session.</span><span class="file-status s-verified">Verified</span></div>
+  <div class="file-row"><span class="file-name">prepare_agent_data.py</span><span class="file-lines">207</span><span class="file-desc">Splits enriched session into tiered files. Sanitizes profanity. Produces safe_* and batch files.</span><span class="file-status s-verified">Verified</span></div>
+</div>
+
+<!-- ═══ PHASE 1 ═══ -->
+<div class="section"><h2>Phase 1 — Parallel Extraction</h2><div class="line"></div></div>
+<div class="grid g2">
+  <div class="card">
+    <div class="card-label">What it does</div>
+    <div style="color:var(--dim);font-size:0.9rem">Four Opus agents run simultaneously on the same enriched data, each extracting a different analytical lens. Threads decompose the conversation. Geological analysis finds depth patterns. Semantic primitives tag 7 dimensions. The explorer finds what the others missed.</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Outputs (4 parallel)</div>
+    <div style="font-size:0.9rem">
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>thread_extractions.json</strong> — 6 threads + 6 markers per message</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>geological_notes.json</strong> — Micro/meso/macro multi-resolution</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>semantic_primitives.json</strong> — 7 primitives per message</div>
+      <div style="padding:4px 0"><strong>explorer_notes.json</strong> — Open-ended observations</div>
+    </div>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px">
+  <div class="agent"><div class="agent-name">Thread Analyst<span class="agent-model cost-opus">Opus</span></div><div class="agent-out">Ideas, reactions, software, code, plans, Claude behavior</div></div>
+  <div class="agent"><div class="agent-name">Geological Reader<span class="agent-model cost-mixed">Sonnet</span></div><div class="agent-out">Strata, veins, faults, fossils — depth analysis</div></div>
+  <div class="agent" style="border-left-color:var(--green)"><div class="agent-name">Primitives Tagger<span class="agent-model cost-free">Haiku/$0</span></div><div class="agent-out">Action, confidence, emotion, intent, friction, decision, pointer</div></div>
+  <div class="agent"><div class="agent-name">Free Explorer<span class="agent-model cost-opus">Opus</span></div><div class="agent-out">Abandoned ideas, patterns, anomalies</div></div>
+</div>
+<div class="card" style="margin-top:12px">
+  <div class="card-label">2 Python Helpers</div>
+  <div class="file-row"><span class="file-name">extract_threads.py</span><span class="file-lines">672</span><span class="file-desc">Python helper for thread extraction. Can run standalone or with agent.</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">tag_primitives.py</span><span class="file-lines">614</span><span class="file-desc">Pure Python primitives tagger. Can tag without LLM or with Haiku enhancement.</span><span class="file-status s-working">Working</span></div>
+</div>
+
+<!-- ═══ PHASE 2 ═══ -->
+<div class="section"><h2>Phase 2 — Synthesis + Code Similarity</h2><div class="line"></div></div>
+<div class="grid g2">
+  <div class="card">
+    <div class="card-label">What it does</div>
+    <div style="color:var(--dim);font-size:0.9rem">Two Opus agents synthesize Phase 1 outputs into graph structures and grounded markers. In parallel, two Python scripts detect file families (genealogy) and code overlap (similarity). The code similarity engine is independent — it reads source files, not chat history.</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Outputs</div>
+    <div style="font-size:0.9rem">
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>idea_graph.json</strong> — Directed graph: idea-states + transitions</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>synthesis.json</strong> — 6-pass temperature-ramped narrative</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>grounded_markers.json</strong> — Warnings, recommendations, iron rules</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>file_genealogy.json</strong> — File families by name/temporal/graph signals</div>
+      <div style="padding:4px 0"><strong>code_similarity_index.json</strong> — 14,176 matches across 341 files (7.9 MB)</div>
+    </div>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+  <div class="agent"><div class="agent-name">Idea Graph Builder<span class="agent-model cost-opus">Opus</span></div><div class="agent-out">Nodes: idea-states. Edges: evolved, pivoted, split, merged, abandoned, resurrected.</div></div>
+  <div class="agent"><div class="agent-name">Synthesizer<span class="agent-model cost-opus">Opus</span></div><div class="agent-out">6-pass temperature ramp (0.3→0.5→0.7→0.9→1.0→0.0). Grounding pass is translation, not summary.</div></div>
+</div>
+<div class="card" style="margin-top:12px">
+  <div class="card-label">2 Python Scripts</div>
+  <div class="file-row"><span class="file-name">file_genealogy.py</span><span class="file-lines">407</span><span class="file-desc">Detects file families via idea graph lineage, temporal succession, name similarity. Updated with code similarity as 5th signal.</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">code_similarity.py</span><span class="file-lines">513</span><span class="file-desc">Full-scan AST fingerprinting + difflib. 57,970 pairs compared. 10 pattern types. Built and verified this session.</span><span class="file-status s-verified">Verified</span></div>
+</div>
+
+<!-- ═══ CODE SIMILARITY RESULTS ═══ -->
+<div class="card" style="margin-top:12px">
+  <div class="card-label">Code Similarity — Pattern Distribution (14,176 matches)</div>
+  <div style="margin-top:12px">
+    <div class="bar-row"><div class="bar-label">partial_extraction</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,#6c5ce7,#a29bfe)"></div></div><div class="bar-val">3,161</div></div>
+    <div class="bar-row"><div class="bar-label">structural_sibling</div><div class="bar-track"><div class="bar-fill" style="width:61%;background:linear-gradient(90deg,#74b9ff,#a29bfe)"></div></div><div class="bar-val">1,933</div></div>
+    <div class="bar-row"><div class="bar-label">import_twin</div><div class="bar-track"><div class="bar-fill" style="width:24%;background:linear-gradient(90deg,#00b894,#55efc4)"></div></div><div class="bar-val">753</div></div>
+    <div class="bar-row"><div class="bar-label">shared_ecosystem</div><div class="bar-track"><div class="bar-fill" style="width:15%;background:linear-gradient(90deg,#fdcb6e,#ffeaa7)"></div></div><div class="bar-val">469</div></div>
+    <div class="bar-row"><div class="bar-label">function_clone</div><div class="bar-track"><div class="bar-fill" style="width:11%;background:linear-gradient(90deg,#e17055,#fab1a0)"></div></div><div class="bar-val">355</div></div>
+    <div class="bar-row"><div class="bar-label" style="color:var(--red)">interface_mismatch</div><div class="bar-track"><div class="bar-fill" style="width:7%;background:linear-gradient(90deg,#e17055,#d63031)"></div></div><div class="bar-val" style="color:var(--red)">221</div></div>
+    <div class="bar-row"><div class="bar-label">template_variant</div><div class="bar-track"><div class="bar-fill" style="width:2%;background:#636e72"></div></div><div class="bar-val">66</div></div>
+    <div class="bar-row"><div class="bar-label">others</div><div class="bar-track"><div class="bar-fill" style="width:2%;background:#636e72"></div></div><div class="bar-val">63</div></div>
+  </div>
+</div>
+
+<!-- ═══ PHASE 3 ═══ -->
+<div class="section"><h2>Phase 3 — Hyperdoc Writing</h2><div class="line"></div></div>
+<div class="grid g2">
+  <div class="card">
+    <div class="card-label">What it does</div>
+    <div style="color:var(--dim);font-size:0.9rem">A File Mapper agent reads all Phase 1-2 outputs and produces per-file dossiers. Then one dedicated Opus agent per unique file writes a full hyperdoc: header (@ctx annotations, story arc, frictions, decisions), inline annotations per function, and footer (version history, related files, idea graph).</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Results</div>
+    <div style="font-size:0.9rem">
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>456 hyperdocs</strong> written (14 MB total, ~30KB each)</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>492 input extracts</strong> prepared by cross-session aggregation</div>
+      <div style="padding:4px 0;border-bottom:1px solid var(--border)"><strong>341 enhanced Python files</strong> with hyperdoc comments inserted</div>
+      <div style="padding:4px 0"><strong>Quality: B+</strong> overall, A+ for p01_plan_enforcer. Not boilerplate.</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="margin-top:12px">
+  <div class="card-label">6 Scripts + 3 Agent Definitions</div>
+  <div class="file-row"><span class="file-name">generate_dossiers.py</span><span class="file-lines">837</span><span class="file-desc">Largest file. Python helper for dossier generation from Phase 1-2 outputs.</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">write_hyperdocs.py</span><span class="file-lines">591</span><span class="file-desc">Python helper for hyperdoc generation. Structures header + inline + footer.</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">generate_viewer.py</span><span class="file-lines">349</span><span class="file-desc">Generates interactive HTML viewer from dossier data.</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">generate_remaining_hyperdocs.py</span><span class="file-lines">333</span><span class="file-desc">Resume script. Finds done/remaining files for incremental Phase 4b runs.</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">aggregate_dossiers.py</span><span class="file-lines">313</span><span class="file-desc">Cross-session aggregation. Normalizes 2 schemas, 1,379 files indexed, 4,464 entries.</span><span class="file-status s-working">Working</span></div>
+</div>
+
+<!-- ═══ PHASE 4-5 ═══ -->
+<div class="section"><h2>Phase 4 — Insertion &amp; Phase 5 — Ground Truth</h2><div class="line"></div></div>
+<div class="grid g2">
+  <div class="card">
+    <div class="card-label">Phase 4: Smart Insertion ($0)</div>
+    <div class="file-row"><span class="file-name">insert_from_phase4b.py</span><span class="file-lines">524</span><span class="file-desc">Reads hyperdoc JSONs, inserts header/inline/footer into source files.</span><span class="file-status s-working">Working</span></div>
+    <div class="file-row"><span class="file-name">insert_hyperdocs_v2.py</span><span class="file-lines">348</span><span class="file-desc">V2 insertion with improved AST-based placement.</span><span class="file-status s-working">Working</span></div>
+    <div class="file-row"><span class="file-name">insert_hyperdocs.py</span><span class="file-lines">242</span><span class="file-desc">Original insertion script.</span><span class="file-status s-working">Working</span></div>
+    <div class="file-row"><span class="file-name">hyperdoc_store_init.py</span><span class="file-lines">193</span><span class="file-desc">Initializes versioned hyperdoc storage.</span><span class="file-status s-working">Working</span></div>
+  </div>
+  <div class="card">
+    <div class="card-label">Phase 5: Ground Truth Verification ($0)</div>
+    <div class="file-row"><span class="file-name">run_verification.py</span><span class="file-lines">420</span><span class="file-desc">Adapter for all sessions. 261 sessions verified, 73% credibility.</span><span class="file-status s-verified">Verified</span></div>
+    <div class="file-row"><span class="file-name">ground_truth_verifier.py</span><span class="file-lines">393</span><span class="file-desc">AST checks: bare excepts, model strings, missing functions, truncation.</span><span class="file-status s-working">Working</span></div>
+    <div class="file-row"><span class="file-name">claim_extractor.py</span><span class="file-lines">295</span><span class="file-desc">Extracts claims from grounded_markers, primitives, idea_graph.</span><span class="file-status s-working">Working</span></div>
+    <div class="file-row"><span class="file-name">gap_reporter.py</span><span class="file-lines">240</span><span class="file-desc">Classifies: contradicted, unverified, unmonitored, premature_victory.</span><span class="file-status s-working">Working</span></div>
+  </div>
+</div>
+
+<!-- ═══ GROUND TRUTH ═══ -->
+<div class="card" style="margin-top:12px">
+  <div class="card-label">Ground Truth Results (261 sessions, 22,812 checks)</div>
+  <div class="donut-wrap" style="margin-top:16px">
+    <svg viewBox="0 0 160 160" width="140" height="140">
+      <circle cx="80" cy="80" r="60" fill="none" stroke="var(--surface2)" stroke-width="20"/>
+      <circle cx="80" cy="80" r="60" fill="none" stroke="var(--green)" stroke-width="20" stroke-dasharray="275 102" stroke-dashoffset="0" transform="rotate(-90 80 80)"/>
+      <circle cx="80" cy="80" r="60" fill="none" stroke="var(--red)" stroke-width="20" stroke-dasharray="102 275" stroke-dashoffset="-275" transform="rotate(-90 80 80)"/>
+      <text x="80" y="76" text-anchor="middle" fill="var(--text)" font-size="22" font-weight="700">73%</text>
+      <text x="80" y="96" text-anchor="middle" fill="var(--dim)" font-size="10">credibility</text>
+    </svg>
+    <div class="donut-labels">
+      <div class="dl"><div class="dl-dot" style="background:var(--green)"></div> 16,593 verified (73%)</div>
+      <div class="dl"><div class="dl-dot" style="background:var(--red)"></div> 6,219 contradicted (27%)</div>
+      <div style="margin-top:12px;color:var(--dim);font-size:0.8rem">Contradictions are mostly bare except blocks in new code and non-Opus model strings in config/comments. Each check is independently verifiable by Python AST — no self-reporting.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ REAL-TIME LAYER ═══ -->
+<div class="section"><h2>Real-Time Layer (Foundation Built)</h2><div class="line"></div></div>
+<div class="grid g2">
+  <div class="card">
+    <div class="card-label">Built This Session — 3 Foundation Files</div>
+    <div class="file-row"><span class="file-name">code_similarity_incremental.py</span><span class="file-lines">271</span><span class="file-desc">Single-file re-scan in 2.74s. 341-file fingerprint cache (476 KB).</span><span class="file-status s-verified">Verified</span></div>
+    <div class="file-row"><span class="file-name">session_metadata_tracker.py</span><span class="file-lines">184</span><span class="file-desc">Operation counts, file frequency, churn detection (>5 edits = debug loop).</span><span class="file-status s-verified">Verified</span></div>
+    <div class="file-row"><span class="file-name">app_level_manager.py</span><span class="file-lines">289</span><span class="file-desc">Maturity levels 0-6. Currently reports Level 5 from real filesystem evidence.</span><span class="file-status s-verified">Verified</span></div>
+  </div>
+  <div class="card">
+    <div class="card-label">Not Yet Built — 4 Files (Future Session)</div>
+    <div class="file-row"><span class="file-name">realtime_dispatcher.py</span><span class="file-lines">~120</span><span class="file-desc">Layer 1 async PostToolUse hook. Runs capture + similarity + metadata in-process.</span><span class="file-status s-stub">Planned</span></div>
+    <div class="file-row"><span class="file-name">frustration_detector.py</span><span class="file-lines">~80</span><span class="file-desc">Async UserPromptSubmit hook. Caps, profanity, emergency phrase detection.</span><span class="file-status s-stub">Planned</span></div>
+    <div class="file-row"><span class="file-name">periodic_processor.py</span><span class="file-lines">~200</span><span class="file-desc">Layer 2 coordinator. Runs Phase 0 + primitives + similarity on triggers.</span><span class="file-status s-stub">Planned</span></div>
+    <div class="file-row"><span class="file-name">on_demand_processor.py</span><span class="file-lines">~150</span><span class="file-desc">Layer 3. User-triggered Phase 1-2 analysis.</span><span class="file-status s-stub">Planned</span></div>
+  </div>
+</div>
+
+<!-- ═══ ORCHESTRATION ═══ -->
+<div class="section"><h2>Orchestration &amp; Infrastructure</h2><div class="line"></div></div>
+<div class="card">
+  <div class="card-label">Root-Level Scripts</div>
+  <div class="file-row"><span class="file-name">concierge.py</span><span class="file-lines">353</span><span class="file-desc">Session discovery + Phase 0 orchestration. CLI: --discover, --process, --status, --dashboard.</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">dashboard.py</span><span class="file-lines">266</span><span class="file-desc">Static HTML dashboard generator. Pipeline status, genealogy, credibility, key findings.</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">batch_orchestrator.py</span><span class="file-lines">177</span><span class="file-desc">Phase 1-2 progress tracker. Shows queue grouped by session size.</span><span class="file-status s-working">Working</span></div>
+  <div class="file-row"><span class="file-name">install.py</span><span class="file-lines">144</span><span class="file-desc">One-time setup. Copies slash command, merges hooks into settings.json.</span><span class="file-status s-built">Built</span></div>
+  <div class="file-row"><span class="file-name">realtime_hook.py</span><span class="file-lines">123</span><span class="file-desc">Async PostToolUse capture. Writes realtime_buffer.jsonl. $0. Not yet wired into hooks.</span><span class="file-status s-built">Built</span></div>
+</div>
+
+<div class="card" style="margin-top:12px">
+  <div class="card-label">Automated Infrastructure (3 Cron Jobs)</div>
+  <div class="infra-row">
+    <div class="infra-icon" style="background:var(--green-dim);color:var(--green)">:00</div>
+    <div class="infra-name">Chat History Sync</div>
+    <div class="infra-detail">~/PERMANENT_CHAT_HISTORY/sync_to_permanent.py — Copies new JSONL sessions hourly</div>
+    <div class="infra-status s-verified">Running</div>
+  </div>
+  <div class="infra-row">
+    <div class="infra-icon" style="background:var(--blue-dim);color:var(--blue)">:05</div>
+    <div class="infra-name">Hyperdocs Output Sync</div>
+    <div class="infra-detail">~/PERMANENT_HYPERDOCS/sync_hyperdocs.py — Syncs pipeline outputs. Never deletes, never overwrites smaller.</div>
+    <div class="infra-status s-verified">Running</div>
+  </div>
+  <div class="infra-row">
+    <div class="infra-icon" style="background:var(--accent-dim);color:#a29bfe">:30</div>
+    <div class="infra-name">GitHub Source Sync</div>
+    <div class="infra-detail">~/Hyperdocs/sync_from_dev.sh — Rsyncs dev source to GitHub clone, auto-commits and pushes.</div>
+    <div class="infra-status s-verified">Running</div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px">
+  <div class="card-label">Permanent Storage</div>
+  <div class="grid g3" style="margin-top:8px">
+    <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
+      <div style="font-size:1.6rem;font-weight:700;color:var(--green)">1.1 GB</div>
+      <div style="font-size:0.75rem;color:var(--dim)">PERMANENT_HYPERDOCS</div>
+      <div style="font-size:0.75rem;color:var(--dim)">7,362 files</div>
+    </div>
+    <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
+      <div style="font-size:1.6rem;font-weight:700;color:var(--blue)">1.1 GB</div>
+      <div style="font-size:0.75rem;color:var(--dim)">PERMANENT_CHAT_HISTORY</div>
+      <div style="font-size:0.75rem;color:var(--dim)">3,405 files</div>
+    </div>
+    <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
+      <div style="font-size:1.6rem;font-weight:700;color:var(--accent)">1.6 MB</div>
+      <div style="font-size:0.75rem;color:var(--dim)">GitHub Source (~/Hyperdocs)</div>
+      <div style="font-size:0.75rem;color:var(--dim)">175 files</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GENEALOGY ═══ -->
+<div class="section"><h2>Cross-Session Genealogy</h2><div class="line"></div></div>
+<div class="grid g4" style="margin-bottom:12px">
+  <div class="card"><div class="card-label">Families</div><div class="big" style="color:var(--blue)">18</div><div class="detail">Enriched with code similarity</div></div>
+  <div class="card"><div class="card-label">Standalone</div><div class="big" style="color:var(--dim)">190</div><div class="detail">No version relationships</div></div>
+  <div class="card"><div class="card-label">Detection Signals</div><div class="big" style="color:var(--accent)">5</div><div class="detail">Name, content, temporal, co-occurrence, code</div></div>
+  <div class="card"><div class="card-label">Links Found</div><div class="big" style="color:var(--yellow)">736</div><div class="detail">Score >= 0.4</div></div>
+</div>
+
+<!-- ═══ WHAT'S MISSING ═══ -->
+<div class="section"><h2>What's Not Built Yet</h2><div class="line"></div></div>
+<div class="grid g2">
+  <div class="card" style="border-color:var(--red)">
+    <div class="card-label" style="color:var(--red)">Level 6 Blockers</div>
+    <div style="font-size:0.9rem;color:var(--dim)">
+      <div style="padding:6px 0;border-bottom:1px solid var(--border)">Hook wiring — realtime_dispatcher.py needs to be registered in settings.json as async PostToolUse hook</div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--border)">Frustration detector — UserPromptSubmit async hook not built</div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--border)">Periodic processor — SessionEnd trigger for automatic Phase 0</div>
+      <div style="padding:6px 0">On-demand processor — User-triggered Phase 1-2 via /hyperdocs analyze</div>
+    </div>
+  </div>
+  <div class="card" style="border-color:var(--yellow)">
+    <div class="card-label" style="color:var(--yellow)">Production Polish</div>
+    <div style="font-size:0.9rem;color:var(--dim)">
+      <div style="padding:6px 0;border-bottom:1px solid var(--border)">Production line visualization (manufacturing site tour)</div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--border)">Onboarding testing (3+ scenarios end-to-end)</div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--border)">Orchestrator phase transition fixes (8.8% failure rate)</div>
+      <div style="padding:6px 0">Tableau-quality dashboard upgrades</div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:40px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-align:center">
+  <div style="font-size:1.2rem;font-weight:600;margin-bottom:8px">34 scripts. 10 agents. 284 sessions. 456 hyperdocs. 73% verified. Level 5.</div>
+  <div style="color:var(--dim);font-size:0.9rem">Context is not impossible. File by file. Message by message.</div>
+</div>
+
+</div>
+</body>
+</html>
