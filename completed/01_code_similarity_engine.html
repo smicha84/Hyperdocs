@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Completed: Code Similarity Engine</title>
+<style>
+  :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#232736;--border:#2e3348;--text:#e2e4ed;--text-dim:#8b8fa3;--green:#00b894;--green-dim:rgba(0,184,148,0.12);--blue:#74b9ff;--red:#e17055;--yellow:#fdcb6e;--accent:#6c5ce7}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;padding:40px;line-height:1.7;max-width:1000px;margin:0 auto}
+  h1{font-size:1.8rem;font-weight:700;margin-bottom:4px}
+  .back{color:var(--accent);text-decoration:none;font-size:0.9rem;display:inline-block;margin-bottom:24px}
+  .back:hover{text-decoration:underline}
+  .meta{color:var(--text-dim);font-size:0.85rem;margin-bottom:32px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin:16px 0}
+  .card h2{font-size:1.1rem;margin-bottom:12px}
+  .stat-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center;flex:1;min-width:120px}
+  .stat-num{font-size:1.8rem;font-weight:700;line-height:1}
+  .stat-label{font-size:0.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;margin-top:4px}
+  pre{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;font-size:0.8rem;line-height:1.5;margin:12px 0}
+  code{font-family:'SF Mono','Fira Code',monospace}
+  table{width:100%;border-collapse:collapse;font-size:0.85rem}
+  th{text-align:left;padding:8px;color:var(--text-dim);border-bottom:1px solid var(--border);font-weight:500}
+  td{padding:8px;border-bottom:1px solid var(--border)}
+  .bar{display:flex;align-items:center;gap:12px;margin:6px 0}
+  .bar-label{width:160px;font-size:0.85rem;flex-shrink:0}
+  .bar-track{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:4px}
+  .bar-count{width:50px;text-align:right;font-weight:600;font-size:0.85rem}
+</style>
+</head>
+<body>
+
+<a href="../LIVING_IDEAS.html" class="back">&larr; Back to Living Ideas</a>
+
+<h1 style="color:var(--green)">Code Similarity Engine — Complete</h1>
+<div class="meta">Completed Feb 9, 2026 &bull; Script: <code>phase_2_synthesis/code_similarity.py</code> &bull; Output: <code>~/PERMANENT_HYPERDOCS/indexes/code_similarity_index.json</code></div>
+
+<div class="stat-row">
+  <div class="stat"><div class="stat-num" style="color:var(--green)">341</div><div class="stat-label">Files Scanned</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--blue)">57,970</div><div class="stat-label">Pairs Compared</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--accent)">14,176</div><div class="stat-label">Non-trivial Matches</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--yellow)">7.9 MB</div><div class="stat-label">Index Size</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--green)">0</div><div class="stat-label">Parse Errors</div></div>
+</div>
+
+<div class="card">
+  <h2>What Was Built</h2>
+  <p style="color:var(--text-dim);margin-bottom:16px">A Python script that compares ALL Python files against ALL others with no pre-filtering. Completely unobstructed by genealogy. Uses 5 comparison signals per pair, classifies into 10 pattern types.</p>
+
+  <h3 style="font-size:0.95rem;margin:16px 0 8px 0">Comparison Signals (per file)</h3>
+  <table>
+    <tr><th>Signal</th><th>Method</th><th>Cost</th></tr>
+    <tr><td>Function names</td><td>Python <code>ast</code> module</td><td>Fast (set comparison)</td></tr>
+    <tr><td>Class + method signatures</td><td>Python <code>ast</code> module</td><td>Fast (set comparison)</td></tr>
+    <tr><td>Import fingerprint</td><td>Python <code>ast</code> module</td><td>Fast (set comparison)</td></tr>
+    <tr><td>Constants + string literals</td><td>Python <code>ast</code> module</td><td>Fast (set comparison)</td></tr>
+    <tr><td>Text similarity</td><td><code>difflib.SequenceMatcher</code></td><td>Expensive (only when signal &gt; threshold)</td></tr>
+  </table>
+
+  <h3 style="font-size:0.95rem;margin:16px 0 8px 0">Optimization</h3>
+  <p style="color:var(--text-dim);font-size:0.9rem">Fingerprints are computed once per file (AST parsing). Pairs are compared using fast set operations first. <code>difflib</code> only runs on pairs that show initial signal (46,574 of 57,970 pairs). Text comparison uses first 5,000 chars as representative sample instead of full file (avg 45KB). Hyperdoc comment blocks stripped before comparison to prevent false matches.</p>
+</div>
+
+<div class="card">
+  <h2>Pattern Distribution</h2>
+  <div style="margin-top:12px">
+    <div class="bar"><div class="bar-label">partial_extraction</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,#6c5ce7,#a29bfe)"></div></div><div class="bar-count">3,161</div></div>
+    <div class="bar"><div class="bar-label">structural_sibling</div><div class="bar-track"><div class="bar-fill" style="width:61%;background:linear-gradient(90deg,#74b9ff,#a29bfe)"></div></div><div class="bar-count">1,933</div></div>
+    <div class="bar"><div class="bar-label">import_twin</div><div class="bar-track"><div class="bar-fill" style="width:24%;background:linear-gradient(90deg,#00b894,#55efc4)"></div></div><div class="bar-count">753</div></div>
+    <div class="bar"><div class="bar-label">shared_ecosystem</div><div class="bar-track"><div class="bar-fill" style="width:15%;background:linear-gradient(90deg,#fdcb6e,#ffeaa7)"></div></div><div class="bar-count">469</div></div>
+    <div class="bar"><div class="bar-label">function_clone</div><div class="bar-track"><div class="bar-fill" style="width:11%;background:linear-gradient(90deg,#e17055,#fab1a0)"></div></div><div class="bar-count">355</div></div>
+    <div class="bar"><div class="bar-label" style="color:var(--red)">interface_mismatch</div><div class="bar-track"><div class="bar-fill" style="width:7%;background:linear-gradient(90deg,#e17055,#d63031)"></div></div><div class="bar-count" style="color:var(--red)">221</div></div>
+    <div class="bar"><div class="bar-label">template_variant</div><div class="bar-track"><div class="bar-fill" style="width:2%;background:#636e72"></div></div><div class="bar-count">66</div></div>
+    <div class="bar"><div class="bar-label">name_only</div><div class="bar-track"><div class="bar-fill" style="width:1%;background:#636e72"></div></div><div class="bar-count">29</div></div>
+    <div class="bar"><div class="bar-label">evolution_pair</div><div class="bar-track"><div class="bar-fill" style="width:1%;background:#fdcb6e"></div></div><div class="bar-count">19</div></div>
+    <div class="bar"><div class="bar-label" style="color:var(--red)">dead_copy</div><div class="bar-track"><div class="bar-fill" style="width:1%;background:#d63031"></div></div><div class="bar-count" style="color:var(--red)">15</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Top 10 Strongest Matches</h2>
+  <table>
+    <tr><th>Score</th><th>Text</th><th>File A</th><th>File B</th><th>Patterns</th></tr>
+    <tr><td>9.75</td><td>0.60</td><td>gate_control_server.py</td><td>root__gate_control_server.py</td><td>function_clone</td></tr>
+    <tr><td>9.75</td><td>0.37</td><td>grounded_data_collector.py</td><td>root__grounded_data_collector.py</td><td>function_clone, partial_extraction</td></tr>
+    <tr><td>9.75</td><td>0.70</td><td>p01_llm_evaluator.py</td><td>root__p01_llm_evaluator.py</td><td>evolution_pair, function_clone</td></tr>
+    <tr><td>9.75</td><td>0.28</td><td>p03_llm_evaluator.py</td><td>root__p03_llm_evaluator.py</td><td>function_clone, partial_extraction, template_variant</td></tr>
+    <tr><td>9.75</td><td>0.59</td><td>p28_oversight_enforcer.py</td><td>root__p28_oversight_enforcer.py</td><td>function_clone, partial_extraction</td></tr>
+    <tr><td>9.67</td><td>0.37</td><td>llm_client.py</td><td>root__llm_client.py</td><td>function_clone, partial_extraction</td></tr>
+    <tr><td style="color:var(--red)">7.80</td><td style="color:var(--red)">1.00</td><td>p03_code_review_enforcer.py</td><td>root__p03_code_review_enforcer.py</td><td style="color:var(--red)">dead_copy</td></tr>
+    <tr><td style="color:var(--red)">7.80</td><td style="color:var(--red)">1.00</td><td>p04_opaque_logic_enforcer.py</td><td>root__p04_opaque_logic_enforcer.py</td><td style="color:var(--red)">dead_copy</td></tr>
+    <tr><td>7.80</td><td>0.75</td><td>p13_manual_review_enforcer.py</td><td>root__p13_manual_review_enforcer.py</td><td>evolution_pair, function_clone</td></tr>
+    <tr><td style="color:var(--red)">7.80</td><td style="color:var(--red)">0.94</td><td>p20_mental_model_enforcer.py</td><td>root__p20_mental_model_enforcer.py</td><td style="color:var(--red)">dead_copy</td></tr>
+  </table>
+  <div style="margin-top:12px;color:var(--text-dim);font-size:0.85rem"><strong style="color:var(--text)">Key finding:</strong> The <code>root__</code> prefix pattern dominates. These are files that exist in two versions — the original and a copy with a <code>root__</code> prefix. p03 and p04 enforcers are 100% identical to their <code>root__</code> counterparts (dead copies).</div>
+</div>
+
+<div class="card">
+  <h2>Most Isolated Files</h2>
+  <p style="color:var(--text-dim);font-size:0.9rem;margin-bottom:12px">Files with zero matches against any other file. Either truly independent utilities, or disconnected from the system they should be part of.</p>
+  <table>
+    <tr><th>File</th><th>Isolation</th><th>Matches</th><th>Assessment</th></tr>
+    <tr><td>__init__.py</td><td>1.00</td><td>0</td><td style="color:var(--text-dim)">Expected — package init</td></tr>
+    <tr><td>app.py</td><td>1.00</td><td>0</td><td style="color:var(--text-dim)">Expected — standalone app</td></tr>
+    <tr><td>auth.py</td><td>1.00</td><td>0</td><td style="color:var(--text-dim)">Expected — auth module</td></tr>
+    <tr><td>config.py</td><td>1.00</td><td>0</td><td style="color:var(--text-dim)">Expected — config only</td></tr>
+    <tr><td>conftest.py</td><td>1.00</td><td>0</td><td style="color:var(--text-dim)">Expected — pytest fixture</td></tr>
+    <tr><td>development_model_presets.py</td><td>1.00</td><td>0</td><td style="color:var(--yellow)">Worth investigating</td></tr>
+    <tr><td>main.py</td><td>1.00</td><td>0</td><td style="color:var(--text-dim)">Expected — entry point</td></tr>
+    <tr><td>setup.py</td><td>1.00</td><td>0</td><td style="color:var(--text-dim)">Expected — package setup</td></tr>
+    <tr><td>test.py</td><td>1.00</td><td>0</td><td style="color:var(--text-dim)">Expected — test file</td></tr>
+    <tr><td>utils.py</td><td>1.00</td><td>0</td><td style="color:var(--text-dim)">Expected — utilities</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>How to Run</h2>
+  <pre><code># Full scan (default: enhanced_files directory)
+python3 phase_2_synthesis/code_similarity.py
+
+# Custom source directory
+python3 phase_2_synthesis/code_similarity.py --source-dir /path/to/files
+
+# Custom output path
+python3 phase_2_synthesis/code_similarity.py --output /path/to/output.json
+
+# Adjust threshold (lower = more matches kept)
+python3 phase_2_synthesis/code_similarity.py --threshold 0.02</code></pre>
+</div>
+
+<div class="card">
+  <h2>Design Decisions</h2>
+  <table>
+    <tr><th>Decision</th><th>Why</th></tr>
+    <tr><td>No genealogy pre-filtering</td><td>Stefan's explicit requirement: matching must be unobstructed. Most valuable discoveries are files that DON'T look related by name.</td></tr>
+    <tr><td>AST-first, difflib-second</td><td>AST fingerprints are fast (set operations). difflib is O(n*m) on file content. Only run expensive comparison when cheap signals warrant it.</td></tr>
+    <tr><td>5,000-char text sample</td><td>Full 45KB file comparison on 46K+ pairs would take hours. First 5,000 chars is representative enough for classification.</td></tr>
+    <tr><td>Strip hyperdoc comments</td><td>All enhanced files have embedded hyperdoc blocks. Without stripping, every file would match every other on the shared hyperdoc boilerplate.</td></tr>
+    <tr><td>10 pattern types</td><td>Each type has different implications: dead_copy means "delete one", interface_mismatch means "fix the drift", template_variant means "this is by design".</td></tr>
+  </table>
+</div>
+
+</body>
+</html>

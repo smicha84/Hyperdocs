@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Completed: HTML Visualization Cleanup</title>
+<style>
+  :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#232736;--border:#2e3348;--text:#e2e4ed;--text-dim:#8b8fa3;--green:#00b894;--green-dim:rgba(0,184,148,0.12);--blue:#74b9ff;--red:#e17055;--yellow:#fdcb6e;--accent:#6c5ce7}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;padding:40px;line-height:1.7;max-width:1000px;margin:0 auto}
+  h1{font-size:1.8rem;font-weight:700;margin-bottom:4px}
+  .back{color:var(--accent);text-decoration:none;font-size:0.9rem;display:inline-block;margin-bottom:24px}
+  .back:hover{text-decoration:underline}
+  .meta{color:var(--text-dim);font-size:0.85rem;margin-bottom:32px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin:16px 0}
+  .card h2{font-size:1.1rem;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:0.85rem}
+  th{text-align:left;padding:8px;color:var(--text-dim);border-bottom:1px solid var(--border);font-weight:500}
+  td{padding:8px;border-bottom:1px solid var(--border)}
+  .status-good{color:var(--green)}
+  .status-text{color:var(--yellow)}
+  .status-dead{color:var(--red)}
+</style>
+</head>
+<body>
+
+<a href="../LIVING_IDEAS.html" class="back">&larr; Back to Living Ideas</a>
+
+<h1 style="color:var(--green)">HTML Visualization Cleanup — Complete</h1>
+<div class="meta">Completed Feb 9, 2026 &bull; 4 broken files archived &bull; 3 production dashboards remain</div>
+
+<div class="card">
+  <h2>What Was Done</h2>
+  <p style="color:var(--text-dim);margin-bottom:16px">An Opus agent audited all 11 HTML visualization files in the output directory. Each was assessed for: real data vs hardcoded, chart technology (D3/SVG/Canvas vs styled text), interactivity, and customer value. 4 broken/dead files were moved to <code>archived_html/</code>. 3 production-ready dashboards confirmed working.</p>
+</div>
+
+<div class="card">
+  <h2 style="color:var(--green)">Production-Ready (Kept)</h2>
+  <table>
+    <tr><th>File</th><th>Size</th><th>Technology</th><th>Data</th><th>Interactive</th><th>What It Shows</th></tr>
+    <tr>
+      <td><strong>hyperdocs_dashboard.html</strong></td>
+      <td>580 KB</td>
+      <td>D3.js v7, 71 SVGs</td>
+      <td class="status-good">Real</td>
+      <td class="status-good">Yes (tabs, search, sort)</td>
+      <td>Sessions, messages, hyperdocs, enhanced files, phase metrics, bar charts</td>
+    </tr>
+    <tr>
+      <td><strong>pipeline_visualization.html</strong></td>
+      <td>352 KB</td>
+      <td>D3.js, 29 SVGs</td>
+      <td class="status-good">Real</td>
+      <td class="status-good">Yes (tabs, expandable)</td>
+      <td>Phase cards, cost estimates, timing, processing timeline</td>
+    </tr>
+    <tr>
+      <td><strong>code_graph_studio.html</strong></td>
+      <td>119 KB</td>
+      <td>D3.js force graph</td>
+      <td class="status-good">Real (embedded)</td>
+      <td class="status-good">Yes (zoom, drag, 4 tabs)</td>
+      <td>C4 architecture, dependencies, plan progress, PageRank</td>
+    </tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2 style="color:var(--yellow)">Styled Text (Kept — Not Charts)</h2>
+  <table>
+    <tr><th>File</th><th>Size</th><th>Assessment</th></tr>
+    <tr>
+      <td>idea_evolution_analysis.html</td>
+      <td>19 KB</td>
+      <td>Well-written narrative analysis with real data (1,668 ideas, transition statistics). Not a dashboard — an essay. Valuable as documentation.</td>
+    </tr>
+    <tr>
+      <td>PROCESSING_PLAN.html</td>
+      <td>29 KB</td>
+      <td>Technical specification with cost estimates and file listings. Styled monospace text. Useful as reference, not a visualization.</td>
+    </tr>
+    <tr>
+      <td>genealogy_dashboard.html</td>
+      <td>45 KB</td>
+      <td>Real genealogy data (13 families, 300 files). Expandable cards with version chains. Text-based, no charts, but data is legitimate.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2 style="color:var(--red)">Archived (Moved to archived_html/)</h2>
+  <table>
+    <tr><th>File</th><th>Size</th><th>Why Archived</th><th>Evidence</th></tr>
+    <tr>
+      <td class="status-dead">code_graph_visualization.html</td>
+      <td>50 KB</td>
+      <td>CORS errors on file:// protocol. Uses fetch() for data. Superseded by code_graph_studio.html.</td>
+      <td>Hyperdoc: "functionally dead artifact, never updated"</td>
+    </tr>
+    <tr>
+      <td class="status-dead">hyperdoc_awareness_viewer.html</td>
+      <td>106 KB</td>
+      <td>Requires WebSocket server (port 8766). CORS blocks localhost requests. User frustration: "this is NOT VISUAL ENOUGH!!!!"</td>
+      <td>Session c7e7d342 frustration peak</td>
+    </tr>
+    <tr>
+      <td class="status-dead">hyperdoc_transparency_dashboard.html</td>
+      <td>51 KB</td>
+      <td>Session that was building this died from context window exhaustion after 48 seconds. Never completed.</td>
+      <td>Session 4a00f308 death</td>
+    </tr>
+    <tr>
+      <td class="status-dead">session_513d4807 dashboard</td>
+      <td>~2 KB</td>
+      <td>Empty template stub. Shows "Run Phase X for [data]" placeholders. No actual content.</td>
+      <td>Skeleton template, never populated</td>
+    </tr>
+  </table>
+  <div style="margin-top:12px;color:var(--text-dim);font-size:0.85rem"><strong>Note:</strong> <code>timeline.html</code> was referenced across 4 sessions but doesn't exist on disk (ghost file). Nothing to archive.</div>
+</div>
+
+<div class="card">
+  <h2>Location</h2>
+  <p style="color:var(--text-dim);font-size:0.9rem">
+    <strong>Active files:</strong> <code>.claude/hooks/hyperdoc/hyperdocs_3/output/enhanced_files/</code><br>
+    <strong>Archived files:</strong> <code>.claude/hooks/hyperdoc/hyperdocs_3/output/enhanced_files/archived_html/</code>
+  </p>
+</div>
+
+</body>
+</html>

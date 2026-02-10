@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Completed: Partial Session Diagnosis</title>
+<style>
+  :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#232736;--border:#2e3348;--text:#e2e4ed;--text-dim:#8b8fa3;--green:#00b894;--green-dim:rgba(0,184,148,0.12);--blue:#74b9ff;--red:#e17055;--yellow:#fdcb6e;--accent:#6c5ce7}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;padding:40px;line-height:1.7;max-width:1000px;margin:0 auto}
+  h1{font-size:1.8rem;font-weight:700;margin-bottom:4px}
+  .back{color:var(--accent);text-decoration:none;font-size:0.9rem;display:inline-block;margin-bottom:24px}
+  .back:hover{text-decoration:underline}
+  .meta{color:var(--text-dim);font-size:0.85rem;margin-bottom:32px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin:16px 0}
+  .card h2{font-size:1.1rem;margin-bottom:12px}
+  .stat-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;text-align:center;flex:1;min-width:120px}
+  .stat-num{font-size:1.8rem;font-weight:700;line-height:1}
+  .stat-label{font-size:0.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;margin-top:4px}
+  table{width:100%;border-collapse:collapse;font-size:0.85rem}
+  th{text-align:left;padding:8px;color:var(--text-dim);border-bottom:1px solid var(--border);font-weight:500}
+  td{padding:8px;border-bottom:1px solid var(--border)}
+  .phase-ok{color:var(--green);font-weight:600}
+  .phase-miss{color:var(--red);font-weight:600}
+  .phase-partial{color:var(--yellow);font-weight:600}
+  code{font-family:'SF Mono','Fira Code',monospace;font-size:0.85rem}
+  .session-list{font-family:'SF Mono',monospace;font-size:0.8rem;color:var(--text-dim);word-break:break-all}
+</style>
+</head>
+<body>
+
+<a href="../LIVING_IDEAS.html" class="back">&larr; Back to Living Ideas</a>
+
+<h1 style="color:var(--green)">Partial Session Diagnosis — Complete</h1>
+<div class="meta">Diagnosed Feb 9, 2026 &bull; 23 sessions affected &bull; 4 failure patterns identified &bull; Status: Ready to re-run</div>
+
+<div class="stat-row">
+  <div class="stat"><div class="stat-num" style="color:var(--green)">259</div><div class="stat-label">Fully Complete</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--red)">23</div><div class="stat-label">Incomplete</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--yellow)">4</div><div class="stat-label">Failure Patterns</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--text-dim)">8.8%</div><div class="stat-label">Failure Rate</div></div>
+</div>
+
+<div class="card">
+  <h2>Expected Complete Set: 19 Files Per Session</h2>
+  <table>
+    <tr><th>Phase</th><th>Files</th><th>Count</th></tr>
+    <tr><td><strong>Phase 0</strong> — Deterministic Prep</td><td><code>enriched_session, session_summary, safe_condensed, safe_tier4, conversation_condensed, emergency_contexts, tier2plus_messages, tier4_priority_messages, user_messages_tier2plus</code></td><td>9</td></tr>
+    <tr><td><strong>Phase 1</strong> — Extraction</td><td><code>thread_extractions, geological_notes, semantic_primitives, explorer_notes</code></td><td>4</td></tr>
+    <tr><td><strong>Phase 2</strong> — Synthesis</td><td><code>idea_graph, synthesis, grounded_markers</code></td><td>3</td></tr>
+    <tr><td><strong>Phase 3</strong> — File Mapper</td><td><code>file_dossiers, claude_md_analysis, file_genealogy</code></td><td>3</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Pattern A — Phase 1 Never Launched (14 sessions)</h2>
+  <table>
+    <tr><th>Phase 0</th><th>Phase 1</th><th>Phase 2</th><th>Phase 3</th><th>Files Present</th></tr>
+    <tr><td class="phase-ok">COMPLETE (9/9)</td><td class="phase-miss">MISSING</td><td class="phase-miss">MISSING</td><td class="phase-miss">MISSING</td><td>9 / 19</td></tr>
+  </table>
+  <div style="margin-top:12px;color:var(--text-dim);font-size:0.85rem">
+    <strong>Root cause:</strong> Phase 0 fully completed (Feb 7 15:41-15:43) but Phase 1 agents were never launched. Orchestrator should have detected Phase 0 completion and triggered Phase 1 — it didn't.<br><br>
+    <strong>Fix:</strong> Re-run Phases 1, 2, 3 for these sessions. Phase 0 data is intact.
+  </div>
+  <div class="session-list" style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:8px">
+    0a4f387d, 11b5eed6, 1dd3cfd2, 3b2ddd80, 54f37a7b, 57297c0d, 6bc46710, 8e46b43e, a2583cb5, c2443b2f, c905792b, d391a8e7, d9bb9dfd, f0a350b4
+  </div>
+</div>
+
+<div class="card">
+  <h2>Pattern B — Phase 0 Partial Failure (3 sessions)</h2>
+  <table>
+    <tr><th>Phase 0</th><th>Phase 1</th><th>Phase 2</th><th>Phase 3</th><th>Files Present</th></tr>
+    <tr><td class="phase-partial">PARTIAL (3/9)</td><td class="phase-ok">COMPLETE (4/4)</td><td class="phase-miss">MISSING</td><td class="phase-partial">STUB ONLY</td><td>8 / 19</td></tr>
+  </table>
+  <div style="margin-top:12px;color:var(--text-dim);font-size:0.85rem">
+    <strong>Root cause:</strong> Phase 0 had catastrophic failure (lost 6 of 9 files: enriched_session, conversation_condensed, emergency_contexts, tier messages). But Phase 1 ran anyway — no dependency validation.<br><br>
+    <strong>Fix:</strong> Re-run Phase 0 completely, then Phases 2, 3. Phase 1 data may need re-evaluation since it ran without Phase 0 inputs.
+  </div>
+  <div class="session-list" style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:8px">
+    0fb6fc11, 12697b76, 15acdfcf
+  </div>
+</div>
+
+<div class="card">
+  <h2>Pattern C — Phase 0 Missing Entirely (2 sessions)</h2>
+  <table>
+    <tr><th>Phase 0</th><th>Phase 1</th><th>Phase 2</th><th>Phase 3</th><th>Files Present</th></tr>
+    <tr><td class="phase-miss">MISSING (0/9)</td><td class="phase-ok">COMPLETE (4/4)</td><td class="phase-miss">MISSING</td><td class="phase-partial">STUB ONLY</td><td>5 / 19</td></tr>
+  </table>
+  <div style="margin-top:12px;color:var(--text-dim);font-size:0.85rem">
+    <strong>Root cause:</strong> Phase 0 failed entirely (no enrichment files at all), yet Phase 1 completed successfully. This is unexpected — Phase 1 should require Phase 0 outputs as input. Suggests Phase 1 agents may have a different code path or input source.<br><br>
+    <strong>Fix:</strong> Re-run Phase 0, then Phases 2, 3. Investigate whether Phase 1 outputs are valid without Phase 0 input.
+  </div>
+  <div class="session-list" style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:8px">
+    1451ac42, 147e85b1
+  </div>
+</div>
+
+<div class="card">
+  <h2>Pattern D — Phase 2 Never Launched (3 sessions)</h2>
+  <table>
+    <tr><th>Phase 0</th><th>Phase 1</th><th>Phase 2</th><th>Phase 3</th><th>Files Present</th></tr>
+    <tr><td class="phase-ok">COMPLETE (9/9)</td><td class="phase-ok">COMPLETE (4/4)</td><td class="phase-miss">MISSING</td><td class="phase-partial">STUB ONLY</td><td>14 / 19</td></tr>
+  </table>
+  <div style="margin-top:12px;color:var(--text-dim);font-size:0.85rem">
+    <strong>Root cause:</strong> Phases 0-1 fully completed (Feb 7 19:17-19:18) but Phase 2 agents never launched. Phase 3 ran later (Feb 8 21:49) in a separate batch but could only create empty stubs due to missing Phase 2 outputs.<br><br>
+    <strong>Fix:</strong> Re-run Phase 2, then Phase 3. All upstream data exists.
+  </div>
+  <div class="session-list" style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:8px">
+    10da8b78, 14824394, 152932ee
+  </div>
+</div>
+
+<div class="card">
+  <h2>Empty/Stub Files Observed</h2>
+  <table>
+    <tr><th>File</th><th>Size</th><th>Content</th><th>Interpretation</th></tr>
+    <tr><td><code>emergency_contexts.json</code></td><td>33 bytes</td><td><code>{"count": 0, "windows": []}</code></td><td>Legitimate empty result (no emergency content found) OR incomplete write</td></tr>
+    <tr><td><code>user_messages_tier2plus.json</code></td><td>34 bytes</td><td><code>{"count": 0, "messages": []}</code></td><td>Legitimate empty result (no tier2+ user messages) OR incomplete write</td></tr>
+    <tr><td><code>file_genealogy.json</code></td><td>318 bytes</td><td>Valid JSON, all counts = 0</td><td>Phase 3 ran independently (Feb 8 21:49 batch) but produced empty output — missing Phase 2 inputs</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Cross-Phase Dependency Issues Found</h2>
+  <table>
+    <tr><th>Dependency</th><th>Expected</th><th>Observed</th><th style="color:var(--red)">Issue</th></tr>
+    <tr><td>Phase 1 requires Phase 0</td><td>Phase 1 should fail if Phase 0 is missing</td><td>Patterns B, C: Phase 1 succeeds despite missing/partial Phase 0</td><td style="color:var(--red)">No input validation</td></tr>
+    <tr><td>Phase 2 requires Phase 1</td><td>Phase 2 should launch after Phase 1 completes</td><td>Pattern D: Phase 1 present but Phase 2 never launched</td><td style="color:var(--red)">Transition failure</td></tr>
+    <tr><td>Phase 3 requires Phase 2</td><td>Phase 3 should fail if Phase 2 is missing</td><td>All patterns: Phase 3 creates empty stubs</td><td style="color:var(--yellow)">Resilient but misleading</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Re-Run Plan</h2>
+  <table>
+    <tr><th>Pattern</th><th>Sessions</th><th>What to Re-Run</th><th>Estimated Agents</th></tr>
+    <tr><td>A</td><td>14</td><td>Phases 1 + 2 + 3</td><td>14 x 4 = 56 (Phase 1) + 14 x 3 = 42 (Phase 2-3)</td></tr>
+    <tr><td>B</td><td>3</td><td>Phase 0 + 2 + 3 (keep Phase 1)</td><td>3 (Phase 0, Python) + 3 x 3 = 9 (Phase 2-3)</td></tr>
+    <tr><td>C</td><td>2</td><td>Phase 0 + 2 + 3 (investigate Phase 1)</td><td>2 (Phase 0) + 2 x 3 = 6 (Phase 2-3)</td></tr>
+    <tr><td>D</td><td>3</td><td>Phase 2 + 3 only</td><td>3 x 3 = 9 (Phase 2-3)</td></tr>
+  </table>
+  <div style="margin-top:12px;color:var(--text-dim);font-size:0.85rem">
+    <strong>Total:</strong> ~122 agent launches to complete all 23 sessions. Recommended batch size: 30 concurrent agents with 3-minute cooldowns (based on historical throughput data).
+  </div>
+</div>
+
+</body>
+</html>
