@@ -803,5 +803,27 @@
   <strong style="color:var(--shared)">Commitments tested:</strong> #1 (read before touch — read all files before claiming anything), #2 (run before claim — ran Phase 0, ran similarity engine), #7 (say when I don't know — admitted memory was wrong about 90/456), #8 (never delete without asking — asked before archiving HTML), #10 (when wrong, say immediately — corrected stale numbers in real time).
 </div>
 
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin:16px 0;font-size:0.9rem;color:var(--text-dim)">
+  <strong style="color:var(--text)">Feb 10, 2026 — Onboarding Test: Fresh Session Phase 0</strong><br><br>
+  <strong style="color:var(--shared)">Test subject:</strong> Session <code>02552cd9</code> (99 messages, 35 user / 64 assistant, 362 KB JSONL). Never previously processed.<br><br>
+
+  <strong style="color:var(--shared)">What worked:</strong><br>
+  &bull; <code>deterministic_prep.py</code> ran cleanly. Produced <code>enriched_session.json</code> (0.2 MB, 99 messages) in &lt;2 seconds.<br>
+  &bull; <code>prepare_agent_data.py</code> ran cleanly. Produced all 9 Phase 0 files + batch dir + sanitized 2 files (profanity removal).<br>
+  &bull; <code>completeness_scanner.py</code> correctly identified the session as "missing phase_1, phase_2, phase_3, phase_5" — Phase 0 complete.<br>
+  &bull; <code>app_level_manager.py</code> still reads Level 5 VERIFIED (existing 261 sessions anchor the level). Session count: 285 &rarr; 285.<br>
+  &bull; Tier distribution: 82 SKIP (83%), 3 basic (3%), 10 standard (10%), 4 priority (4%). Zero frustration peaks, zero emergencies.<br>
+  &bull; Token usage parsed: 4.8M input, 5.3K output, 7.9K thinking chars.<br><br>
+
+  <strong style="color:var(--user)">What broke / issues found:</strong><br>
+  &bull; <strong>Bug: Nested output directory.</strong> When <code>HYPERDOCS_OUTPUT_DIR</code> is set to the full path including <code>session_XXXX</code>, <code>get_session_output_dir()</code> appends <em>another</em> <code>session_XXXX/</code> inside it. First attempt produced <code>session_e7be321d/session_e7be321d/</code>. Fix: set <code>HYPERDOCS_OUTPUT_DIR</code> to the <em>parent</em> sessions directory, not the target session dir. A new user would hit this immediately.<br>
+  &bull; <strong>No documentation on env vars.</strong> The script requires <code>HYPERDOCS_SESSION_ID</code>, <code>HYPERDOCS_CHAT_HISTORY</code>, and <code>HYPERDOCS_OUTPUT_DIR</code> but there's no README or help text showing the correct values. The relationship between these three vars is non-obvious.<br>
+  &bull; <strong>Code similarity not exercised.</strong> Session only mentioned 1 file (<code>MEMORY.md</code>), which isn't Python. <code>code_similarity_incremental.py --file</code> has nothing to scan. Short sessions with few code operations won't benefit from this layer.<br>
+  &bull; <strong>Content policy sanitization runs on ALL files</strong> including safe_* files that already stripped content. Harmless but wasteful on second pass.<br><br>
+
+  <strong style="color:var(--shared)">What a real user would experience:</strong><br>
+  The $0 foundation layer works. A user with a JSONL file can run 2 commands and get a fully enriched session in seconds. The main friction is knowing which env vars to set and how <code>OUTPUT_DIR</code> interacts with <code>get_session_output_dir()</code>. The concierge system (which automates this setup) would eliminate this friction entirely.
+</div>
+
 </body>
 </html>

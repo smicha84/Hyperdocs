@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperdocs Production Line — Session 0012ebed</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --cyan: #39d353;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+  }
+
+  header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  header .session-badge {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 13px;
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-dim);
+    padding: 12px 32px 0;
+  }
+
+  .pipeline-container {
+    padding: 32px;
+    overflow-x: auto;
+  }
+
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-width: max-content;
+  }
+
+  .station {
+    min-width: 320px;
+    max-width: 360px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .station:hover {
+    border-color: var(--accent);
+  }
+
+  .station-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .station-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 600;
+    margin-right: 10px;
+  }
+
+  .station-title {
+    font-size: 14px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .cost-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .cost-free { background: rgba(63, 185, 80, 0.15); color: var(--green); }
+  .cost-opus { background: rgba(188, 140, 255, 0.15); color: var(--purple); }
+  .cost-haiku { background: rgba(88, 166, 255, 0.15); color: var(--accent); }
+  .cost-python { background: rgba(57, 211, 83, 0.15); color: var(--cyan); }
+
+  .station-body {
+    padding: 16px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .data-section {
+    background: rgba(0,0,0,0.25);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .data-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .data-content {
+    font-size: 12px;
+    line-height: 1.5;
+    font-family: 'SF Mono', Consolas, monospace;
+    color: var(--text);
+    word-break: break-word;
+  }
+
+  .data-content .highlight {
+    color: var(--orange);
+    font-weight: 500;
+  }
+
+  .data-content .key {
+    color: var(--accent);
+  }
+
+  .data-content .value {
+    color: var(--green);
+  }
+
+  .data-content .string {
+    color: #a5d6ff;
+  }
+
+  .connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    min-width: 48px;
+    position: relative;
+  }
+
+  .connector svg {
+    width: 48px;
+    height: 24px;
+  }
+
+  .connector .arrow-line {
+    stroke: var(--border);
+    stroke-width: 2;
+    stroke-dasharray: 4 4;
+  }
+
+  .connector .arrow-head {
+    fill: var(--accent);
+  }
+
+  .connector .arrow-line.animated {
+    animation: dash 1.5s linear infinite;
+  }
+
+  @keyframes dash {
+    to { stroke-dashoffset: -16; }
+  }
+
+  .transform-label {
+    position: absolute;
+    top: -8px;
+    font-size: 9px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    text-align: center;
+    width: 100%;
+  }
+
+  /* Phase colors */
+  .phase-0 .station-number { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+  .phase-0 .station-header { border-bottom-color: rgba(63, 185, 80, 0.3); }
+
+  .phase-1 .station-number { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
+  .phase-1 .station-header { border-bottom-color: rgba(88, 166, 255, 0.3); }
+
+  .phase-2 .station-number { background: rgba(188, 140, 255, 0.2); color: var(--purple); }
+  .phase-2 .station-header { border-bottom-color: rgba(188, 140, 255, 0.3); }
+
+  .phase-3 .station-number { background: rgba(210, 153, 34, 0.2); color: var(--orange); }
+  .phase-3 .station-header { border-bottom-color: rgba(210, 153, 34, 0.3); }
+
+  .phase-4 .station-number { background: rgba(248, 81, 73, 0.2); color: var(--red); }
+  .phase-4 .station-header { border-bottom-color: rgba(248, 81, 73, 0.3); }
+
+  .phase-5 .station-number { background: rgba(57, 211, 83, 0.2); color: var(--cyan); }
+  .phase-5 .station-header { border-bottom-color: rgba(57, 211, 83, 0.3); }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    padding: 2px 0;
+  }
+
+  .stat-row .stat-label { color: var(--text-dim); }
+  .stat-row .stat-value { color: var(--text); font-weight: 500; }
+
+  .station-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .message-bubble {
+    background: rgba(210, 153, 34, 0.1);
+    border: 1px solid rgba(210, 153, 34, 0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--orange);
+    text-align: center;
+    letter-spacing: 2px;
+  }
+
+  .scroll-hint {
+    text-align: center;
+    padding: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .legend {
+    padding: 16px 32px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .summary-stats {
+    padding: 16px 32px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .summary-stat {
+    text-align: center;
+  }
+
+  .summary-stat .big-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .summary-stat .stat-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .idea-path {
+    background: rgba(188, 140, 255, 0.08);
+    border: 1px solid rgba(188, 140, 255, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    margin: 8px 0;
+  }
+
+  .idea-path .path-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .idea-path .step-icon {
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    margin-top: 1px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Hyperdocs Production Line</h1>
+    <div style="font-size:12px; color:var(--text-dim); margin-top:4px;">
+      How a single message transforms through 6 pipeline phases
+    </div>
+  </div>
+  <span class="session-badge">session_0012ebed</span>
+</header>
+
+<div class="subtitle">
+  Tracing message #1108 — a 45-byte user frustration that generates 18 grounded markers, 26 idea nodes, and 2 hyperdoc annotations
+</div>
+
+<div class="summary-stats">
+  <div class="summary-stat">
+    <div class="big-number">1,317</div>
+    <div class="stat-desc">messages in session</div>
+  </div>
+  <div class="summary-stat">
+    <div class="big-number">$0</div>
+    <div class="stat-desc">Phase 0 cost</div>
+  </div>
+  <div class="summary-stat">
+    <div class="big-number">26</div>
+    <div class="stat-desc">idea graph nodes</div>
+  </div>
+  <div class="summary-stat">
+    <div class="big-number">18</div>
+    <div class="stat-desc">grounded markers</div>
+  </div>
+  <div class="summary-stat">
+    <div class="big-number">0.99</div>
+    <div class="stat-desc">highest confidence</div>
+  </div>
+  <div class="summary-stat">
+    <div class="big-number">54</div>
+    <div class="stat-desc">claims verified</div>
+  </div>
+</div>
+
+<p class="scroll-hint">Scroll right to follow the pipeline &rarr;</p>
+
+<div class="pipeline-container">
+<div class="pipeline">
+
+  <!-- ═══ PHASE 0: RAW INPUT ═══ -->
+  <div class="station phase-0">
+    <div class="station-header">
+      <div style="display:flex; align-items:center;">
+        <span class="station-number">0a</span>
+        <span class="station-title">Raw Message</span>
+      </div>
+      <span class="cost-badge cost-free">input</span>
+    </div>
+    <div class="station-body">
+      <div class="data-section">
+        <div class="data-label">JSONL Line (from Claude Code)</div>
+        <div class="message-bubble">ALWAYS WITH LLM!!!!!!!!</div>
+      </div>
+      <div class="data-section">
+        <div class="data-label">Raw Fields</div>
+        <div class="data-content">
+          <span class="key">role</span>: <span class="string">"user"</span><br>
+          <span class="key">content_length</span>: <span class="value">45</span> bytes<br>
+          <span class="key">timestamp</span>: <span class="string">"2026-01-20T18:58:25Z"</span><br>
+          <span class="key">index</span>: <span class="value">1108</span> of 1317
+        </div>
+      </div>
+      <div class="station-footer">
+        Message #1108 in a 6-day session (Jan 15-21, 2026). The user is frustrated that regex-based analysis was used instead of LLM semantic analysis.
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="transform-label">enrich</div>
+    <svg viewBox="0 0 48 24"><line class="arrow-line animated" x1="0" y1="12" x2="40" y2="12"/><polygon class="arrow-head" points="40,6 48,12 40,18"/></svg>
+  </div>
+
+  <!-- ═══ PHASE 0: ENRICHED ═══ -->
+  <div class="station phase-0">
+    <div class="station-header">
+      <div style="display:flex; align-items:center;">
+        <span class="station-number">0b</span>
+        <span class="station-title">Deterministic Enrichment</span>
+      </div>
+      <span class="cost-badge cost-python">Python $0</span>
+    </div>
+    <div class="station-body">
+      <div class="data-section">
+        <div class="data-label">Metadata Extracted (pure Python)</div>
+        <div class="data-content">
+          <span class="key">caps_ratio</span>: <span class="highlight">1.00</span> (all caps)<br>
+          <span class="key">exclamations</span>: <span class="highlight">8</span><br>
+          <span class="key">profanity</span>: <span class="value">false</span><br>
+          <span class="key">code_block</span>: <span class="value">false</span><br>
+          <span class="key">files</span>: <span class="value">[]</span>
+        </div>
+      </div>
+      <div class="data-section">
+        <div class="data-label">Filter Classification</div>
+        <div class="data-content">
+          <span class="key">filter_tier</span>: <span class="value">1</span> (SKIP)<br>
+          <span class="key">filter_score</span>: <span class="value">0</span><br>
+          <span class="key">filter_signals</span>: <span class="value">[]</span>
+        </div>
+      </div>
+      <div class="station-footer">
+        deterministic_prep.py + message_filter.py. No API calls. Computes 25+ metadata fields per message. Tier 1 = too short for standalone processing, but context is captured through neighboring messages.
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="transform-label">agents</div>
+    <svg viewBox="0 0 48 24"><line class="arrow-line animated" x1="0" y1="12" x2="40" y2="12"/><polygon class="arrow-head" points="40,6 48,12 40,18"/></svg>
+  </div>
+
+  <!-- ═══ PHASE 1: EXTRACTION ═══ -->
+  <div class="station phase-1">
+    <div class="station-header">
+      <div style="display:flex; align-items:center;">
+        <span class="station-number">1</span>
+        <span class="station-title">Multi-Agent Extraction</span>
+      </div>
+      <span class="cost-badge cost-opus">4 Opus agents</span>
+    </div>
+    <div class="station-body">
+      <div class="data-section">
+        <div class="data-label">Thread Analyst</div>
+        <div class="data-content">
+          Extracted into <span class="highlight">react-003</span>:<br>
+          <span class="string">"msg 1108, caps_ratio 1.0, ALWAYS WITH LLM — user rejects regex-based analysis"</span>
+        </div>
+      </div>
+      <div class="data-section">
+        <div class="data-label">Semantic Primitives Tagger</div>
+        <div class="data-content">
+          <span class="key">action_vector</span>: <span class="value">decided</span><br>
+          <span class="key">emotional_tenor</span>: <span class="highlight">frustrated</span><br>
+          <span class="key">intent_marker</span>: <span class="value">correctness</span><br>
+          <span class="key">friction_log</span>: <span class="string">"User demands LLM-only analysis, no regex"</span>
+        </div>
+      </div>
+      <div class="data-section">
+        <div class="data-label">Geological Reader + Explorer</div>
+        <div class="data-content">
+          <span class="key">macro observation</span>: <span class="string">"Errors predict novelty. The assistant makes mistakes at format boundaries."</span>
+        </div>
+      </div>
+      <div class="station-footer">
+        4 Opus agents run in parallel, each reading safe_condensed.json (metadata only, not raw messages). Thread analyst assigns to 6 threads. Primitives tagger applies 7 semantic dimensions.
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="transform-label">synthesize</div>
+    <svg viewBox="0 0 48 24"><line class="arrow-line animated" x1="0" y1="12" x2="40" y2="12"/><polygon class="arrow-head" points="40,6 48,12 40,18"/></svg>
+  </div>
+
+  <!-- ═══ PHASE 2: SYNTHESIS ═══ -->
+  <div class="station phase-2">
+    <div class="station-header">
+      <div style="display:flex; align-items:center;">
+        <span class="station-number">2</span>
+        <span class="station-title">Idea Graph + Synthesis</span>
+      </div>
+      <span class="cost-badge cost-opus">Opus synthesis</span>
+    </div>
+    <div class="station-body">
+      <div class="data-section">
+        <div class="data-label">Idea Graph Node</div>
+        <div class="data-content">
+          <span class="key">N16</span>: <span class="string">"LLM-mandatory analysis"</span><br>
+          <span class="key">confidence</span>: <span class="value">stable</span><br>
+          <span class="key">maturity</span>: <span class="value">established</span>
+        </div>
+      </div>
+      <div class="idea-path">
+        <div class="data-label" style="margin-bottom:8px;">Idea Evolution Path</div>
+        <div class="path-step">
+          <span class="step-icon" style="background:rgba(63,185,80,0.2);color:var(--green);">N7</span>
+          <span>Bootstrap problem identified <span style="color:var(--text-dim)">&rarr; pivoted</span></span>
+        </div>
+        <div class="path-step">
+          <span class="step-icon" style="background:rgba(88,166,255,0.2);color:var(--accent);">N8</span>
+          <span>Pivot: enforcement &rarr; generation <span style="color:var(--text-dim)">&rarr; expanded</span></span>
+        </div>
+        <div class="path-step">
+          <span class="step-icon" style="background:rgba(188,140,255,0.2);color:var(--purple);">N16</span>
+          <span>LLM-mandatory principle crystallized</span>
+        </div>
+      </div>
+      <div class="data-section">
+        <div class="data-label">Grounded Marker GM-003</div>
+        <div class="data-content">
+          <span class="key">claim</span>: <span class="string">"LLM semantic analysis is mandatory for all marker generation. Regex-based pattern matching is rejected."</span><br>
+          <span class="key">confidence</span>: <span class="highlight">0.99</span><br>
+          <span class="key">evidence</span>: <span class="value">react-003 (msg 1108), react-004 (msg 1235)</span>
+        </div>
+      </div>
+      <div class="station-footer">
+        5-pass temperature ramp (0.3 &rarr; 1.0) + grounding pass. Session character: "From bounded refactoring to unbounded system creation through a conceptual pivot at the bootstrap problem."
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="transform-label">map</div>
+    <svg viewBox="0 0 48 24"><line class="arrow-line animated" x1="0" y1="12" x2="40" y2="12"/><polygon class="arrow-head" points="40,6 48,12 40,18"/></svg>
+  </div>
+
+  <!-- ═══ PHASE 3: FILE MAPPING ═══ -->
+  <div class="station phase-3">
+    <div class="station-header">
+      <div style="display:flex; align-items:center;">
+        <span class="station-number">3</span>
+        <span class="station-title">File Mapper</span>
+      </div>
+      <span class="cost-badge cost-opus">Opus agent</span>
+    </div>
+    <div class="station-body">
+      <div class="data-section">
+        <div class="data-label">File Dossier: marker_generator.py</div>
+        <div class="data-content">
+          <span class="key">mentions</span>: <span class="value">11</span> (highest in session)<br>
+          <span class="key">significance</span>: <span class="highlight">high</span><br>
+          <span class="key">story_arc</span>: <span class="string">"Initially designed with 10 markers, expanded to 23 after user forced deeper research. The expansion is a 'humility arc'."</span>
+        </div>
+      </div>
+      <div class="data-section">
+        <div class="data-label">Key Decision Tracked</div>
+        <div class="data-content">
+          <span class="string">"LLM-based marker generation made mandatory, replacing regex pattern detection"</span>
+        </div>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Files cataloged</span>
+        <span class="stat-value">45</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">High significance</span>
+        <span class="stat-value">8 files</span>
+      </div>
+      <div class="station-footer">
+        Maps each grounded marker and idea node back to specific source files. Creates per-file dossiers with story arcs, key decisions, and significance tiers.
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="transform-label">write</div>
+    <svg viewBox="0 0 48 24"><line class="arrow-line animated" x1="0" y1="12" x2="40" y2="12"/><polygon class="arrow-head" points="40,6 48,12 40,18"/></svg>
+  </div>
+
+  <!-- ═══ PHASE 4: HYPERDOC WRITER ═══ -->
+  <div class="station phase-4">
+    <div class="station-header">
+      <div style="display:flex; align-items:center;">
+        <span class="station-number">4</span>
+        <span class="station-title">Hyperdoc Writer</span>
+      </div>
+      <span class="cost-badge cost-opus">Opus per-file</span>
+    </div>
+    <div class="station-body">
+      <div class="data-section">
+        <div class="data-label">@ctx Annotation (embedded in hyperdoc)</div>
+        <div class="data-content" style="font-size:11px;">
+          <span class="key">@ctx:version</span>=1<br>
+          <span class="key">@ctx:source_sessions</span>=<span class="value">conv_0012ebed</span>,conv_4c08a224<br>
+          <span class="key">@ctx:confidence</span>=<span class="highlight">0.99</span><br>
+          <span class="key">@ctx:category</span>=<span class="value">decision</span>
+        </div>
+      </div>
+      <div class="data-section">
+        <div class="data-label">Actionable Guidance Written</div>
+        <div class="data-content">
+          <span class="string">"Never implement marker detection, summarization, or analysis using regex patterns alone. Every analysis step must pass through LLM semantic analysis."</span>
+        </div>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Hyperdocs referencing this session</span>
+        <span class="stat-value">2</span>
+      </div>
+      <div class="station-footer">
+        Cross-session aggregation (aggregate_dossiers.py) combines dossiers from 284 sessions. Per-file Opus agents write layered hyperdocs with header + inline annotations + footer.
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="transform-label">verify</div>
+    <svg viewBox="0 0 48 24"><line class="arrow-line animated" x1="0" y1="12" x2="40" y2="12"/><polygon class="arrow-head" points="40,6 48,12 40,18"/></svg>
+  </div>
+
+  <!-- ═══ PHASE 5: GROUND TRUTH ═══ -->
+  <div class="station phase-5">
+    <div class="station-header">
+      <div style="display:flex; align-items:center;">
+        <span class="station-number">5</span>
+        <span class="station-title">Ground Truth Verification</span>
+      </div>
+      <span class="cost-badge cost-python">Python $0</span>
+    </div>
+    <div class="station-body">
+      <div class="data-section">
+        <div class="data-label">Claim Extraction</div>
+        <div class="data-content">
+          <span class="key">total_claims</span>: <span class="value">54</span> extracted<br>
+          <span class="key">files_checked</span>: <span class="value">28</span><br>
+          <span class="key">files_found</span>: <span class="value">28</span><br>
+          <span class="key">files_missing</span>: <span class="value">2</span>
+        </div>
+      </div>
+      <div class="data-section">
+        <div class="data-label">Verification Result</div>
+        <div class="data-content" style="text-align:center; padding: 8px 0;">
+          <span style="font-size:24px; font-weight:700; color:var(--green);">73%</span><br>
+          <span style="font-size:11px; color:var(--text-dim);">credibility across 261 sessions</span>
+        </div>
+      </div>
+      <div class="data-section">
+        <div class="data-label">Gap Report</div>
+        <div class="data-content">
+          The gap between claims and evidence = the lie. Computable, verifiable, not self-reported.
+        </div>
+      </div>
+      <div class="station-footer">
+        claim_extractor.py extracts factual claims from all pipeline outputs. ground_truth_verifier.py checks them against filesystem. gap_reporter.py computes the difference.
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div class="legend">
+  <span style="font-size:12px; color:var(--text-dim); font-weight:500;">Pipeline cost:</span>
+  <div class="legend-item">
+    <span class="legend-dot" style="background:var(--green);"></span>
+    Phase 0 — $0 (Python)
+  </div>
+  <div class="legend-item">
+    <span class="legend-dot" style="background:var(--purple);"></span>
+    Phase 1-4 — Opus agents
+  </div>
+  <div class="legend-item">
+    <span class="legend-dot" style="background:var(--cyan);"></span>
+    Phase 5 — $0 (Python)
+  </div>
+  <div class="legend-item">
+    <span class="legend-dot" style="background:var(--accent);"></span>
+    Total session output: 20 JSON files
+  </div>
+</div>
+
+<div style="padding:16px 32px; border-top:1px solid var(--border); font-size:11px; color:var(--text-dim);">
+  Data source: ~/PERMANENT_HYPERDOCS/sessions/session_0012ebed/ &mdash; Generated 2026-02-10 &mdash; Hyperdocs Pipeline v3
+</div>
+
+</body>
+</html>
