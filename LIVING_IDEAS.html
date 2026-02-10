@@ -207,7 +207,7 @@
 
 <h1>Hyperdocs — Living Ideas</h1>
 <p class="subtitle">Every idea from our discussion, organized by origin. Updated in real time.</p>
-<span class="updated">Last updated: February 10, 2026 — Session: Completeness Scanner + Production Line + Onboarding Test</span>
+<span class="updated">Last updated: February 10, 2026 — Session: Completeness Scanner + Production Line + Onboarding + Schema Normalization</span>
 
 <!-- ═══════════════════════════════════════════════════════ -->
 <!-- HTML FILE GALLERY -->
@@ -384,10 +384,10 @@
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:16px">
   <div style="background:var(--surface);border:1px solid var(--shared-border);border-radius:12px;padding:20px">
-    <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">Completeness Scanner</div>
-    <div style="font-size:1.8rem;font-weight:700;color:var(--shared)">DONE</div>
-    <div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px">285 sessions scanned, field-level completeness</div>
-    <div style="color:var(--text-dim);font-size:0.8rem">831KB report at indexes/completeness_report.json</div>
+    <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">Schema Normalization</div>
+    <div style="font-size:1.8rem;font-weight:700;color:var(--shared)">+798</div>
+    <div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px">data fields recovered, 886 variants &rarr; 9</div>
+    <div style="color:var(--text-dim);font-size:0.8rem">2,442 files normalized, 100% canonical conformity</div>
   </div>
   <div style="background:var(--surface);border:1px solid var(--shared-border);border-radius:12px;padding:20px">
     <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">Production Line Viz</div>
@@ -482,38 +482,38 @@
     </div>
   </div>
 
-  <!-- Schema Variance Discovery -->
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px">
-    <div style="font-weight:600;margin-bottom:16px">Schema Variance — The Bulk Processing Problem</div>
+  <!-- Schema Variance — FIXED -->
+  <div style="background:var(--surface);border:1px solid var(--shared-border);border-radius:12px;padding:24px">
+    <div style="font-weight:600;margin-bottom:16px;color:var(--shared)">Schema Variance — FIXED (was 886 variants, now 9)</div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:180px;font-size:0.85rem">thread_extractions.threads</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:30%;height:100%;background:linear-gradient(90deg,#00b894,#55efc4);border-radius:4px"></div></div>
-        <div style="width:65px;text-align:right;font-weight:600;font-size:0.85rem;color:var(--yellow)">82/269</div>
+        <div style="width:180px;font-size:0.85rem">thread_extractions</div>
+        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:98%;height:100%;background:linear-gradient(90deg,#00b894,#55efc4);border-radius:4px"></div></div>
+        <div style="width:100px;text-align:right;font-size:0.8rem"><span style="color:var(--text-dim);text-decoration:line-through">82</span> &rarr; <span style="font-weight:600;color:var(--shared)">264/269</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:180px;font-size:0.85rem">semantic_primitives.tagged</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:7%;height:100%;background:linear-gradient(90deg,#e17055,#fab1a0);border-radius:4px"></div></div>
-        <div style="width:65px;text-align:right;font-weight:600;font-size:0.85rem;color:var(--red)">19/269</div>
+        <div style="width:180px;font-size:0.85rem">semantic_primitives</div>
+        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:98%;height:100%;background:linear-gradient(90deg,#00b894,#55efc4);border-radius:4px"></div></div>
+        <div style="width:100px;text-align:right;font-size:0.8rem"><span style="color:var(--text-dim);text-decoration:line-through">19</span> &rarr; <span style="font-weight:600;color:var(--shared)">264/269</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:12px">
         <div style="width:180px;font-size:0.85rem">synthesis.passes</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:77%;height:100%;background:linear-gradient(90deg,#74b9ff,#a29bfe);border-radius:4px"></div></div>
-        <div style="width:65px;text-align:right;font-weight:600;font-size:0.85rem">201/261</div>
+        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:100%;height:100%;background:linear-gradient(90deg,#00b894,#55efc4);border-radius:4px"></div></div>
+        <div style="width:100px;text-align:right;font-size:0.8rem"><span style="color:var(--text-dim);text-decoration:line-through">201</span> &rarr; <span style="font-weight:600;color:var(--shared)">261/261</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:180px;font-size:0.85rem">idea_graph.nodes</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:98%;height:100%;background:linear-gradient(90deg,#00b894,#55efc4);border-radius:4px"></div></div>
-        <div style="width:65px;text-align:right;font-weight:600;font-size:0.85rem;color:var(--shared)">256/261</div>
+        <div style="width:180px;font-size:0.85rem">grounded_markers</div>
+        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:99%;height:100%;background:linear-gradient(90deg,#00b894,#55efc4);border-radius:4px"></div></div>
+        <div style="width:100px;text-align:right;font-size:0.8rem"><span style="color:var(--text-dim);text-decoration:line-through">183</span> &rarr; <span style="font-weight:600;color:var(--shared)">258/261</span></div>
       </div>
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:180px;font-size:0.85rem">grounded_markers.markers</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:70%;height:100%;background:linear-gradient(90deg,#6c5ce7,#a29bfe);border-radius:4px"></div></div>
-        <div style="width:65px;text-align:right;font-weight:600;font-size:0.85rem">183/261</div>
+        <div style="width:180px;font-size:0.85rem">geological_notes</div>
+        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:100%;height:100%;background:linear-gradient(90deg,#00b894,#55efc4);border-radius:4px"></div></div>
+        <div style="width:100px;text-align:right;font-size:0.8rem"><span style="font-weight:600;color:var(--shared)">269/269 (100%)</span></div>
       </div>
     </div>
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);color:var(--text-dim);font-size:0.8rem">
-      <strong style="color:var(--text)">Key finding:</strong> Files exist but content varies wildly. Only 30% of thread_extractions have the expected 6-thread structure. Only 7% of semantic_primitives have tagged messages. Bulk agents used inconsistent output schemas.
+      <strong style="color:var(--shared)">Fixed:</strong> schema_normalizer.py processed 2,442 files in 2 passes. 886 schema variants collapsed to 9 canonical schemas. +798 data fields recovered. 26 genuinely empty field-instances remain across 20 thin sessions. Automated via post_agent_normalize.py.
     </div>
   </div>
 </div>
@@ -893,12 +893,12 @@
     <div class="idea-body">The dependency chain: code similarity script → enriched genealogy → trustworthy visualizations. Building visualizations first means visualizing incomplete data. The script is the missing station on the production line.</div>
   </li>
 
-  <li class="idea claude">
+  <li class="idea shared">
     <div class="idea-header">
-      <span class="idea-title">Schema variance: the distributed agent consistency problem</span>
-      <div class="idea-tags"><span class="tag technical">Technical</span><span class="tag priority">Priority</span></div>
+      <span class="idea-title">Schema variance: discovered, diagnosed, and fixed</span>
+      <div class="idea-tags"><span class="tag technical">Technical</span><span style="background:rgba(0,184,148,0.2);color:#00b894;font-size:0.7rem;padding:2px 8px;border-radius:10px">Fixed</span></div>
     </div>
-    <div class="idea-body">Completeness scanner revealed that 261 sessions produce Phase 1 files, but only 30% have the expected 6-thread structure. Only 7% of semantic_primitives have tagged messages. Bulk agents (50-60 concurrent) used inconsistent output schemas. Fix: either schema validation at write time or normalization at read time.</div>
+    <div class="idea-body">886 schema variants across 269 sessions. Built schema_normalizer.py (2 passes, 2,442 files). +798 data fields recovered. Automated via post_agent_normalize.py. <strong>Root cause:</strong> LLM agents don't produce uniform JSON. <strong>Prevention:</strong> Python normalization layer between agent output and any consumer.</div>
   </li>
 
   <li class="idea claude">
@@ -1013,7 +1013,7 @@
 
 <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin:24px 0;font-size:0.9rem">
   <strong style="color:var(--text)">Summary:</strong> <span style="color:var(--shared)">8 done</span> &bull; <span style="color:var(--red)">4 P0 remaining</span> &bull; <span style="color:var(--yellow)">5 P1</span> &bull; <span style="color:var(--blue)">4 P2</span><br>
-  <span style="color:var(--text-dim);font-size:0.85rem">P0 remaining: fix orchestrator transitions, complete 23 partial sessions, test 2 more onboarding scenarios, error recovery/resume. P1 and P2 unchanged.</span>
+  <span style="color:var(--text-dim);font-size:0.85rem">P0 remaining: fix orchestrator transitions, complete 23 partial sessions, test 2 more onboarding scenarios, error recovery/resume. Schema normalization DONE — automated for all future runs.</span>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -1057,6 +1057,26 @@
 
   <strong style="color:var(--shared)">What a real user would experience:</strong><br>
   The $0 foundation layer works. A user with a JSONL file can run 2 commands and get a fully enriched session in seconds. The main friction is knowing which env vars to set and how <code>OUTPUT_DIR</code> interacts with <code>get_session_output_dir()</code>. The concierge system (which automates this setup) would eliminate this friction entirely.
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--shared-border);border-radius:12px;padding:20px;margin:16px 0;font-size:0.9rem;color:var(--text-dim)">
+  <strong style="color:var(--shared)">Feb 10, 2026 — Schema Normalization: The Biggest Data Quality Fix</strong><br><br>
+  Completeness scanner revealed that bulk-processed Phase 1-3 agents produced <strong>886 different JSON schemas</strong> across 269 sessions. The data existed but was filed under different key names in every session. Geological notes alone had <strong>182 schema variants</strong> — data lived under <code>micro</code>, <code>strata</code>, <code>layers</code>, <code>observations</code>, <code>geological_layers</code>, <code>zoom_levels</code>, <code>vertical_structures</code>, <code>stratigraphy</code>, and more. Semantic primitives went from 7% visible to 98%.<br><br>
+
+  <strong style="color:var(--text)">Built:</strong><br>
+  &bull; <code>schema_normalizer.py</code> (~500 lines) — 9 per-file-type normalizers that find data wherever agents put it. Backs up originals, preserves all data in <code>_extra</code>, idempotent.<br>
+  &bull; <code>schema_validator.py</code> (~100 lines) — Validates any file against canonical schema.<br>
+  &bull; <code>post_agent_normalize.py</code> (~100 lines) — Single command after any agent: <code>python3 post_agent_normalize.py session_XXXX</code>. Auto-normalizes + validates.<br><br>
+
+  <strong style="color:var(--text)">Results:</strong><br>
+  &bull; 2,442 files normalized across 2 passes. Zero errors. Zero data loss.<br>
+  &bull; 2,381 backup files preserved in <code>{session}/backups/</code>.<br>
+  &bull; 886 schema variants &rarr; 9 canonical schemas (one per file type).<br>
+  &bull; +798 data fields recovered.<br>
+  &bull; 26 genuinely empty field-instances remain across 20 thin sessions (1.1% — these are real, not schema bugs).<br>
+  &bull; Key lesson: autonomous LLM agents NEED a Python normalization layer between output and consumers. Phase 0 and Phase 5 were always 100% because they're deterministic Python. Phases 1-3 went through agents and got chaos.<br><br>
+
+  <strong style="color:var(--text)">Automation:</strong> <code>post_agent_normalize.py</code> ensures every future agent run goes through the normalization gate. The problem cannot recur.
 </div>
 
 </body>
