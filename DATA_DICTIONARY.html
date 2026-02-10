@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperdocs — Data Dictionary</title>
+<style>
+:root{--bg:#0f1117;--s1:#1a1d27;--s2:#232736;--bdr:#2e3348;--txt:#e2e4ed;--dim:#8b8fa3;--grn:#00b894;--grn-d:rgba(0,184,148,0.12);--ylw:#fdcb6e;--ylw-d:rgba(253,203,110,0.12);--red:#e17055;--red-d:rgba(225,112,85,0.12);--blu:#74b9ff;--blu-d:rgba(116,185,255,0.12);--acc:#6c5ce7;--acc-d:rgba(108,92,231,0.12)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;padding:0;line-height:1.6}
+.top{background:var(--s1);border-bottom:1px solid var(--bdr);padding:16px 32px;position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:16px}
+.top h1{font-size:1.2rem;font-weight:700;background:linear-gradient(90deg,#6c5ce7,#74b9ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.top input{flex:1;max-width:400px;padding:6px 12px;border-radius:6px;border:1px solid var(--bdr);background:var(--s2);color:var(--txt);font-size:0.85rem;outline:none}
+.top input:focus{border-color:var(--acc)}
+.prov-legend{display:flex;gap:12px;margin-left:auto;font-size:0.75rem}
+.prov{padding:2px 8px;border-radius:4px;font-weight:600;font-size:0.7rem;letter-spacing:0.05em}
+.prov-C{background:var(--grn-d);color:var(--grn)}
+.prov-E{background:var(--blu-d);color:var(--blu)}
+.prov-I{background:var(--ylw-d);color:var(--ylw)}
+.prov-A{background:var(--acc-d);color:#a29bfe}
+.prov-X{background:var(--s2);color:var(--dim)}
+.main{max-width:1300px;margin:0 auto;padding:24px 32px 80px}
+.sec{margin:40px 0 16px;display:flex;align-items:center;gap:12px}
+.sec h2{font-size:1.2rem;font-weight:600;white-space:nowrap}
+.sec .line{flex:1;height:1px;background:var(--bdr)}
+.sec .badge{font-size:0.7rem;padding:2px 10px;border-radius:12px;background:var(--s2);color:var(--dim)}
+.file-card{background:var(--s1);border:1px solid var(--bdr);border-radius:12px;margin:16px 0;overflow:hidden}
+.file-header{padding:16px 20px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.file-header:hover{background:var(--s2)}
+.file-name{font-family:'SF Mono',monospace;font-weight:600;font-size:0.95rem}
+.file-meta{display:flex;gap:8px;align-items:center}
+.file-size{font-size:0.75rem;color:var(--dim)}
+.file-phase{font-size:0.7rem;padding:2px 8px;border-radius:4px}
+.ph0{background:var(--grn-d);color:var(--grn)}
+.ph1{background:var(--acc-d);color:#a29bfe}
+.ph2{background:var(--ylw-d);color:var(--ylw)}
+.ph3{background:var(--blu-d);color:var(--blu)}
+.ph4{background:rgba(253,121,168,0.15);color:#fd79a8}
+.ph5{background:var(--red-d);color:var(--red)}
+.phX{background:var(--s2);color:var(--dim)}
+.file-body{padding:16px 20px;display:none}
+.file-body.open{display:block}
+.file-desc{color:var(--dim);font-size:0.9rem;margin-bottom:16px}
+.field-table{width:100%;border-collapse:collapse;font-size:0.82rem}
+.field-table th{text-align:left;padding:8px 10px;color:var(--dim);border-bottom:2px solid var(--bdr);font-weight:500;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em}
+.field-table td{padding:7px 10px;border-bottom:1px solid var(--bdr);vertical-align:top}
+.field-table tr:last-child td{border-bottom:none}
+.field-table tr:hover{background:rgba(108,92,231,0.05)}
+.fname{font-family:'SF Mono',monospace;font-size:0.8rem;color:var(--txt);font-weight:500}
+.ftype{font-family:'SF Mono',monospace;font-size:0.75rem;color:var(--blu)}
+.fsample{font-family:'SF Mono',monospace;font-size:0.72rem;color:var(--dim);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fmissing{font-size:0.78rem;color:var(--dim)}
+.fmissing .warn{color:var(--ylw)}
+.fmissing .absent{color:var(--red)}
+.note-box{background:var(--s2);border-radius:8px;padding:12px 16px;margin:12px 0;font-size:0.85rem;color:var(--dim);border-left:3px solid var(--ylw)}
+.note-box.warn{border-left-color:var(--red)}
+.note-box strong{color:var(--txt)}
+.query-card{background:var(--s1);border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;margin:8px 0}
+.query-q{font-weight:500;font-size:0.9rem;margin-bottom:4px}
+.query-a{font-family:'SF Mono',monospace;font-size:0.8rem;color:var(--blu)}
+.query-cat{font-size:0.7rem;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:8px}
+.qc-file{background:var(--grn-d);color:var(--grn)}
+.qc-session{background:var(--blu-d);color:var(--blu)}
+.qc-cross{background:var(--acc-d);color:#a29bfe}
+.qc-behavior{background:var(--ylw-d);color:var(--ylw)}
+.qc-arch{background:var(--red-d);color:var(--red)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}.prov-legend{display:none}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>Data Dictionary</h1>
+  <input type="text" id="search" placeholder="Search fields, files, types..." oninput="filterAll(this.value)">
+  <div class="prov-legend">
+    <span class="prov prov-C">C Computed</span>
+    <span class="prov prov-E">E Extracted</span>
+    <span class="prov prov-I">I Interpreted</span>
+    <span class="prov prov-A">A Aggregated</span>
+    <span class="prov prov-X">-- Absent</span>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ═══ PROVENANCE RULES ═══ -->
+<div class="sec"><h2>Provenance Categories</h2><div class="line"></div></div>
+
+<div class="grid2">
+  <div class="file-card" style="border-left:3px solid var(--grn)">
+    <div style="padding:16px 20px">
+      <div><span class="prov prov-C">C</span> <strong>COMPUTED</strong></div>
+      <div style="color:var(--dim);font-size:0.85rem;margin-top:8px">Deterministic Python calculation. Reproducible. Run the same input, get the same output.</div>
+      <div style="margin-top:8px;font-size:0.82rem"><strong>0 means:</strong> Genuinely zero &bull; <strong>null means:</strong> Bug &bull; <strong>[] means:</strong> Genuinely empty</div>
+      <div style="color:var(--dim);font-size:0.8rem;margin-top:4px">Examples: content_length, caps_ratio, filter_tier, filter_score, content_hash</div>
+    </div>
+  </div>
+  <div class="file-card" style="border-left:3px solid var(--blu)">
+    <div style="padding:16px 20px">
+      <div><span class="prov prov-E">E</span> <strong>EXTRACTED</strong></div>
+      <div style="color:var(--dim);font-size:0.85rem;margin-top:8px">Regex/AST pattern match. May have false negatives — pattern exists but regex didn't catch it.</div>
+      <div style="margin-top:8px;font-size:0.82rem"><strong>0 means:</strong> Pattern not found (may still exist) &bull; <strong>null means:</strong> Extractor didn't run &bull; <strong>[] means:</strong> No patterns matched</div>
+      <div style="color:var(--dim);font-size:0.8rem;margin-top:4px">Examples: metadata.files, metadata.error, profanity, func_overlap, import_overlap</div>
+    </div>
+  </div>
+  <div class="file-card" style="border-left:3px solid var(--ylw)">
+    <div style="padding:16px 20px">
+      <div><span class="prov prov-I">I</span> <strong>INTERPRETED</strong></div>
+      <div style="color:var(--dim);font-size:0.85rem;margin-top:8px">LLM judgment. Subjective. Not reproducible. Different model or temperature = different result.</div>
+      <div style="margin-top:8px;font-size:0.82rem"><strong>0 means:</strong> LLM said zero (opinion) &bull; <strong>null means:</strong> Agent didn't process this &bull; <strong>[] means:</strong> LLM found nothing (opinion)</div>
+      <div style="color:var(--dim);font-size:0.8rem;margin-top:4px">Examples: is_pivot, story_arc, confidence_signal, action_vector, idea nodes</div>
+    </div>
+  </div>
+  <div class="file-card" style="border-left:3px solid #a29bfe">
+    <div style="padding:16px 20px">
+      <div><span class="prov prov-A">A</span> <strong>AGGREGATED</strong></div>
+      <div style="color:var(--dim);font-size:0.85rem;margin-top:8px">Combination of other fields. Only as reliable as its inputs. If inputs are ABSENT, aggregation is meaningless.</div>
+      <div style="margin-top:8px;font-size:0.82rem"><strong>0 means:</strong> All inputs zero OR inputs missing &bull; <strong>null means:</strong> Aggregation didn't run &bull; <strong>[] means:</strong> No inputs existed</div>
+      <div style="color:var(--dim);font-size:0.8rem;margin-top:4px">Examples: total_sessions, merged_decisions, cumulative_summary, tier_distribution</div>
+    </div>
+  </div>
+</div>
+<div class="file-card" style="border-left:3px solid var(--red);margin-top:12px">
+  <div style="padding:16px 20px">
+    <div><span class="prov prov-X">--</span> <strong>ABSENT</strong></div>
+    <div style="color:var(--dim);font-size:0.85rem;margin-top:8px">Field exists in schema but value was never collected. <strong style="color:var(--red)">You cannot distinguish between "genuinely zero" and "not collected."</strong> This is the worst category — it looks like data but isn't.</div>
+    <div style="margin-top:8px;font-size:0.82rem"><strong>0 means:</strong> UNKNOWN &bull; <strong>null means:</strong> UNKNOWN &bull; <strong>[] means:</strong> UNKNOWN</div>
+    <div style="color:var(--dim);font-size:0.8rem;margin-top:4px">Examples: total_mentions in cross_session_file_index (often 0 when mentions exist but weren't counted)</div>
+  </div>
+</div>
+
+<!-- ═══ PHASE 0 ═══ -->
+<div class="sec"><h2>Phase 0 — Deterministic Prep</h2><div class="line"></div><span class="badge">9 files, $0, Python</span></div>
+
+<div class="file-card" data-search="enriched_session messages metadata behavior filter tier">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">enriched_session.json</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">The master record — every message with full metadata</span></div>
+    <div class="file-meta"><span class="file-size">~8 MB per session</span><span class="file-phase ph0">Phase 0</span></div>
+  </div>
+  <div class="file-body">
+    <div class="file-desc">Produced by <code>deterministic_prep.py</code>. Contains every message from the session JSONL with enriched metadata: message filter tier, 50+ regex-extracted signals, and Claude behavior analysis. This is the input to all Phase 1 agents. Sample session: 1,317 messages (392 user, 925 assistant).</div>
+    <table class="field-table">
+      <tr><th>Field</th><th>Type</th><th>Prov</th><th>Sample</th><th>If 0 / null / empty</th></tr>
+      <tr><td class="fname">messages[].index</td><td class="ftype">int</td><td><span class="prov prov-C">C</span></td><td class="fsample">50</td><td class="fmissing">Never missing</td></tr>
+      <tr><td class="fname">messages[].role</td><td class="ftype">enum: user|assistant</td><td><span class="prov prov-C">C</span></td><td class="fsample">"user"</td><td class="fmissing">Never missing</td></tr>
+      <tr><td class="fname">messages[].content</td><td class="ftype">string (free text)</td><td><span class="prov prov-C">C</span></td><td class="fsample">[raw message text]</td><td class="fmissing">"" = tool-only msg, no user text</td></tr>
+      <tr><td class="fname">messages[].content_length</td><td class="ftype">int (chars)</td><td><span class="prov prov-C">C</span></td><td class="fsample">2847</td><td class="fmissing">0 = empty message (legitimate)</td></tr>
+      <tr><td class="fname">messages[].content_hash</td><td class="ftype">string (hex, 16 chars)</td><td><span class="prov prov-C">C</span></td><td class="fsample">"e3b0c44298fc1c14"</td><td class="fmissing">Never missing</td></tr>
+      <tr><td class="fname">messages[].timestamp</td><td class="ftype">string (ISO 8601)</td><td><span class="prov prov-C">C</span></td><td class="fsample">"2026-01-15T20:28:24"</td><td class="fmissing">null = timestamp not in source JSONL</td></tr>
+      <tr><td class="fname">messages[].uuid</td><td class="ftype">string (UUID v4)</td><td><span class="prov prov-C">C</span></td><td class="fsample">"93cf0e06-f303-..."</td><td class="fmissing">"" = not recorded in source JSONL</td></tr>
+      <tr><td class="fname">messages[].model</td><td class="ftype">string (model ID)</td><td><span class="prov prov-C">C</span></td><td class="fsample">"claude-opus-4-5-20250..."</td><td class="fmissing">null = user message OR not recorded</td></tr>
+      <tr><td class="fname">messages[].has_thinking</td><td class="ftype">bool</td><td><span class="prov prov-C">C</span></td><td class="fsample">true</td><td class="fmissing">false = no thinking block in response</td></tr>
+      <tr><td class="fname">messages[].thinking_length</td><td class="ftype">int (chars)</td><td><span class="prov prov-C">C</span></td><td class="fsample">4200</td><td class="fmissing">0 = no thinking content</td></tr>
+      <tr><td class="fname">messages[].filter_tier</td><td class="ftype">int (1-4)</td><td><span class="prov prov-C">C</span></td><td class="fsample">3</td><td class="fmissing">1 = lowest tier (SKIP). Never missing.</td></tr>
+      <tr><td class="fname">messages[].filter_tier_name</td><td class="ftype">enum: SKIP|BASIC|STANDARD|PRIORITY</td><td><span class="prov prov-C">C</span></td><td class="fsample">"STANDARD"</td><td class="fmissing">Never missing</td></tr>
+      <tr><td class="fname">messages[].filter_score</td><td class="ftype">int (weighted)</td><td><span class="prov prov-C">C</span></td><td class="fsample">7</td><td class="fmissing">0 = no keyword signals detected</td></tr>
+      <tr><td class="fname">messages[].filter_signals</td><td class="ftype">list of strings</td><td><span class="prov prov-E">E</span></td><td class="fsample">["failure:2","code:1"]</td><td class="fmissing">[] = no keyword categories matched (regex may have missed some)</td></tr>
+      <tr><td class="fname">messages[].metadata.files</td><td class="ftype">list of strings (filenames)</td><td><span class="prov prov-E">E</span></td><td class="fsample">["gate_control.py","config.py"]</td><td class="fmissing"><span class="warn">[] = regex found no files. May be false negative — file could be referenced by description not name.</span></td></tr>
+      <tr><td class="fname">messages[].metadata.error</td><td class="ftype">bool</td><td><span class="prov prov-E">E</span></td><td class="fsample">true</td><td class="fmissing"><span class="warn">false = no error KEYWORDS found. Does NOT mean "no errors occurred."</span></td></tr>
+      <tr><td class="fname">messages[].metadata.error_types</td><td class="ftype">list of strings (exception names)</td><td><span class="prov prov-E">E</span></td><td class="fsample">["TypeError","ValueError"]</td><td class="fmissing">[] = no Python exception names detected</td></tr>
+      <tr><td class="fname">messages[].metadata.traceback</td><td class="ftype">bool</td><td><span class="prov prov-E">E</span></td><td class="fsample">false</td><td class="fmissing">false = no "Traceback (most recent call last)" pattern</td></tr>
+      <tr><td class="fname">messages[].metadata.caps_ratio</td><td class="ftype">float (0.0-1.0)</td><td><span class="prov prov-C">C</span></td><td class="fsample">0.42</td><td class="fmissing">0.0 = all lowercase alpha chars</td></tr>
+      <tr><td class="fname">messages[].metadata.profanity</td><td class="ftype">bool</td><td><span class="prov prov-E">E</span></td><td class="fsample">true</td><td class="fmissing">false = regex found no profanity patterns</td></tr>
+      <tr><td class="fname">messages[].metadata.emergency_intervention</td><td class="ftype">bool</td><td><span class="prov prov-E">E</span></td><td class="fsample">true</td><td class="fmissing">false = not flagged as emergency. Requires BOTH urgency signal + intervention pattern.</td></tr>
+      <tr><td class="fname">messages[].metadata.emergency_reason</td><td class="ftype">string (coded)</td><td><span class="prov prov-E">E</span></td><td class="fsample">"claude_wrong,CAPS,3!"</td><td class="fmissing">"" = not an emergency</td></tr>
+      <tr><td class="fname">messages[].behavior_flags</td><td class="ftype">object | null</td><td><span class="prov prov-E">E</span></td><td class="fsample">{confusion:false,...}</td><td class="fmissing">null = this is a USER message (behavior only analyzed for assistant msgs)</td></tr>
+      <tr><td class="fname">messages[].behavior_flags.confusion</td><td class="ftype">bool</td><td><span class="prov prov-E">E</span></td><td class="fsample">false</td><td class="fmissing"><span class="warn">false = regex didn't find confusion phrases. Claude may still be confused.</span></td></tr>
+      <tr><td class="fname">messages[].behavior_flags.overconfident</td><td class="ftype">bool</td><td><span class="prov prov-E">E</span></td><td class="fsample">true</td><td class="fmissing"><span class="warn">false = no certainty language detected. Claude may still be overconfident without using those words.</span></td></tr>
+      <tr><td class="fname">messages[].behavior_flags.damage_score</td><td class="ftype">int (0-10)</td><td><span class="prov prov-C">C</span></td><td class="fsample">4</td><td class="fmissing">0 = no damage signals detected. Formula: confusion(+2) + forgetting(+3) + assumptions(+1) + apologies(+2) + rushing(+2) + overconfidence(+2) - clarifying(-1) - questions(-1) - admits_mistake(-1)</td></tr>
+    </table>
+    <div class="note-box">
+      <strong>Session Stats</strong> (in same file, under <code>session_stats</code>):<br>
+      <code>total_messages</code> <span class="prov prov-C">C</span> int (sample: 1317) &bull;
+      <code>user_messages</code> <span class="prov prov-C">C</span> int (sample: 392) &bull;
+      <code>assistant_messages</code> <span class="prov prov-C">C</span> int (sample: 925) &bull;
+      <code>tier_distribution</code> <span class="prov prov-A">A</span> {tier: count} &bull;
+      <code>frustration_peaks</code> <span class="prov prov-E">E</span> list (caps_ratio > 0.3 OR profanity) &bull;
+      <code>emergency_interventions</code> <span class="prov prov-E">E</span> list &bull;
+      <code>file_mention_counts</code> <span class="prov prov-E">E</span> {filename: count} &bull;
+      <code>total_input_tokens</code> <span class="prov prov-C">C</span> int (0 = not in JSONL) &bull;
+      <code>total_output_tokens</code> <span class="prov prov-C">C</span> int
+    </div>
+  </div>
+</div>
+
+<div class="file-card" data-search="session_summary safe tier2 tier4 condensed emergency user_messages batches">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">8 supporting Phase 0 files</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">Derived views of enriched_session.json</span></div>
+    <div class="file-meta"><span class="file-phase ph0">Phase 0</span></div>
+  </div>
+  <div class="file-body">
+    <table class="field-table">
+      <tr><th>File</th><th>Size</th><th>Contents</th><th>Why it exists</th></tr>
+      <tr><td class="fname">session_summary.json</td><td>~1 KB</td><td>session_stats only, no messages</td><td>Lightweight summary for agents to read without loading 8MB</td></tr>
+      <tr><td class="fname">safe_tier4.json</td><td>~2-50 KB</td><td>Priority messages, metadata + 200-char preview only</td><td>API-safe: won't trigger content policy violations from profanity</td></tr>
+      <tr><td class="fname">safe_condensed.json</td><td>~5-30 KB</td><td>All messages, metadata only, no raw content</td><td>API-safe version of full conversation timeline</td></tr>
+      <tr><td class="fname">tier2plus_messages.json</td><td>~1-8 MB</td><td>Full content for tier 2+ messages</td><td>Subset of enriched_session with low-value messages removed</td></tr>
+      <tr><td class="fname">tier4_priority_messages.json</td><td>~0.5-2 MB</td><td>Full content for tier 4 only</td><td>The most important messages only</td></tr>
+      <tr><td class="fname">user_messages_tier2plus.json</td><td>~0.1-2 MB</td><td>User messages only, tier 2+</td><td>For user frustration/reaction analysis</td></tr>
+      <tr><td class="fname">emergency_contexts.json</td><td>33 bytes - 500 KB</td><td>5-message windows around emergencies</td><td>Full context for emergency intervention analysis</td></tr>
+      <tr><td class="fname">conversation_condensed.json</td><td>~2-5 MB</td><td>All messages, content capped by tier</td><td>Tier 4: full, Tier 3: 1000 chars, Tier 2: 300, Tier 1: 100</td></tr>
+    </table>
+    <div class="note-box warn">
+      <strong>33-byte emergency_contexts.json</strong> — If this file is 33 bytes (<code>{{"count":0,"windows":[]}}</code>), it means either (a) genuinely no emergency interventions in this session, OR (b) the processing didn't detect them. Check <code>enriched_session.json → session_stats.emergency_interventions</code> to verify.
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PHASE 1 ═══ -->
+<div class="sec"><h2>Phase 1 — Parallel Extraction</h2><div class="line"></div><span class="badge">4 files, Opus agents</span></div>
+
+<div class="file-card" data-search="thread_extractions ideas reactions software code plans pivot failure breakthrough frustration">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">thread_extractions.json</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">6 analytical threads + 6 markers per message</span></div>
+    <div class="file-meta"><span class="file-size">~4-35 KB</span><span class="file-phase ph1">Phase 1 — Opus</span></div>
+  </div>
+  <div class="file-body">
+    <div class="file-desc">Produced by <strong>Thread Analyst agent (Opus 4.6)</strong>. Decomposes every message into 6 threads (ideas, reactions, software, code, plans, Claude behavior) and tags 6 boolean markers. All values are LLM opinions.</div>
+    <table class="field-table">
+      <tr><th>Field</th><th>Type</th><th>Prov</th><th>If empty</th></tr>
+      <tr><td class="fname">threads[].message_index</td><td class="ftype">int</td><td><span class="prov prov-C">C</span></td><td class="fmissing">Never missing</td></tr>
+      <tr><td class="fname">threads[].ideas</td><td class="ftype">list of strings</td><td><span class="prov prov-I">I</span></td><td class="fmissing"><span class="warn">[] = Opus found no ideas. Opus may have missed some.</span></td></tr>
+      <tr><td class="fname">threads[].reactions</td><td class="ftype">list of strings</td><td><span class="prov prov-I">I</span></td><td class="fmissing">[] = no emotional reactions detected (Opus opinion)</td></tr>
+      <tr><td class="fname">threads[].software</td><td class="ftype">list of strings</td><td><span class="prov prov-I">I</span></td><td class="fmissing">[] = no software decisions (Opus opinion)</td></tr>
+      <tr><td class="fname">threads[].code</td><td class="ftype">list of strings</td><td><span class="prov prov-I">I</span></td><td class="fmissing">[] = no code references (Opus opinion)</td></tr>
+      <tr><td class="fname">threads[].plans</td><td class="ftype">list of strings</td><td><span class="prov prov-I">I</span></td><td class="fmissing">[] = no planning activity (Opus opinion)</td></tr>
+      <tr><td class="fname">threads[].is_pivot</td><td class="ftype">bool</td><td><span class="prov prov-I">I</span></td><td class="fmissing"><span class="warn">false = Opus didn't classify as pivot. Message may still BE a pivot.</span></td></tr>
+      <tr><td class="fname">threads[].is_failure</td><td class="ftype">bool</td><td><span class="prov prov-I">I</span></td><td class="fmissing">false = Opus saw no failure (Opus opinion)</td></tr>
+      <tr><td class="fname">threads[].is_breakthrough</td><td class="ftype">bool</td><td><span class="prov prov-I">I</span></td><td class="fmissing">false = Opus saw no breakthrough (Opus opinion)</td></tr>
+      <tr><td class="fname">threads[].frustration_level</td><td class="ftype">int (0-10)</td><td><span class="prov prov-I">I</span></td><td class="fmissing">0 = Opus detected no frustration (Opus opinion)</td></tr>
+    </table>
+    <div class="note-box"><strong>Every value in this file is an LLM opinion.</strong> A different Opus run on the same data may produce different classifications. Ground truth verification (Phase 5) checks some of these against Python-verifiable facts.</div>
+  </div>
+</div>
+
+<div class="file-card" data-search="semantic_primitives action confidence emotion intent friction decision disclosure">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">semantic_primitives.json</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">7 dimensions per message</span></div>
+    <div class="file-meta"><span class="file-size">~4-20 KB</span><span class="file-phase ph1">Phase 1 — Haiku/Python</span></div>
+  </div>
+  <div class="file-body">
+    <div class="file-desc">Produced by <strong>Primitives Tagger agent</strong>. Tags every message with 7 semantic primitives — the most structured data in the pipeline. Can run as pure Python ($0) or with Haiku enhancement.</div>
+    <table class="field-table">
+      <tr><th>Field</th><th>Type</th><th>Prov</th><th>Values</th><th>If null</th></tr>
+      <tr><td class="fname">tagged_messages[].action_vector</td><td class="ftype">enum (8 values)</td><td><span class="prov prov-I">I</span></td><td class="fsample">created | modified | debugged | refactored | discovered | decided | abandoned | reverted</td><td class="fmissing">null = agent didn't tag this message</td></tr>
+      <tr><td class="fname">tagged_messages[].confidence_signal</td><td class="ftype">enum (6 values)</td><td><span class="prov prov-I">I</span></td><td class="fsample">experimental | tentative | working | stable | proven | fragile</td><td class="fmissing">null = not tagged</td></tr>
+      <tr><td class="fname">tagged_messages[].emotional_tenor</td><td class="ftype">enum (7 values)</td><td><span class="prov prov-I">I</span></td><td class="fsample">frustrated | uncertain | curious | cautious | confident | excited | relieved</td><td class="fmissing">null = not tagged</td></tr>
+      <tr><td class="fname">tagged_messages[].intent_marker</td><td class="ftype">enum (7 values)</td><td><span class="prov prov-I">I</span></td><td class="fsample">correctness | performance | maintainability | feature | bugfix | exploration | cleanup</td><td class="fmissing">null = not tagged</td></tr>
+      <tr><td class="fname">tagged_messages[].friction_log</td><td class="ftype">string | null</td><td><span class="prov prov-I">I</span></td><td class="fsample">"Opus called per line at $0.05"</td><td class="fmissing">null = no friction detected (LLM opinion). Most messages have null.</td></tr>
+      <tr><td class="fname">tagged_messages[].decision_trace</td><td class="ftype">string | null</td><td><span class="prov prov-I">I</span></td><td class="fsample">"chose Python over Opus because V1 proved it works"</td><td class="fmissing">null = no decision made in this message (LLM opinion)</td></tr>
+      <tr><td class="fname">tagged_messages[].disclosure_pointer</td><td class="ftype">string (hash)</td><td><span class="prov prov-C">C</span></td><td class="fsample">"e3b0c44298fc1c14"</td><td class="fmissing">References the content_hash for traceability</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="file-card" data-search="geological_notes micro meso macro geological reader">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">geological_notes.json</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">Multi-resolution depth analysis</span></div>
+    <div class="file-meta"><span class="file-size">~3-15 KB</span><span class="file-phase ph1">Phase 1 — Sonnet/Opus</span></div>
+  </div>
+  <div class="file-body">
+    <div class="file-desc">Produced by <strong>Geological Reader agent</strong>. Three zoom levels: micro (single message), meso (5-message windows), macro (15-20 message arcs). Uses geological vocabulary: strata, veins, faults, fossils.</div>
+    <table class="field-table">
+      <tr><th>Field</th><th>Type</th><th>Prov</th><th>Example</th></tr>
+      <tr><td class="fname">micro[].index</td><td class="ftype">int</td><td><span class="prov prov-C">C</span></td><td class="fsample">47</td></tr>
+      <tr><td class="fname">micro[].observation</td><td class="ftype">string (narrative)</td><td><span class="prov prov-I">I</span></td><td class="fsample">"User discovers the Opus-per-line cost bug"</td></tr>
+      <tr><td class="fname">meso[].range</td><td class="ftype">string</td><td><span class="prov prov-C">C</span></td><td class="fsample">"msgs 100-105"</td></tr>
+      <tr><td class="fname">meso[].pattern</td><td class="ftype">string (narrative)</td><td><span class="prov prov-I">I</span></td><td class="fsample">"Error-correction cycle: 3 failed attempts before fix"</td></tr>
+      <tr><td class="fname">macro[].range</td><td class="ftype">string</td><td><span class="prov prov-C">C</span></td><td class="fsample">"msgs 1-200"</td></tr>
+      <tr><td class="fname">macro[].arc</td><td class="ftype">string (narrative)</td><td><span class="prov prov-I">I</span></td><td class="fsample">"From P05 orchestrator design through implementation to crisis"</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="file-card" data-search="explorer_notes observations abandoned">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">explorer_notes.json</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">Open-ended observations</span></div>
+    <div class="file-meta"><span class="file-size">~2-10 KB</span><span class="file-phase ph1">Phase 1 — Opus</span></div>
+  </div>
+  <div class="file-body">
+    <div class="file-desc">Produced by <strong>Free Explorer agent (Opus)</strong>. Unstructured observations about patterns, abandoned ideas, and anomalies the other agents missed. No fixed schema — content varies per session.</div>
+    <div class="note-box">This file has no fixed field schema. All content is <span class="prov prov-I">I</span> INTERPRETED. The explorer writes whatever it finds interesting.</div>
+  </div>
+</div>
+
+<!-- ═══ PHASE 2 ═══ -->
+<div class="sec"><h2>Phase 2 — Synthesis</h2><div class="line"></div><span class="badge">3-5 files, Opus + Python ($0)</span></div>
+
+<div class="file-card" data-search="idea_graph nodes edges transitions evolved pivoted abandoned resurrected subgraphs">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">idea_graph.json</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">Directed graph of idea evolution</span></div>
+    <div class="file-meta"><span class="file-size">~5-30 KB</span><span class="file-phase ph2">Phase 2 — Opus</span></div>
+  </div>
+  <div class="file-body">
+    <div class="file-desc">Produced by <strong>Idea Graph Builder agent (Opus)</strong>. Sample session: 26 nodes, 30 edges. NOT a timeline — a directed graph where topology tells the story.</div>
+    <table class="field-table">
+      <tr><th>Field</th><th>Type</th><th>Prov</th><th>Sample</th><th>If empty</th></tr>
+      <tr><td class="fname">nodes[].id</td><td class="ftype">string (N01...)</td><td><span class="prov prov-C">C</span></td><td class="fsample">"N01"</td><td class="fmissing">Never missing</td></tr>
+      <tr><td class="fname">nodes[].label</td><td class="ftype">string (idea name)</td><td><span class="prov prov-I">I</span></td><td class="fsample">"P05 module landscape mapping"</td><td class="fmissing">Never missing</td></tr>
+      <tr><td class="fname">nodes[].description</td><td class="ftype">string (narrative)</td><td><span class="prov prov-I">I</span></td><td class="fsample">"Assistant catalogs 8 existing P05 sub-analyzers..."</td><td class="fmissing">"" = Opus didn't describe this idea</td></tr>
+      <tr><td class="fname">nodes[].message_index</td><td class="ftype">int</td><td><span class="prov prov-I">I</span></td><td class="fsample">30</td><td class="fmissing">Approximate — Opus estimated when idea first appeared</td></tr>
+      <tr><td class="fname">nodes[].confidence</td><td class="ftype">enum (5 values)</td><td><span class="prov prov-I">I</span></td><td class="fsample">"tentative"</td><td class="fmissing">Opus judgment of idea maturity</td></tr>
+      <tr><td class="fname">edges[].from</td><td class="ftype">string (node ID)</td><td><span class="prov prov-C">C</span></td><td class="fsample">"N01"</td><td class="fmissing">Never missing</td></tr>
+      <tr><td class="fname">edges[].to</td><td class="ftype">string (node ID)</td><td><span class="prov prov-C">C</span></td><td class="fsample">"N05"</td><td class="fmissing">Never missing</td></tr>
+      <tr><td class="fname">edges[].transition</td><td class="ftype">enum (10 values)</td><td><span class="prov prov-I">I</span></td><td class="fsample">evolved | pivoted | split | merged | abandoned | resurrected | constrained | expanded | concretized | abstracted</td><td class="fmissing">Opus classified the transition type</td></tr>
+      <tr><td class="fname">edges[].evidence</td><td class="ftype">string</td><td><span class="prov prov-I">I</span></td><td class="fsample">"User rejected approach at msg 150"</td><td class="fmissing">"" = Opus didn't provide evidence</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="file-card" data-search="grounded_markers warnings recommendations patterns iron_rules markers claims">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">grounded_markers.json</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">Warnings, recommendations, iron rules</span></div>
+    <div class="file-meta"><span class="file-size">~3-20 KB</span><span class="file-phase ph2">Phase 2 — Opus</span></div>
+  </div>
+  <div class="file-body">
+    <div class="file-desc">Produced by <strong>Synthesizer agent (Opus)</strong> via 6-pass temperature ramp. Sample: 18 markers. These are the actionable outputs that feed into hyperdoc @ctx annotations.</div>
+    <table class="field-table">
+      <tr><th>Field</th><th>Type</th><th>Prov</th><th>Sample</th></tr>
+      <tr><td class="fname">markers[].marker_id</td><td class="ftype">string (GM-001...)</td><td><span class="prov prov-C">C</span></td><td class="fsample">"GM-001"</td></tr>
+      <tr><td class="fname">markers[].category</td><td class="ftype">enum: architecture|behavior|risk|opportunity|decision</td><td><span class="prov prov-I">I</span></td><td class="fsample">"architecture"</td></tr>
+      <tr><td class="fname">markers[].claim</td><td class="ftype">string (assertion)</td><td><span class="prov prov-I">I</span></td><td class="fsample">"The P05 orchestrator pattern was derived from..."</td></tr>
+      <tr><td class="fname">markers[].evidence</td><td class="ftype">string (references)</td><td><span class="prov prov-I">I</span></td><td class="fsample">"thread_extractions:idea-001, plan-001"</td></tr>
+      <tr><td class="fname">markers[].confidence</td><td class="ftype">float (0-1)</td><td><span class="prov prov-I">I</span></td><td class="fsample">0.85</td></tr>
+      <tr><td class="fname">markers[].actionable_guidance</td><td class="ftype">string (recommendation)</td><td><span class="prov prov-I">I</span></td><td class="fsample">"Maintain the shared types pattern across all enforcers"</td></tr>
+    </table>
+    <div class="note-box"><strong>Ground truth target:</strong> These markers are what Phase 5 verifies. The <code>confidence</code> is Opus's self-assessment. Ground truth provides the <em>independent</em> credibility score.</div>
+  </div>
+</div>
+
+<div class="file-card" data-search="code_similarity similarity patterns function_clone dead_copy interface_mismatch fingerprint">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">code_similarity_index.json</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">All-pairs code comparison — 14,176 matches</span></div>
+    <div class="file-meta"><span class="file-size">7.9 MB</span><span class="file-phase ph2">Phase 2 — Python $0</span></div>
+  </div>
+  <div class="file-body">
+    <div class="file-desc">Produced by <code>code_similarity.py</code>. Reads SOURCE FILES (not chat history). AST fingerprinting + difflib. 341 files, 57,970 pairs compared. <strong>Independent of the chat pipeline.</strong></div>
+    <table class="field-table">
+      <tr><th>Field</th><th>Type</th><th>Prov</th><th>Range</th><th>If 0</th></tr>
+      <tr><td class="fname">matches[].file_a</td><td class="ftype">string (filename.py)</td><td><span class="prov prov-C">C</span></td><td class="fsample">"gate_control.py"</td><td class="fmissing">Never missing</td></tr>
+      <tr><td class="fname">matches[].signals.func_overlap</td><td class="ftype">float (0-1)</td><td><span class="prov prov-E">E</span></td><td class="fsample">0.0-1.0 (Jaccard)</td><td class="fmissing">0 = no shared function names</td></tr>
+      <tr><td class="fname">matches[].signals.text_similarity</td><td class="ftype">float (0-1)</td><td><span class="prov prov-E">E</span></td><td class="fsample">0.0-1.0 (difflib ratio)</td><td class="fmissing">0 = signal_score too low to run text comparison, OR completely different</td></tr>
+      <tr><td class="fname">matches[].signals.import_overlap</td><td class="ftype">float (0-1)</td><td><span class="prov prov-E">E</span></td><td class="fsample">0.0-1.0 (Jaccard)</td><td class="fmissing">0 = no shared imports</td></tr>
+      <tr><td class="fname">matches[].signals.signal_score</td><td class="ftype">float (weighted)</td><td><span class="prov prov-C">C</span></td><td class="fsample">0.0-10.0</td><td class="fmissing">0 = no signals whatsoever (pair not stored)</td></tr>
+      <tr><td class="fname">matches[].signals.shared_functions</td><td class="ftype">list of strings</td><td><span class="prov prov-E">E</span></td><td class="fsample">["do_GET","send_json"]</td><td class="fmissing">[] = no common function names (excludes __init__, main, to_dict)</td></tr>
+      <tr><td class="fname">matches[].patterns</td><td class="ftype">list of enums (10 types)</td><td><span class="prov prov-C">C</span></td><td class="fsample">["function_clone","partial_extraction"]</td><td class="fmissing">[] = signals present but no pattern threshold met ("unclassified")</td></tr>
+      <tr><td class="fname">file_stats{}.isolation_score</td><td class="ftype">float (0-1)</td><td><span class="prov prov-C">C</span></td><td class="fsample">1.0 = completely isolated</td><td class="fmissing">0.0 = 10+ matches (well-connected file)</td></tr>
+    </table>
+    <div class="note-box">
+      <strong>10 pattern types and what they mean:</strong><br>
+      <strong>dead_copy</strong> (>90% text): near-identical, one should be deleted &bull;
+      <strong>evolution_pair</strong> (60-90%): same concept, different version &bull;
+      <strong>function_clone</strong> (>50% shared functions): shared logic &bull;
+      <strong>partial_extraction</strong> (B ⊂ A at >80%): refactored subset &bull;
+      <strong>template_variant</strong> (same structure, <30% text): parameterized copies &bull;
+      <strong>import_twin</strong> (>70% imports, <30% functions): same dependencies &bull;
+      <strong>name_only</strong> (name overlap, <5% code): rewritten from scratch &bull;
+      <strong>interface_mismatch</strong> (shared names, <30% text): implementations diverged &bull;
+      <strong>structural_sibling</strong> (moderate multi-signal): co-evolved &bull;
+      <strong>shared_ecosystem</strong> (same imports + moderate overlap): part of same system
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PHASE 3-4 ═══ -->
+<div class="sec"><h2>Phase 3-4 — Hyperdoc Writing</h2><div class="line"></div><span class="badge">Dossiers + 456 Hyperdocs</span></div>
+
+<div class="file-card" data-search="file_dossiers dossier story_arc decisions warnings confidence related_files claude_behavior">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">file_dossiers.json</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">Per-file analysis for this session's top files</span></div>
+    <div class="file-meta"><span class="file-phase ph3">Phase 3 — Opus</span></div>
+  </div>
+  <div class="file-body">
+    <div class="file-desc">Produced by <strong>File Mapper agent (Opus)</strong>. Maps Phase 1-2 findings to individual files.</div>
+    <table class="field-table">
+      <tr><th>Field</th><th>Type</th><th>Prov</th><th>If empty</th></tr>
+      <tr><td class="fname">dossiers{file}.total_mentions</td><td class="ftype">int</td><td><span class="prov prov-A">A</span></td><td class="fmissing"><span class="warn">0 = file not mentioned in thread extractions, OR agent didn't count. UNRELIABLE for some sessions.</span></td></tr>
+      <tr><td class="fname">dossiers{file}.significance</td><td class="ftype">enum: high|medium|low</td><td><span class="prov prov-I">I</span></td><td class="fmissing">Opus judgment</td></tr>
+      <tr><td class="fname">dossiers{file}.story_arc</td><td class="ftype">string (narrative)</td><td><span class="prov prov-I">I</span></td><td class="fmissing">"" = Opus didn't write a story arc</td></tr>
+      <tr><td class="fname">dossiers{file}.key_decisions</td><td class="ftype">list of strings</td><td><span class="prov prov-I">I</span></td><td class="fmissing">[] = no decisions identified (Opus opinion)</td></tr>
+      <tr><td class="fname">dossiers{file}.confidence</td><td class="ftype">enum</td><td><span class="prov prov-I">I</span></td><td class="fmissing">Opus assessment of file stability</td></tr>
+      <tr><td class="fname">dossiers{file}.related_files</td><td class="ftype">list of strings (filenames)</td><td><span class="prov prov-I">I</span></td><td class="fmissing">[] = Opus found no related files</td></tr>
+      <tr><td class="fname">dossiers{file}.claude_behavior</td><td class="ftype">object</td><td><span class="prov prov-I">I</span></td><td class="fmissing">Opus's assessment of how Claude behaved on this file</td></tr>
+    </table>
+    <div class="note-box warn"><strong>Schema warning:</strong> Two incompatible formats exist across sessions. 56% use dict-keyed dossiers (<code>dossiers: {{"file.py": ...}}</code>), 44% use list format (<code>dossiers: [{{filename: "file.py", ...}}]</code>). <code>aggregate_dossiers.py</code> normalizes both.</div>
+  </div>
+</div>
+
+<div class="file-card" data-search="hyperdoc layers cumulative seed historical realtime header inline_annotations footer">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">{filename}_hyperdoc.json</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">Layered hyperdoc (v2 format) — 456 files</span></div>
+    <div class="file-meta"><span class="file-size">~15-55 KB each</span><span class="file-phase ph4">Phase 4 — Opus</span></div>
+  </div>
+  <div class="file-body">
+    <div class="file-desc">Produced by <strong>Hyperdoc Writer agents (Opus, one per file)</strong>. Migrated to layered format v2 on Feb 9, 2026. Layers accumulate — each pipeline run appends, never overwrites.</div>
+    <table class="field-table">
+      <tr><th>Field</th><th>Type</th><th>Prov</th><th>Notes</th></tr>
+      <tr><td class="fname">file_path</td><td class="ftype">string (source path)</td><td><span class="prov prov-C">C</span></td><td class="fmissing">Original path of the source file</td></tr>
+      <tr><td class="fname">format_version</td><td class="ftype">int (2)</td><td><span class="prov prov-C">C</span></td><td class="fmissing">2 = layered format. 1 = old snapshot (should not exist anymore).</td></tr>
+      <tr><td class="fname">layers[]</td><td class="ftype">list of layer objects</td><td><span class="prov prov-A">A</span></td><td class="fmissing">Grows over time. Never shrinks.</td></tr>
+      <tr><td class="fname">layers[].type</td><td class="ftype">enum: historical|realtime|seed|verification</td><td><span class="prov prov-C">C</span></td><td class="fmissing"><strong>historical</strong> = from batch processing. <strong>seed</strong> = created before code was written. <strong>realtime</strong> = from continuous processing. <strong>verification</strong> = ground truth results.</td></tr>
+      <tr><td class="fname">layers[].session_id</td><td class="ftype">string</td><td><span class="prov prov-C">C</span></td><td class="fmissing">"batch_historical" for migrated layers</td></tr>
+      <tr><td class="fname">layers[].header</td><td class="ftype">string (multi-line @ctx + narrative)</td><td><span class="prov prov-I">I</span></td><td class="fmissing">"" = Opus didn't write a header</td></tr>
+      <tr><td class="fname">layers[].inline_annotations</td><td class="ftype">list of objects (per-function)</td><td><span class="prov prov-I">I</span></td><td class="fmissing">[] = no functions annotated. For .json/.md files this is expected (0 functions).</td></tr>
+      <tr><td class="fname">layers[].footer</td><td class="ftype">string (multi-line)</td><td><span class="prov prov-I">I</span></td><td class="fmissing">"" = Opus didn't write a footer</td></tr>
+      <tr><td class="fname">cumulative_summary.total_layers</td><td class="ftype">int</td><td><span class="prov prov-A">A</span></td><td class="fmissing">Count of layers array</td></tr>
+      <tr><td class="fname">cumulative_summary.total_sessions</td><td class="ftype">int</td><td><span class="prov prov-A">A</span></td><td class="fmissing"><span class="warn">Extracted from header @ctx:cross_session_total. May not match actual session count if header didn't include it.</span></td></tr>
+      <tr><td class="fname">cumulative_summary.layer_types</td><td class="ftype">object {type: count}</td><td><span class="prov prov-A">A</span></td><td class="fmissing">Distribution of layer types</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ PHASE 5 ═══ -->
+<div class="sec"><h2>Phase 5 — Ground Truth</h2><div class="line"></div><span class="badge">Verification, $0, Python</span></div>
+
+<div class="file-card" data-search="ground_truth verification credibility verified contradicted claims gap_report">
+  <div class="file-header" onclick="toggle(this)">
+    <div><span class="file-name">ground_truth_verification.json</span><span style="color:var(--dim);font-size:0.8rem;margin-left:12px">Independent Python verification of pipeline claims</span></div>
+    <div class="file-meta"><span class="file-size">~5-50 KB</span><span class="file-phase ph5">Phase 5 — Python $0</span></div>
+  </div>
+  <div class="file-body">
+    <div class="file-desc">Produced by <code>run_verification.py</code>. Python checks: AST for bare excepts, regex for model strings, function existence, truncation limits. 261 sessions verified, 73% aggregate credibility.</div>
+    <table class="field-table">
+      <tr><th>Field</th><th>Type</th><th>Prov</th><th>Sample</th></tr>
+      <tr><td class="fname">claims.total_claims</td><td class="ftype">int</td><td><span class="prov prov-C">C</span></td><td class="fsample">54</td></tr>
+      <tr><td class="fname">verification.files_checked</td><td class="ftype">int</td><td><span class="prov prov-C">C</span></td><td class="fsample">30</td></tr>
+      <tr><td class="fname">verification.checks[].verified</td><td class="ftype">int</td><td><span class="prov prov-C">C</span></td><td class="fsample">60</td></tr>
+      <tr><td class="fname">verification.checks[].failed</td><td class="ftype">int</td><td><span class="prov prov-C">C</span></td><td class="fsample">24</td></tr>
+      <tr><td class="fname">verification.checks[].credibility</td><td class="ftype">float (0-1)</td><td><span class="prov prov-C">C</span></td><td class="fsample">0.71</td></tr>
+      <tr><td class="fname">gap_report.summary.credibility_score</td><td class="ftype">float (0-1)</td><td><span class="prov prov-C">C</span></td><td class="fsample">0.71 (session) / 0.73 (aggregate)</td></tr>
+    </table>
+    <div class="note-box"><strong>All Phase 5 fields are <span class="prov prov-C">C</span> COMPUTED.</strong> This is the only phase where every value is deterministic and reproducible. The credibility score is verified / (verified + failed) — no LLM judgment involved.</div>
+  </div>
+</div>
+
+<!-- ═══ KNOWLEDGE GRAPH QUERIES ═══ -->
+<div class="sec"><h2>Knowledge Graph Queries</h2><div class="line"></div><span class="badge">What you can ask the data</span></div>
+
+<div class="grid2">
+  <div class="query-card"><span class="query-cat qc-file">File</span><div class="query-q">Which files have been edited in the most sessions?</div><div class="query-a">cross_session_file_index → files{}.session_count → sort desc</div></div>
+  <div class="query-card"><span class="query-cat qc-file">File</span><div class="query-q">Which files have the most interface mismatches?</div><div class="query-a">code_similarity_index → matches where "interface_mismatch" in patterns → group by file</div></div>
+  <div class="query-card"><span class="query-cat qc-file">File</span><div class="query-q">What family does this file belong to?</div><div class="query-a">cross_session_genealogy → families[].versions[].file</div></div>
+  <div class="query-card"><span class="query-cat qc-file">File</span><div class="query-q">Which files are dead copies?</div><div class="query-a">code_similarity_index → matches where "dead_copy" in patterns</div></div>
+  <div class="query-card"><span class="query-cat qc-session">Session</span><div class="query-q">Which sessions had the most frustration?</div><div class="query-a">session_summary → frustration_peaks.length → sort desc</div></div>
+  <div class="query-card"><span class="query-cat qc-session">Session</span><div class="query-q">What ideas were abandoned?</div><div class="query-a">idea_graph → edges where transition="abandoned"</div></div>
+  <div class="query-card"><span class="query-cat qc-session">Session</span><div class="query-q">What's this session's credibility?</div><div class="query-a">ground_truth_verification → gap_report.summary.credibility_score</div></div>
+  <div class="query-card"><span class="query-cat qc-cross">Cross-Session</span><div class="query-q">How has this file evolved across sessions?</div><div class="query-a">hyperdoc → layers[] ordered by generated_at</div></div>
+  <div class="query-card"><span class="query-cat qc-cross">Cross-Session</span><div class="query-q">Which concepts keep getting rewritten?</div><div class="query-a">cross_session_genealogy → families where versions > 3</div></div>
+  <div class="query-card"><span class="query-cat qc-behavior">Behavioral</span><div class="query-q">When does Claude get overconfident?</div><div class="query-a">enriched_session → messages where behavior_flags.overconfident=true + context</div></div>
+  <div class="query-card"><span class="query-cat qc-behavior">Behavioral</span><div class="query-q">What happens before frustration peaks?</div><div class="query-a">sequence: damage_score rising → frustration_peak (3-msg window analysis)</div></div>
+  <div class="query-card"><span class="query-cat qc-arch">Architectural</span><div class="query-q">Which files depend on each other?</div><div class="query-a">code_similarity → shared_functions + import_overlap</div></div>
+  <div class="query-card"><span class="query-cat qc-arch">Architectural</span><div class="query-q">What's the most isolated file?</div><div class="query-a">code_similarity → file_stats.isolation_score → sort desc</div></div>
+  <div class="query-card"><span class="query-cat qc-arch">Architectural</span><div class="query-q">Which decisions were never verified?</div><div class="query-a">ground_truth → gap_report.gaps.unverified</div></div>
+  <div class="query-card"><span class="query-cat qc-arch">Architectural</span><div class="query-q">What % of the codebase has hyperdocs?</div><div class="query-a">hyperdocs count / total .py files on disk</div></div>
+</div>
+
+<div style="margin-top:40px;padding:20px;background:var(--s1);border:1px solid var(--bdr);border-radius:12px;text-align:center;font-size:0.85rem;color:var(--dim)">
+  19 file types &bull; 100+ fields &bull; 5 provenance categories &bull; 15+ knowledge graph queries<br>
+  <span style="color:var(--txt);font-weight:600">Every number in the Hyperdocs system traces back to this dictionary.</span>
+</div>
+
+</div>
+
+<script>
+function toggle(el){el.nextElementSibling.classList.toggle('open')}
+function filterAll(q){
+  q=q.toLowerCase();
+  document.querySelectorAll('.file-card').forEach(c=>{
+    const search=(c.dataset.search||'')+' '+c.textContent.toLowerCase();
+    c.style.display=!q||search.includes(q)?'':'none';
+    if(q&&search.includes(q)){const body=c.querySelector('.file-body');if(body)body.classList.add('open')}
+  });
+  document.querySelectorAll('.query-card').forEach(c=>{
+    c.style.display=!q||c.textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
+</script>
+
+</body>
+</html>
