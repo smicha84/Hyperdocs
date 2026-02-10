@@ -87,9 +87,9 @@ code { font-size: 11px; background: #1a1a2a; padding: 1px 5px; border-radius: 3p
 </div>
 
 <div class="stats">
-  <div class="stat"><div class="n" style="color:var(--cyan)">39</div><div class="l">Python Scripts</div></div>
+  <div class="stat"><div class="n" style="color:var(--cyan)">19</div><div class="l">Python Scripts</div></div>
   <div class="stat"><div class="n" style="color:var(--purple)">9</div><div class="l">Agent Definitions</div></div>
-  <div class="stat"><div class="n" style="color:var(--white)">48</div><div class="l">Total System Files</div></div>
+  <div class="stat"><div class="n" style="color:var(--white)">28</div><div class="l">Total System Files</div></div>
 </div>
 
 <!-- PHASE 0 -->
@@ -101,10 +101,10 @@ code { font-size: 11px; background: #1a1a2a; padding: 1px 5px; border-radius: 3p
   </div>
   <div class="phase-desc">Reads a JSONL chat history. Enriches every message with 50+ metadata signals (file mentions, errors, frustration, tool results). Classifies into 4 tiers. Produces enriched data for agents.</div>
   <div class="file-list">
-    <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">deterministic_prep.py</span><span class="file-meta">271 lines &middot; entry point</span></div>
-    <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">prepare_agent_data.py</span><span class="file-meta">207 lines &middot; splits data + sanitizes + safe files</span></div>
+    <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">deterministic_prep.py</span><span class="file-meta">267 lines &middot; entry point</span></div>
+    <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">prepare_agent_data.py</span><span class="file-meta">128 lines &middot; splits data for agents</span></div>
     <div class="file"><span class="file-icon">&#8627;</span><span class="file-name script">claude_session_reader.py</span><span class="file-meta">380 lines &middot; parses JSONL into messages</span></div>
-    <div class="file"><span class="file-icon">&#8627;</span><span class="file-name script">metadata_extractor.py</span><span class="file-meta">908 lines &middot; 50+ signals per message</span></div>
+    <div class="file"><span class="file-icon">&#8627;</span><span class="file-name script">metadata_extractor.py</span><span class="file-meta">901 lines &middot; 50+ signals per message</span></div>
     <div class="file"><span class="file-icon">&#8627;</span><span class="file-name script">message_filter.py</span><span class="file-meta">331 lines &middot; 4-tier classification</span></div>
     <div class="file"><span class="file-icon">&#8627;</span><span class="file-name script">claude_behavior_analyzer.py</span><span class="file-meta">548 lines &middot; context damage detection</span></div>
     <div class="file"><span class="file-icon">&#8627;</span><span class="file-name script">geological_reader.py</span><span class="file-meta">446 lines &middot; message data classes</span></div>
@@ -138,14 +138,12 @@ code { font-size: 11px; background: #1a1a2a; padding: 1px 5px; border-radius: 3p
   <div class="phase-header">
     <span class="phase-num">PHASE 2</span>
     <span class="phase-title">phase_2_synthesis/</span>
-    <span class="phase-meta">2 agents + 2 scripts &middot; 4 files</span>
+    <span class="phase-meta">2 agents &middot; 2 files</span>
   </div>
   <div class="phase-desc">Builds an idea evolution graph (nodes = ideas, edges = transitions like pivoted/abandoned/evolved). Runs 6-pass temperature-ramped synthesis producing grounded warnings, patterns, and metrics.</div>
   <div class="file-list">
     <div class="file"><span class="file-icon">&#9673;</span><span class="file-name agent">idea-graph-builder.md</span><span class="file-meta">95 lines &middot; directed graph of ideas</span></div>
     <div class="file"><span class="file-icon">&#9673;</span><span class="file-name agent">synthesizer.md</span><span class="file-meta">98 lines &middot; 6-pass (temp 0.3&rarr;1.0&rarr;0.0)</span></div>
-    <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">code_similarity.py</span><span class="file-meta">513 lines &middot; AST fingerprinting, 14,176 matches</span></div>
-    <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">file_genealogy.py</span><span class="file-meta">407 lines &middot; 5 detection signals, 18 families</span></div>
   </div>
 </div>
 
@@ -194,17 +192,13 @@ code { font-size: 11px; background: #1a1a2a; padding: 1px 5px; border-radius: 3p
   <div class="phase-header">
     <span class="phase-num">PHASE 5</span>
     <span class="phase-title">phase_5_ground_truth/</span>
-    <span class="phase-meta">Python only &middot; no LLM &middot; 7 files</span>
+    <span class="phase-meta">Python only &middot; no LLM &middot; 3 files</span>
   </div>
   <div class="phase-desc">Verifies claims made during the session against actual code state. Extracts claims from pipeline data, runs 8 independent checks (AST, regex, importlib), produces per-file credibility scores and unfinished business reports.</div>
   <div class="file-list">
     <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">claim_extractor.py</span><span class="file-meta">295 lines &middot; extracts typed claims</span></div>
     <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">ground_truth_verifier.py</span><span class="file-meta">393 lines &middot; 8 Python checks</span></div>
     <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">gap_reporter.py</span><span class="file-meta">240 lines &middot; credibility scores</span></div>
-    <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">schema_normalizer.py</span><span class="file-meta">500 lines &middot; 886 variants &rarr; 9 canonical</span></div>
-    <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">completeness_scanner.py</span><span class="file-meta">230 lines &middot; field-level quality report</span></div>
-    <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">post_agent_normalize.py</span><span class="file-meta">100 lines &middot; auto-normalize after agents</span></div>
-    <div class="file"><span class="file-icon">&#9654;</span><span class="file-name script">schema_validator.py</span><span class="file-meta">100 lines &middot; canonical schema validation</span></div>
   </div>
 </div>
 
@@ -227,7 +221,7 @@ code { font-size: 11px; background: #1a1a2a; padding: 1px 5px; border-radius: 3p
 </div>
 
 <div class="footer">
-  hyperdocs_3 &middot; 48 system files &middot; 6 phases &middot; 39 scripts &middot; 9 agents
+  hyperdocs_3 &middot; 28 system files &middot; 6 phases &middot; 19 scripts &middot; 9 agents
 </div>
 
 </div>
