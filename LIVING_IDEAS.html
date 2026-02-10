@@ -125,14 +125,234 @@
     body { padding: 20px; }
     .stat-bar { flex-wrap: wrap; }
     .idea-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .nav-gallery { grid-template-columns: repeat(2, 1fr) !important; }
   }
+
+  .nav-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 20px 0 32px;
+  }
+
+  .nav-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, transform 0.15s;
+    display: flex;
+    flex-direction: column;
+  }
+  .nav-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .nav-thumb {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 700;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .nav-thumb .thumb-bg {
+    position: absolute;
+    inset: 0;
+    opacity: 0.12;
+  }
+
+  .nav-info {
+    padding: 10px 12px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .nav-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  .nav-desc {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  .nav-status {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-weight: 500;
+    margin-top: 2px;
+    align-self: flex-start;
+  }
+  .status-current { background: rgba(0, 184, 148, 0.15); color: var(--shared); }
+  .status-stale { background: rgba(253, 203, 110, 0.15); color: var(--yellow); }
+  .status-archive { background: rgba(139, 148, 163, 0.15); color: var(--text-dim); }
 </style>
 </head>
 <body>
 
 <h1>Hyperdocs — Living Ideas</h1>
 <p class="subtitle">Every idea from our discussion, organized by origin. Updated in real time.</p>
-<span class="updated">Last updated: February 9, 2026 (evening) — Session: Testing the 10 Commitments + Building</span>
+<span class="updated">Last updated: February 10, 2026 — Session: Completeness Scanner + Production Line + Onboarding Test</span>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- HTML FILE GALLERY -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section-header" style="margin-top:24px">
+  <h2>All Hyperdocs Pages</h2>
+  <div class="line"></div>
+  <span class="count">11 files</span>
+</div>
+
+<div class="nav-gallery">
+
+  <a class="nav-card" href="LIVING_IDEAS.html">
+    <div class="nav-thumb" style="background:linear-gradient(135deg,#1a1d27,#2e3348)">
+      <div class="thumb-bg" style="background:linear-gradient(135deg,var(--user),var(--claude))"></div>
+      <span style="color:var(--accent);font-size:22px">IDEAS</span>
+    </div>
+    <div class="nav-info">
+      <div class="nav-title">Living Ideas</div>
+      <div class="nav-desc">Idea tracker, status dashboard, P0 checklist, session notes. The central hub.</div>
+      <span class="nav-status status-current">Current (Feb 10)</span>
+    </div>
+  </a>
+
+  <a class="nav-card" href="production_line.html">
+    <div class="nav-thumb" style="background:linear-gradient(135deg,#0d1117,#161b22)">
+      <div class="thumb-bg" style="background:linear-gradient(90deg,#3fb950,#58a6ff,#bc8cff)"></div>
+      <span style="font-size:16px;letter-spacing:2px;color:#58a6ff">0 &rarr; 1 &rarr; 2 &rarr; 3</span>
+    </div>
+    <div class="nav-info">
+      <div class="nav-title">Production Line</div>
+      <div class="nav-desc">Message #1108 traced through 6 pipeline phases. Real data from session_0012ebed.</div>
+      <span class="nav-status status-current">Current (Feb 10)</span>
+    </div>
+  </a>
+
+  <a class="nav-card" href="operations_panel.html">
+    <div class="nav-thumb" style="background:linear-gradient(135deg,#1a1d27,#232736)">
+      <div class="thumb-bg" style="background:linear-gradient(135deg,#00b894,#74b9ff)"></div>
+      <span style="color:#00b894;font-size:18px">OPS</span>
+    </div>
+    <div class="nav-info">
+      <div class="nav-title">Operations Panel</div>
+      <div class="nav-desc">Interactive file explorer, similarity browser, genealogy viewer, story arcs. 241KB.</div>
+      <span class="nav-status status-stale">Needs update (pre-scanner)</span>
+    </div>
+  </a>
+
+  <a class="nav-card" href="DATA_DICTIONARY.html">
+    <div class="nav-thumb" style="background:linear-gradient(135deg,#1a1d27,#2e3348)">
+      <div class="thumb-bg" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)"></div>
+      <span style="color:#a29bfe;font-size:18px">DICT</span>
+    </div>
+    <div class="nav-info">
+      <div class="nav-title">Data Dictionary</div>
+      <div class="nav-desc">Every JSON file, every field, provenance codes, query catalog. The schema reference.</div>
+      <span class="nav-status status-current">Current (Feb 9)</span>
+    </div>
+  </a>
+
+  <a class="nav-card" href="SYSTEM_REPORT.html">
+    <div class="nav-thumb" style="background:linear-gradient(135deg,#08080e,#0e0e18)">
+      <div class="thumb-bg" style="background:linear-gradient(135deg,#7aa2f7,#9ece6a)"></div>
+      <span style="color:#7aa2f7;font-size:18px">SYS</span>
+    </div>
+    <div class="nav-info">
+      <div class="nav-title">System Report</div>
+      <div class="nav-desc">34 files, 10 agents, pipeline flow, per-file status. Says 284 sessions / 259 complete.</div>
+      <span class="nav-status status-stale">Stale (says 284, now 285)</span>
+    </div>
+  </a>
+
+  <a class="nav-card" href="HYPERDOCS_3_SYSTEM_GUIDE.html">
+    <div class="nav-thumb" style="background:linear-gradient(135deg,#08080e,#0e0e18)">
+      <div class="thumb-bg" style="background:linear-gradient(135deg,#9ece6a,#e0af68)"></div>
+      <span style="color:#9ece6a;font-size:16px">GUIDE</span>
+    </div>
+    <div class="nav-info">
+      <div class="nav-title">System Guide</div>
+      <div class="nav-desc">6-phase pipeline walkthrough. Input/output per phase. File inventory. Monospace layout.</div>
+      <span class="nav-status status-stale">Stale (pre-Phase 5 tools)</span>
+    </div>
+  </a>
+
+  <a class="nav-card" href="PRODUCT_ROADMAP.html">
+    <div class="nav-thumb" style="background:linear-gradient(135deg,#0f1117,#1a1d27)">
+      <div class="thumb-bg" style="background:linear-gradient(135deg,#6c5ce7,#fd79a8)"></div>
+      <span style="color:#fd79a8;font-size:16px">ROAD</span>
+    </div>
+    <div class="nav-info">
+      <div class="nav-title">Product Roadmap</div>
+      <div class="nav-desc">Product state assessment with D3 charts. Tier distribution, processing timeline, gap analysis.</div>
+      <span class="nav-status status-stale">Stale (Feb 9 assessment)</span>
+    </div>
+  </a>
+
+  <a class="nav-card" href="file:///Users/stefanmichaelcheck/PERMANENT_HYPERDOCS/genealogy_dashboard.html">
+    <div class="nav-thumb" style="background:linear-gradient(135deg,#0a0a0a,#171717)">
+      <div class="thumb-bg" style="background:linear-gradient(135deg,#60a5fa,#22c55e)"></div>
+      <span style="color:#60a5fa;font-size:16px">GENE</span>
+    </div>
+    <div class="nav-info">
+      <div class="nav-title">Genealogy Dashboard</div>
+      <div class="nav-desc">18 file families, 300 files, version chains with story arcs. Lives in PERMANENT_HYPERDOCS.</div>
+      <span class="nav-status status-current">Current (18 families)</span>
+    </div>
+  </a>
+
+  <a class="nav-card" href="completed/01_code_similarity_engine.html">
+    <div class="nav-thumb" style="background:var(--surface)">
+      <div class="thumb-bg" style="background:var(--shared)"></div>
+      <span style="color:var(--shared);font-size:14px">DONE</span>
+    </div>
+    <div class="nav-info">
+      <div class="nav-title">Code Similarity Engine</div>
+      <div class="nav-desc">Completed task record. 341 files, 14,176 matches, 10 pattern types.</div>
+      <span class="nav-status status-archive">Archive (Feb 9)</span>
+    </div>
+  </a>
+
+  <a class="nav-card" href="completed/02_html_cleanup.html">
+    <div class="nav-thumb" style="background:var(--surface)">
+      <div class="thumb-bg" style="background:var(--shared)"></div>
+      <span style="color:var(--shared);font-size:14px">DONE</span>
+    </div>
+    <div class="nav-info">
+      <div class="nav-title">HTML Cleanup</div>
+      <div class="nav-desc">Completed task record. 4 broken files archived, 3 production dashboards kept.</div>
+      <span class="nav-status status-archive">Archive (Feb 9)</span>
+    </div>
+  </a>
+
+  <a class="nav-card" href="completed/03_partial_session_diagnosis.html">
+    <div class="nav-thumb" style="background:var(--surface)">
+      <div class="thumb-bg" style="background:var(--shared)"></div>
+      <span style="color:var(--shared);font-size:14px">DONE</span>
+    </div>
+    <div class="nav-info">
+      <div class="nav-title">Partial Session Diagnosis</div>
+      <div class="nav-desc">Completed task record. 23 sessions, 4 failure patterns, ready to re-run.</div>
+      <span class="nav-status status-archive">Archive (Feb 9)</span>
+    </div>
+  </a>
+
+</div>
 
 <div class="stat-bar">
   <div class="stat">
@@ -140,15 +360,15 @@
     <div class="stat-label">Stefan's Ideas</div>
   </div>
   <div class="stat">
-    <div class="stat-num claude-c">15</div>
+    <div class="stat-num claude-c">17</div>
     <div class="stat-label">Claude's Ideas</div>
   </div>
   <div class="stat">
-    <div class="stat-num shared-c">6</div>
+    <div class="stat-num shared-c">7</div>
     <div class="stat-label">Shared / Converged</div>
   </div>
   <div class="stat">
-    <div class="stat-num" style="color:var(--shared)">6 / 8</div>
+    <div class="stat-num" style="color:var(--shared)">8 / 12</div>
     <div class="stat-label">P0 Items Done</div>
   </div>
 </div>
@@ -164,22 +384,48 @@
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:16px">
   <div style="background:var(--surface);border:1px solid var(--shared-border);border-radius:12px;padding:20px">
+    <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">Completeness Scanner</div>
+    <div style="font-size:1.8rem;font-weight:700;color:var(--shared)">DONE</div>
+    <div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px">285 sessions scanned, field-level completeness</div>
+    <div style="color:var(--text-dim);font-size:0.8rem">831KB report at indexes/completeness_report.json</div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--shared-border);border-radius:12px;padding:20px">
+    <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">Production Line Viz</div>
+    <div style="font-size:1.8rem;font-weight:700;color:var(--shared)">DONE</div>
+    <div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px">6-station pipeline trace with real data</div>
+    <div style="color:var(--text-dim);font-size:0.8rem"><a href="production_line.html" style="color:var(--accent)">production_line.html</a> — session_0012ebed</div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--shared-border);border-radius:12px;padding:20px">
+    <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">Onboarding Test</div>
+    <div style="font-size:1.8rem;font-weight:700;color:var(--shared)">PASSED</div>
+    <div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px">Phase 0 on fresh session 02552cd9 (99 msgs)</div>
+    <div style="color:var(--text-dim);font-size:0.8rem">1 env var bug found, $0 layer works clean</div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--shared-border);border-radius:12px;padding:20px">
+    <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">Ground Truth (Phase 5)</div>
+    <div style="font-size:1.8rem;font-weight:700;color:var(--shared)">73%</div>
+    <div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px">Credibility across 261 sessions (22,812 checks)</div>
+    <div style="color:var(--text-dim);font-size:0.8rem">run_verification.py complete</div>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:16px">
+  <div style="background:var(--surface);border:1px solid var(--shared-border);border-radius:12px;padding:20px">
     <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">Code Similarity Engine</div>
     <div style="font-size:1.8rem;font-weight:700;color:var(--shared)">DONE</div>
     <div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px">341 files, 57,970 pairs, 14,176 matches</div>
-    <div style="color:var(--text-dim);font-size:0.8rem">7.9MB index at ~/PERMANENT_HYPERDOCS/indexes/</div>
+    <div style="color:var(--text-dim);font-size:0.8rem">7.9MB index + 476KB fingerprint cache</div>
   </div>
   <div style="background:var(--surface);border:1px solid var(--shared-border);border-radius:12px;padding:20px">
-    <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">Partial Session Diagnosis</div>
-    <div style="font-size:1.8rem;font-weight:700;color:var(--shared)">DONE</div>
-    <div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px">23 sessions, 4 failure patterns identified</div>
-    <div style="color:var(--text-dim);font-size:0.8rem">Root cause: orchestrator transition failures</div>
+    <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">Genealogy + Similarity</div>
+    <div style="font-size:1.8rem;font-weight:700;color:var(--shared)">18</div>
+    <div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px">families (was 13 before 5th signal)</div>
+    <div style="color:var(--text-dim);font-size:0.8rem">Code overlap added as genealogy signal</div>
   </div>
   <div style="background:var(--surface);border:1px solid var(--shared-border);border-radius:12px;padding:20px">
-    <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">HTML Cleanup</div>
-    <div style="font-size:1.8rem;font-weight:700;color:var(--shared)">DONE</div>
-    <div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px">4 broken files archived, 3 production dashboards remain</div>
-    <div style="color:var(--text-dim);font-size:0.8rem">archived_html/ folder created</div>
+    <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--shared);margin-bottom:8px">Dead Copies</div>
+    <div style="font-size:1.8rem;font-weight:700;color:var(--shared)">ARCHIVED</div>
+    <div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px">41 root__ files + 4 broken HTML removed</div>
+    <div style="color:var(--text-dim);font-size:0.8rem">archived_html/ + archived root files</div>
   </div>
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
     <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);margin-bottom:8px">Pricing Model</div>
@@ -189,113 +435,85 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- NEW FINDINGS FROM THIS SESSION -->
-<!-- ═══════════════════════════════════════════════════════ -->
-<div class="section-header">
-  <h2>Discoveries This Session</h2>
-  <div class="line"></div>
-  <span class="count">verified by running</span>
-</div>
-
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:16px;margin-bottom:16px">
-  <!-- Code Similarity Results -->
+  <!-- Completeness Scanner Results -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px">
-    <div style="font-weight:600;margin-bottom:16px">Code Similarity — Pattern Distribution</div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:160px;font-size:0.85rem">partial_extraction</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:100%;height:100%;background:linear-gradient(90deg,#6c5ce7,#a29bfe);border-radius:4px"></div></div>
-        <div style="width:45px;text-align:right;font-weight:600;font-size:0.85rem">3,161</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:160px;font-size:0.85rem">structural_sibling</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:61%;height:100%;background:linear-gradient(90deg,#74b9ff,#a29bfe);border-radius:4px"></div></div>
-        <div style="width:45px;text-align:right;font-weight:600;font-size:0.85rem">1,933</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:160px;font-size:0.85rem">import_twin</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:24%;height:100%;background:linear-gradient(90deg,#00b894,#55efc4);border-radius:4px"></div></div>
-        <div style="width:45px;text-align:right;font-weight:600;font-size:0.85rem">753</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:160px;font-size:0.85rem">shared_ecosystem</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:15%;height:100%;background:linear-gradient(90deg,#fdcb6e,#ffeaa7);border-radius:4px"></div></div>
-        <div style="width:45px;text-align:right;font-weight:600;font-size:0.85rem">469</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:160px;font-size:0.85rem">function_clone</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:11%;height:100%;background:linear-gradient(90deg,#e17055,#fab1a0);border-radius:4px"></div></div>
-        <div style="width:45px;text-align:right;font-weight:600;font-size:0.85rem">355</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:160px;font-size:0.85rem;color:var(--red)">interface_mismatch</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:7%;height:100%;background:linear-gradient(90deg,#e17055,#d63031);border-radius:4px"></div></div>
-        <div style="width:45px;text-align:right;font-weight:600;font-size:0.85rem;color:var(--red)">221</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:160px;font-size:0.85rem">template_variant</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:2%;height:100%;background:#636e72;border-radius:4px"></div></div>
-        <div style="width:45px;text-align:right;font-weight:600;font-size:0.85rem">66</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:160px;font-size:0.85rem">name_only</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:1%;height:100%;background:#636e72;border-radius:4px"></div></div>
-        <div style="width:45px;text-align:right;font-weight:600;font-size:0.85rem">29</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:160px;font-size:0.85rem">evolution_pair</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:1%;height:100%;background:#fdcb6e;border-radius:4px"></div></div>
-        <div style="width:45px;text-align:right;font-weight:600;font-size:0.85rem">19</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:160px;font-size:0.85rem;color:var(--red)">dead_copy</div>
-        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:1%;height:100%;background:#d63031;border-radius:4px"></div></div>
-        <div style="width:45px;text-align:right;font-weight:600;font-size:0.85rem;color:var(--red)">15</div>
-      </div>
-    </div>
-    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);color:var(--text-dim);font-size:0.8rem">
-      <strong style="color:var(--text)">Key finding:</strong> The <code>root__</code> prefix pattern dominates top matches — files exist in two versions. p03 and p04 enforcers are 100% dead copies of their <code>root__</code> counterparts. 221 interface mismatches are the "why does the app break" signal.
-    </div>
-  </div>
-
-  <!-- Partial Session Diagnosis -->
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px">
-    <div style="font-weight:600;margin-bottom:16px">Partial Sessions — 4 Failure Patterns</div>
+    <div style="font-weight:600;margin-bottom:16px">Completeness Scanner — Field-Level Report</div>
     <table style="width:100%;font-size:0.85rem;border-collapse:collapse">
       <tr style="border-bottom:1px solid var(--border)">
-        <th style="text-align:left;padding:6px 8px;color:var(--text-dim);font-weight:500">Pattern</th>
-        <th style="text-align:center;padding:6px 4px;color:var(--text-dim);font-weight:500">Count</th>
-        <th style="text-align:left;padding:6px 8px;color:var(--text-dim);font-weight:500">Phase Status</th>
-        <th style="text-align:left;padding:6px 8px;color:var(--text-dim);font-weight:500">Issue</th>
+        <th style="text-align:left;padding:6px 8px;color:var(--text-dim);font-weight:500">Phase</th>
+        <th style="text-align:center;padding:6px 4px;color:var(--shared);font-weight:500">Complete</th>
+        <th style="text-align:center;padding:6px 4px;color:var(--yellow);font-weight:500">Partial</th>
+        <th style="text-align:center;padding:6px 4px;color:var(--text-dim);font-weight:500">Missing</th>
       </tr>
       <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px;font-weight:600">A</td>
-        <td style="padding:8px;text-align:center;font-weight:700;color:var(--red)">14</td>
-        <td style="padding:8px"><span style="color:var(--shared)">P0</span> <span style="color:var(--red)">P1 P2 P3</span></td>
-        <td style="padding:8px;font-size:0.8rem">Phase 1 never launched</td>
+        <td style="padding:6px 8px">Phase 0</td>
+        <td style="padding:6px;text-align:center;font-weight:700;color:var(--shared)">279</td>
+        <td style="padding:6px;text-align:center">3</td>
+        <td style="padding:6px;text-align:center;color:var(--text-dim)">3</td>
       </tr>
       <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px;font-weight:600">B</td>
-        <td style="padding:8px;text-align:center;font-weight:700">3</td>
-        <td style="padding:8px"><span style="color:var(--yellow)">P0</span> <span style="color:var(--shared)">P1</span> <span style="color:var(--red)">P2 P3</span></td>
-        <td style="padding:8px;font-size:0.8rem">Phase 0 partial failure</td>
+        <td style="padding:6px 8px">Phase 1</td>
+        <td style="padding:6px;text-align:center;font-weight:700;color:var(--shared)">269</td>
+        <td style="padding:6px;text-align:center">0</td>
+        <td style="padding:6px;text-align:center;color:var(--text-dim)">16</td>
       </tr>
       <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px;font-weight:600">C</td>
-        <td style="padding:8px;text-align:center;font-weight:700">2</td>
-        <td style="padding:8px"><span style="color:var(--red)">P0</span> <span style="color:var(--shared)">P1</span> <span style="color:var(--red)">P2 P3</span></td>
-        <td style="padding:8px;font-size:0.8rem">Phase 0 missing entirely</td>
+        <td style="padding:6px 8px">Phase 2</td>
+        <td style="padding:6px;text-align:center;font-weight:700;color:var(--shared)">261</td>
+        <td style="padding:6px;text-align:center">0</td>
+        <td style="padding:6px;text-align:center;color:var(--text-dim)">24</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 8px">Phase 3</td>
+        <td style="padding:6px;text-align:center;font-weight:700;color:var(--shared)">261</td>
+        <td style="padding:6px;text-align:center">0</td>
+        <td style="padding:6px;text-align:center;color:var(--text-dim)">24</td>
       </tr>
       <tr>
-        <td style="padding:8px;font-weight:600">D</td>
-        <td style="padding:8px;text-align:center;font-weight:700">3</td>
-        <td style="padding:8px"><span style="color:var(--shared)">P0 P1</span> <span style="color:var(--red)">P2 P3</span></td>
-        <td style="padding:8px;font-size:0.8rem">Phase 2 never launched</td>
+        <td style="padding:6px 8px">Phase 5</td>
+        <td style="padding:6px;text-align:center;font-weight:700;color:var(--shared)">261</td>
+        <td style="padding:6px;text-align:center">8</td>
+        <td style="padding:6px;text-align:center;color:var(--text-dim)">16</td>
       </tr>
     </table>
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);color:var(--text-dim);font-size:0.8rem">
-      <strong style="color:var(--text)">Root cause:</strong> Orchestrator transition failures between phases. Phase 1 runs even when Phase 0 is missing (no dependency validation). Phase 2 agents never start for some sessions despite Phase 1 completion. 8.8% failure rate (23/261).
+      <strong style="color:var(--text)">285 total sessions.</strong> Classifies every field as POPULATED / ZERO / MISSING / FILE_MISSING. Distinguishes "genuinely zero" from "not collected."
+    </div>
+  </div>
+
+  <!-- Schema Variance Discovery -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px">
+    <div style="font-weight:600;margin-bottom:16px">Schema Variance — The Bulk Processing Problem</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:180px;font-size:0.85rem">thread_extractions.threads</div>
+        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:30%;height:100%;background:linear-gradient(90deg,#00b894,#55efc4);border-radius:4px"></div></div>
+        <div style="width:65px;text-align:right;font-weight:600;font-size:0.85rem;color:var(--yellow)">82/269</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:180px;font-size:0.85rem">semantic_primitives.tagged</div>
+        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:7%;height:100%;background:linear-gradient(90deg,#e17055,#fab1a0);border-radius:4px"></div></div>
+        <div style="width:65px;text-align:right;font-weight:600;font-size:0.85rem;color:var(--red)">19/269</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:180px;font-size:0.85rem">synthesis.passes</div>
+        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:77%;height:100%;background:linear-gradient(90deg,#74b9ff,#a29bfe);border-radius:4px"></div></div>
+        <div style="width:65px;text-align:right;font-weight:600;font-size:0.85rem">201/261</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:180px;font-size:0.85rem">idea_graph.nodes</div>
+        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:98%;height:100%;background:linear-gradient(90deg,#00b894,#55efc4);border-radius:4px"></div></div>
+        <div style="width:65px;text-align:right;font-weight:600;font-size:0.85rem;color:var(--shared)">256/261</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:180px;font-size:0.85rem">grounded_markers.markers</div>
+        <div style="flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:70%;height:100%;background:linear-gradient(90deg,#6c5ce7,#a29bfe);border-radius:4px"></div></div>
+        <div style="width:65px;text-align:right;font-weight:600;font-size:0.85rem">183/261</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);color:var(--text-dim);font-size:0.8rem">
+      <strong style="color:var(--text)">Key finding:</strong> Files exist but content varies wildly. Only 30% of thread_extractions have the expected 6-thread structure. Only 7% of semantic_primitives have tagged messages. Bulk agents used inconsistent output schemas.
     </div>
   </div>
 </div>
@@ -318,20 +536,20 @@
         <div style="font-size:0.75rem;color:var(--text-dim)">Complete</div>
       </div>
     </div>
-    <div style="color:var(--text-dim);font-size:0.8rem">Not boilerplate. Cites specific messages and sessions. Traces causality. Honest about what's broken. Input: 1.4KB metadata → Output: 30KB+ archaeological reports.</div>
+    <div style="color:var(--text-dim);font-size:0.8rem">Not boilerplate. Cites specific messages and sessions. Traces causality. Honest about what's broken. Input: 1.4KB metadata &rarr; Output: 30KB+ archaeological reports.</div>
   </div>
 
   <!-- Visualization Assessment -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px">
-    <div style="font-weight:600;margin-bottom:12px">Visualizations — Audit Results</div>
+    <div style="font-weight:600;margin-bottom:12px">Visualizations — Updated Inventory</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
       <div style="padding:8px 14px;background:var(--shared-dim);border:1px solid var(--shared-border);border-radius:8px;text-align:center">
-        <div style="font-size:1.2rem;font-weight:700;color:var(--shared)">3</div>
+        <div style="font-size:1.2rem;font-weight:700;color:var(--shared)">4</div>
         <div style="font-size:0.7rem;color:var(--text-dim)">Production</div>
       </div>
       <div style="padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;text-align:center">
-        <div style="font-size:1.2rem;font-weight:700;color:var(--text-dim)">2</div>
-        <div style="font-size:0.7rem;color:var(--text-dim)">Styled Text</div>
+        <div style="font-size:1.2rem;font-weight:700;color:var(--text-dim)">3</div>
+        <div style="font-size:0.7rem;color:var(--text-dim)">Reference</div>
       </div>
       <div style="padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;text-align:center">
         <div style="font-size:1.2rem;font-weight:700;color:var(--text-dim)">4</div>
@@ -339,8 +557,8 @@
       </div>
     </div>
     <div style="color:var(--text-dim);font-size:0.8rem">
-      <strong style="color:var(--shared)">Working:</strong> hyperdocs_dashboard (D3, 580KB), pipeline_visualization (D3, 352KB), code_graph_studio (force graph, 119KB)<br>
-      <strong style="color:var(--text-dim)">Text:</strong> idea_evolution_analysis, PROCESSING_PLAN<br>
+      <strong style="color:var(--shared)">Production:</strong> hyperdocs_dashboard (D3), pipeline_visualization (D3), code_graph_studio (force graph), <strong style="color:var(--shared)">production_line.html (NEW)</strong><br>
+      <strong style="color:var(--text-dim)">Reference:</strong> LIVING_IDEAS, operations_panel, DATA_DICTIONARY<br>
       <strong style="color:var(--text-dim)">Archived:</strong> 4 broken files moved to archived_html/
     </div>
   </div>
@@ -639,16 +857,16 @@
 <div class="section-header">
   <h2>Pipeline & Architecture</h2>
   <div class="line"></div>
-  <span class="count">5 ideas</span>
+  <span class="count">7 ideas</span>
 </div>
 
 <ul class="idea-list">
   <li class="idea claude">
     <div class="idea-header">
-      <span class="idea-title">Pipeline state: 97% complete, 25 partial sessions</span>
+      <span class="idea-title">Pipeline state: 285 sessions, 73% credibility verified</span>
       <div class="idea-tags"><span class="tag technical">Technical</span></div>
     </div>
-    <div class="idea-body">284 sessions, 6,135 JSONs, 456 hyperdocs, 341 enhanced files, 492 inputs, 13 genealogy families. 259 sessions fully complete (19 files each). 25 partial. Phase 5 ground truth needs re-run. 3 cron jobs keeping everything synced.</div>
+    <div class="idea-body">285 sessions, 6,135+ JSONs, 456 hyperdocs, 341 enhanced files, 18 genealogy families (5 signals). 261 fully complete. 24 partial. Phase 5 ground truth: 73% credibility (22,812 checks). Completeness scanner now tracks every field. 3 cron jobs syncing.</div>
   </li>
 
   <li class="idea claude">
@@ -656,7 +874,7 @@
       <span class="idea-title">The transformation proof: frustration → constraint</span>
       <div class="idea-tags"><span class="tag technical">Technical</span><span class="tag vision">Vision</span></div>
     </div>
-    <div class="idea-body">Traced message 1108 ("ALWAYS WITH LLM!!!!!!!") through 8 phases. Entered as raw text with caps_ratio 0.89 and tier 4. Exited as GM-003: "LLM-first is mandatory" at 0.99 confidence. <strong>A frustrated outburst became a verifiable architectural constraint.</strong></div>
+    <div class="idea-body">Traced message 1108 ("ALWAYS WITH LLM!!!!!!!") through 6 phases. Entered as raw text with <strong>caps_ratio 1.0 and tier 1 (SKIP)</strong> — too short for standalone processing. But Phase 1 agents read session context and placed it in react-003. Phase 2 built it into GM-003 at <strong>0.99 confidence</strong>. <strong>A 45-byte frustrated outburst, classified as noise by the filter, became the highest-confidence architectural constraint in the session.</strong> The pipeline's value is contextual synthesis, not message filtering.</div>
   </li>
 
   <li class="idea claude">
@@ -673,6 +891,22 @@
       <div class="idea-tags"><span class="tag architecture">Architecture</span><span class="tag priority">Priority</span></div>
     </div>
     <div class="idea-body">The dependency chain: code similarity script → enriched genealogy → trustworthy visualizations. Building visualizations first means visualizing incomplete data. The script is the missing station on the production line.</div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">Schema variance: the distributed agent consistency problem</span>
+      <div class="idea-tags"><span class="tag technical">Technical</span><span class="tag priority">Priority</span></div>
+    </div>
+    <div class="idea-body">Completeness scanner revealed that 261 sessions produce Phase 1 files, but only 30% have the expected 6-thread structure. Only 7% of semantic_primitives have tagged messages. Bulk agents (50-60 concurrent) used inconsistent output schemas. Fix: either schema validation at write time or normalization at read time.</div>
+  </li>
+
+  <li class="idea claude">
+    <div class="idea-header">
+      <span class="idea-title">Completeness scanner as data provenance tool</span>
+      <div class="idea-tags"><span class="tag architecture">Architecture</span></div>
+    </div>
+    <div class="idea-body">Distinguishes POPULATED/ZERO/MISSING/FILE_MISSING at field level across all sessions. The data dictionary defines what should exist; the scanner checks what actually does. Together they close the "genuinely zero vs not collected" gap. Output: <code>completeness_report.json</code> (831KB).</div>
   </li>
 
   <li class="idea shared">
@@ -713,8 +947,8 @@
   <li class="idea" style="border-left-color:var(--shared)"><div class="idea-header"><span class="idea-title" style="opacity:0.6">Diagnose partial sessions</span><div class="idea-tags"><a href="completed/03_partial_session_diagnosis.html" style="background:rgba(0,184,148,0.2);color:#00b894;text-decoration:none;font-size:0.7rem;padding:2px 8px;border-radius:10px">Done &rarr;</a></div></div><div class="idea-body">23 sessions, 4 failure patterns, root cause: orchestrator transition failures.</div></li>
   <li class="idea" style="border-left-color:var(--shared)"><div class="idea-header"><span class="idea-title" style="opacity:0.6">Pricing model</span><div class="idea-tags"><span style="background:rgba(0,184,148,0.2);color:#00b894;font-size:0.7rem;padding:2px 8px;border-radius:10px">Resolved</span></div></div><div class="idea-body">BYOK — users bring their own API key and choose their model. Subscription covers platform.</div></li>
 
-  <li class="idea" style="border-left-color:var(--red)"><div class="idea-header"><span class="idea-title">Enrich genealogy with code similarity</span><div class="idea-tags"><span class="tag priority">P0</span></div></div>
-    <div class="idea-body"><code>cross_session_genealogy.py</code> gains a 5th signal — actual code overlap. The 13 existing families get verified or challenged. New families that name-matching missed get discovered. Similarity index is ready.</div></li>
+  <li class="idea" style="border-left-color:var(--shared)"><div class="idea-header"><span class="idea-title" style="opacity:0.6">Enrich genealogy with code similarity</span><div class="idea-tags"><span style="background:rgba(0,184,148,0.2);color:#00b894;font-size:0.7rem;padding:2px 8px;border-radius:10px">Done</span></div></div>
+    <div class="idea-body">5th signal added. 18 families detected (was 13). Code overlap verified or challenged existing genealogy families.</div></li>
 
   <li class="idea" style="border-left-color:var(--red)"><div class="idea-header"><span class="idea-title">Fix orchestrator phase transitions</span><div class="idea-tags"><span class="tag priority">P0</span></div></div>
     <div class="idea-body"><strong>First run lesson:</strong> 8.8% failure rate. Phase 1 runs even when Phase 0 is missing. Phase 2 never launches despite Phase 1 success. Add dependency validation between phases. A new user hitting this on their first run would abandon the product.</div></li>
@@ -722,17 +956,17 @@
   <li class="idea" style="border-left-color:var(--red)"><div class="idea-header"><span class="idea-title">Complete the 23 partial sessions</span><div class="idea-tags"><span class="tag priority">P0</span></div></div>
     <div class="idea-body">Re-run missing phases for 23 sessions using batch_orchestrator. Pattern A (14): need Phases 1-3. Pattern D (3): need Phases 2-3. Patterns B/C (5): need Phase 0 re-run + Phases 2-3. ~122 agent launches total. <a href="completed/03_partial_session_diagnosis.html" style="color:var(--accent)">See diagnosis</a></div></li>
 
-  <li class="idea" style="border-left-color:var(--red)"><div class="idea-header"><span class="idea-title">Run ground truth verification (Phase 5)</span><div class="idea-tags"><span class="tag priority">P0</span></div></div>
-    <div class="idea-body"><strong>First run lesson:</strong> Phase 5 exists but hasn't been run against the current code state since the batch processing completed. Claim verification (Python checks actual code vs hyperdoc claims) is the credibility foundation. Without it, every hyperdoc has unverified claims.</div></li>
+  <li class="idea" style="border-left-color:var(--shared)"><div class="idea-header"><span class="idea-title" style="opacity:0.6">Run ground truth verification (Phase 5)</span><div class="idea-tags"><span style="background:rgba(0,184,148,0.2);color:#00b894;font-size:0.7rem;padding:2px 8px;border-radius:10px">Done</span></div></div>
+    <div class="idea-body">73% credibility across 261 sessions. 22,812 checks. run_verification.py complete.</div></li>
 
-  <li class="idea" style="border-left-color:var(--red)"><div class="idea-header"><span class="idea-title">Resolve 15 dead copies</span><div class="idea-tags"><span class="tag priority">P0</span></div></div>
-    <div class="idea-body"><strong>First run discovery:</strong> p03 and p04 enforcers are 100% identical to their <code>root__</code> counterparts. 15 total dead copies detected. Decide which version to keep, remove the other. A user seeing duplicate files won't trust the system.</div></li>
+  <li class="idea" style="border-left-color:var(--shared)"><div class="idea-header"><span class="idea-title" style="opacity:0.6">Resolve 15 dead copies</span><div class="idea-tags"><span style="background:rgba(0,184,148,0.2);color:#00b894;font-size:0.7rem;padding:2px 8px;border-radius:10px">Done</span></div></div>
+    <div class="idea-body">41 root__ dead copy files archived. 4 broken HTML files archived. Clean codebase.</div></li>
 
-  <li class="idea" style="border-left-color:var(--red)"><div class="idea-header"><span class="idea-title">Production line visualization (manufacturing tour)</span><div class="idea-tags"><span class="tag priority">P0</span><span class="tag vision">Vision</span></div></div>
-    <div class="idea-body">Show a message entering the pipeline, transforming at each of 8 stations, coming out as embedded knowledge. <strong>This is the product's first impression.</strong> The pipeline tracer proved the story: frustrated text → 0.99 architectural constraint. Build the visualization that tells this story.</div></li>
+  <li class="idea" style="border-left-color:var(--shared)"><div class="idea-header"><span class="idea-title" style="opacity:0.6">Production line visualization (manufacturing tour)</span><div class="idea-tags"><a href="production_line.html" style="background:rgba(0,184,148,0.2);color:#00b894;text-decoration:none;font-size:0.7rem;padding:2px 8px;border-radius:10px">Done &rarr;</a></div></div>
+    <div class="idea-body">6-station horizontal flow using real data from session_0012ebed. Message #1108 ("ALWAYS WITH LLM!!!!!!!!") traces from raw text through enrichment, extraction, synthesis, file mapping, and ground truth. <a href="production_line.html" style="color:var(--accent)">production_line.html</a></div></li>
 
-  <li class="idea" style="border-left-color:var(--red)"><div class="idea-header"><span class="idea-title">Test 3 onboarding scenarios end-to-end</span><div class="idea-tags"><span class="tag priority">P0</span></div></div>
-    <div class="idea-body"><strong>Minimum viable:</strong> (1) New user with 5 sessions — does the pipeline produce useful output? (2) New user with empty chat history — does it fail gracefully? (3) Mid-processing cancellation — can they resume? If any of these break, the product isn't ready.</div></li>
+  <li class="idea" style="border-left-color:var(--yellow)"><div class="idea-header"><span class="idea-title">Test 3 onboarding scenarios end-to-end</span><div class="idea-tags"><span style="background:rgba(210,153,34,0.2);color:#fdcb6e;font-size:0.7rem;padding:2px 8px;border-radius:10px">1/3 done</span></div></div>
+    <div class="idea-body"><strong>Tested:</strong> (1) Fresh session Phase 0 — PASSED. Found env var bug (<code>get_session_output_dir()</code> nesting). <strong>Remaining:</strong> (2) Empty chat history — graceful failure? (3) Mid-processing cancellation — can they resume? Bug fix needed before scenario 2.</div></li>
 
   <li class="idea" style="border-left-color:var(--red)"><div class="idea-header"><span class="idea-title">Error recovery and resume capability</span><div class="idea-tags"><span class="tag priority">P0</span></div></div>
     <div class="idea-body"><strong>First run lesson:</strong> When agents fail (rate limits, content policy, crashes), there's no automatic retry. The 23 partial sessions prove this — they failed silently. A production system needs: detect failure, log it, retry or notify user.</div></li>
@@ -778,8 +1012,8 @@
 </ul>
 
 <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin:24px 0;font-size:0.9rem">
-  <strong style="color:var(--text)">Summary:</strong> <span style="color:var(--shared)">4 done</span> &bull; <span style="color:var(--red)">8 P0 remaining</span> &bull; <span style="color:var(--yellow)">5 P1</span> &bull; <span style="color:var(--blue)">4 P2</span><br>
-  <span style="color:var(--text-dim);font-size:0.85rem">P0 is what makes the product work for a stranger. P1 is what makes them stay. P2 is what makes them tell their friends.</span>
+  <strong style="color:var(--text)">Summary:</strong> <span style="color:var(--shared)">8 done</span> &bull; <span style="color:var(--red)">4 P0 remaining</span> &bull; <span style="color:var(--yellow)">5 P1</span> &bull; <span style="color:var(--blue)">4 P2</span><br>
+  <span style="color:var(--text-dim);font-size:0.85rem">P0 remaining: fix orchestrator transitions, complete 23 partial sessions, test 2 more onboarding scenarios, error recovery/resume. P1 and P2 unchanged.</span>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ -->
