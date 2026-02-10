@@ -99,14 +99,14 @@
 <div class="container">
 
 <h1>Hyperdocs System Report</h1>
-<p class="sub">Complete implementation status &bull; February 9, 2026 &bull; Level 5: VERIFIED</p>
+<p class="sub">Complete implementation status &bull; February 10, 2026 &bull; Level 5: VERIFIED</p>
 
 <!-- ═══ HERO STATS ═══ -->
 <div class="grid g5">
-  <div class="card"><div class="card-label">Python Files</div><div class="big" style="color:var(--accent)">34</div><div class="detail">11,945 lines total</div></div>
-  <div class="card"><div class="card-label">Agent Definitions</div><div class="big" style="color:var(--blue)">10</div><div class="detail">9 Opus/Sonnet + 1 Haiku</div></div>
-  <div class="card"><div class="card-label">Sessions Processed</div><div class="big" style="color:var(--green)">284</div><div class="detail">259 fully complete</div></div>
-  <div class="card"><div class="card-label">Hyperdocs Written</div><div class="big" style="color:var(--green)">456</div><div class="detail">14 MB across all files</div></div>
+  <div class="card"><div class="card-label">Python Files</div><div class="big" style="color:var(--accent)">39</div><div class="detail">14,045 lines total</div></div>
+  <div class="card"><div class="card-label">Agent Definitions</div><div class="big" style="color:var(--blue)">9</div><div class="detail">Opus agents (Thread, Geological, Primitives, Explorer, Idea Graph, Synthesizer, File Mapper, Hyperdoc Writer, Critic)</div></div>
+  <div class="card"><div class="card-label">Sessions Processed</div><div class="big" style="color:var(--green)">285</div><div class="detail">261 fully complete</div></div>
+  <div class="card"><div class="card-label">Hyperdocs Written</div><div class="big" style="color:var(--green)">456</div><div class="detail">13 MB across all files</div></div>
   <div class="card"><div class="card-label">Credibility</div><div class="big" style="color:var(--yellow)">73%</div><div class="detail">22,812 checks / 261 sessions</div></div>
 </div>
 
@@ -124,7 +124,7 @@
 <div class="card" style="margin-top:12px">
   <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:0.85rem">
     <div><span style="color:var(--green)">Similarity index:</span> 7.9 MB (14,176 matches)</div>
-    <div><span style="color:var(--green)">Phase 0-3:</span> 259 sessions complete</div>
+    <div><span style="color:var(--green)">Phase 0-3:</span> 261 sessions complete</div>
     <div><span style="color:var(--green)">Hyperdocs:</span> 456 / 456</div>
     <div><span style="color:var(--green)">Ground truth:</span> 261 sessions verified</div>
     <div><span style="color:var(--dim)">Real-time hooks:</span> Built but not wired (Level 6 blocker)</div>
@@ -286,11 +286,14 @@
     <div class="file-row"><span class="file-name">hyperdoc_store_init.py</span><span class="file-lines">193</span><span class="file-desc">Initializes versioned hyperdoc storage.</span><span class="file-status s-working">Working</span></div>
   </div>
   <div class="card">
-    <div class="card-label">Phase 5: Ground Truth Verification ($0)</div>
+    <div class="card-label">Phase 5: Ground Truth + Data Quality ($0)</div>
     <div class="file-row"><span class="file-name">run_verification.py</span><span class="file-lines">420</span><span class="file-desc">Adapter for all sessions. 261 sessions verified, 73% credibility.</span><span class="file-status s-verified">Verified</span></div>
     <div class="file-row"><span class="file-name">ground_truth_verifier.py</span><span class="file-lines">393</span><span class="file-desc">AST checks: bare excepts, model strings, missing functions, truncation.</span><span class="file-status s-working">Working</span></div>
     <div class="file-row"><span class="file-name">claim_extractor.py</span><span class="file-lines">295</span><span class="file-desc">Extracts claims from grounded_markers, primitives, idea_graph.</span><span class="file-status s-working">Working</span></div>
     <div class="file-row"><span class="file-name">gap_reporter.py</span><span class="file-lines">240</span><span class="file-desc">Classifies: contradicted, unverified, unmonitored, premature_victory.</span><span class="file-status s-working">Working</span></div>
+    <div class="file-row"><span class="file-name">schema_normalizer.py</span><span class="file-lines">500</span><span class="file-desc">Fixes 886 agent schema variants → 9 canonical. 2,442 files normalized. +798 fields recovered.</span><span class="file-status s-verified">Verified</span></div>
+    <div class="file-row"><span class="file-name">completeness_scanner.py</span><span class="file-lines">230</span><span class="file-desc">Field-level completeness report across all sessions. POPULATED/ZERO/MISSING/FILE_MISSING.</span><span class="file-status s-verified">Verified</span></div>
+    <div class="file-row"><span class="file-name">post_agent_normalize.py</span><span class="file-lines">100</span><span class="file-desc">Automated post-agent normalization gate. Run after any agent completes.</span><span class="file-status s-verified">Verified</span></div>
   </div>
 </div>
 
@@ -370,7 +373,7 @@
     <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
       <div style="font-size:1.6rem;font-weight:700;color:var(--green)">1.1 GB</div>
       <div style="font-size:0.75rem;color:var(--dim)">PERMANENT_HYPERDOCS</div>
-      <div style="font-size:0.75rem;color:var(--dim)">7,362 files</div>
+      <div style="font-size:0.75rem;color:var(--dim)">9,755 files</div>
     </div>
     <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
       <div style="font-size:1.6rem;font-weight:700;color:var(--blue)">1.1 GB</div>
@@ -378,9 +381,9 @@
       <div style="font-size:0.75rem;color:var(--dim)">3,405 files</div>
     </div>
     <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
-      <div style="font-size:1.6rem;font-weight:700;color:var(--accent)">1.6 MB</div>
+      <div style="font-size:1.6rem;font-weight:700;color:var(--accent)">2.5 MB</div>
       <div style="font-size:0.75rem;color:var(--dim)">GitHub Source (~/Hyperdocs)</div>
-      <div style="font-size:0.75rem;color:var(--dim)">175 files</div>
+      <div style="font-size:0.75rem;color:var(--dim)">67 tracked files</div>
     </div>
   </div>
 </div>
@@ -409,16 +412,17 @@
   <div class="card" style="border-color:var(--yellow)">
     <div class="card-label" style="color:var(--yellow)">Production Polish</div>
     <div style="font-size:0.9rem;color:var(--dim)">
-      <div style="padding:6px 0;border-bottom:1px solid var(--border)">Production line visualization (manufacturing site tour)</div>
-      <div style="padding:6px 0;border-bottom:1px solid var(--border)">Onboarding testing (3+ scenarios end-to-end)</div>
-      <div style="padding:6px 0;border-bottom:1px solid var(--border)">Orchestrator phase transition fixes (8.8% failure rate)</div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green)">Done:</span> Production line visualization (production_line.html)</div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green)">Done:</span> Schema normalization (886 variants → 9 canonical, automated)</div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="color:var(--yellow)">Partial:</span> Onboarding testing (1/3 scenarios tested)</div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--border)">Orchestrator phase transition fixes (8.4% failure rate)</div>
       <div style="padding:6px 0">Tableau-quality dashboard upgrades</div>
     </div>
   </div>
 </div>
 
 <div style="margin-top:40px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-align:center">
-  <div style="font-size:1.2rem;font-weight:600;margin-bottom:8px">34 scripts. 10 agents. 284 sessions. 456 hyperdocs. 73% verified. Level 5.</div>
+  <div style="font-size:1.2rem;font-weight:600;margin-bottom:8px">39 scripts. 9 agents. 285 sessions. 456 hyperdocs. 73% verified. Level 5.</div>
   <div style="color:var(--dim);font-size:0.9rem">Context is not impossible. File by file. Message by message.</div>
 </div>
 

@@ -501,7 +501,7 @@
 <body>
 
 <h1>Hyperdocs — Where We Are</h1>
-<p class="subtitle">Product state assessment &bull; February 9, 2026 &bull; <em>Corrected from actual filesystem data</em></p>
+<p class="subtitle">Product state assessment &bull; February 10, 2026 &bull; <em>Corrected from actual filesystem data</em></p>
 
 <!-- ═══════════════════════════════════════════ -->
 <!-- SECTION: What We've Built -->
@@ -514,13 +514,13 @@
 <div class="card-grid">
   <div class="card">
     <div class="card-title">Sessions Processed</div>
-    <div class="big-number green">284</div>
-    <div class="card-detail">259 fully complete (19 files each) + 25 partial</div>
+    <div class="big-number green">285</div>
+    <div class="card-detail">261 fully complete + 24 partial</div>
   </div>
   <div class="card">
     <div class="card-title">Pipeline Output Files</div>
     <div class="big-number blue">6,135</div>
-    <div class="card-detail">JSON files across 284 session directories</div>
+    <div class="card-detail">JSON files across 285 session directories</div>
   </div>
   <div class="card">
     <div class="card-title">Hyperdocs Written</div>
@@ -553,21 +553,21 @@
   <div class="pipeline-phase">
     <div class="phase-num">Phase 1</div>
     <div class="phase-name">Extraction</div>
-    <div class="phase-status status-verified">284 sessions</div>
+    <div class="phase-status status-verified">269 sessions</div>
     <div style="color:var(--text-dim);font-size:0.75rem;margin-top:6px">4 agents per session</div>
   </div>
   <div class="pipeline-arrow">→</div>
   <div class="pipeline-phase">
     <div class="phase-num">Phase 2</div>
     <div class="phase-name">Synthesis</div>
-    <div class="phase-status status-verified">259/284 full</div>
+    <div class="phase-status status-verified">261/285</div>
     <div style="color:var(--text-dim);font-size:0.75rem;margin-top:6px">Idea graph + 6-pass</div>
   </div>
   <div class="pipeline-arrow">→</div>
   <div class="pipeline-phase">
     <div class="phase-num">Phase 3</div>
     <div class="phase-name">File Mapper</div>
-    <div class="phase-status status-verified">259/284 full</div>
+    <div class="phase-status status-verified">261/285</div>
     <div style="color:var(--text-dim);font-size:0.75rem;margin-top:6px">Dossiers + CLAUDE.md</div>
   </div>
   <div class="pipeline-arrow">→</div>
@@ -581,20 +581,45 @@
   <div class="pipeline-phase">
     <div class="phase-num">Phase 5</div>
     <div class="phase-name">Ground Truth</div>
-    <div class="phase-status status-assumed">Built</div>
-    <div style="color:var(--text-dim);font-size:0.75rem;margin-top:6px">Not re-verified</div>
+    <div class="phase-status status-verified">73% verified</div>
+    <div style="color:var(--text-dim);font-size:0.75rem;margin-top:6px">261 sessions checked</div>
   </div>
 </div>
 
 <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
-  <div style="font-weight:600;margin-bottom:12px;color:var(--red)">Missing from Pipeline</div>
+  <div style="font-weight:600;margin-bottom:12px;color:var(--green)">Completed Since Last Assessment</div>
   <div class="progress-row">
-    <div class="progress-label">Code Similarity Script</div>
-    <div class="progress-track"><div class="progress-fill red" style="width:0%"></div></div>
-    <div class="progress-pct" style="color:var(--red)">0%</div>
+    <div class="progress-label">Code Similarity</div>
+    <div class="progress-track"><div class="progress-fill green" style="width:100%"></div></div>
+    <div class="progress-pct">DONE</div>
+  </div>
+  <div class="progress-row">
+    <div class="progress-label">Phase 5 Ground Truth</div>
+    <div class="progress-track"><div class="progress-fill green" style="width:100%"></div></div>
+    <div class="progress-pct">DONE</div>
+  </div>
+  <div class="progress-row">
+    <div class="progress-label">Schema Normalization</div>
+    <div class="progress-track"><div class="progress-fill green" style="width:100%"></div></div>
+    <div class="progress-pct">DONE</div>
+  </div>
+  <div class="progress-row">
+    <div class="progress-label">Completeness Scanner</div>
+    <div class="progress-track"><div class="progress-fill green" style="width:100%"></div></div>
+    <div class="progress-pct">DONE</div>
+  </div>
+  <div class="progress-row">
+    <div class="progress-label">Production Line Viz</div>
+    <div class="progress-track"><div class="progress-fill green" style="width:100%"></div></div>
+    <div class="progress-pct">DONE</div>
+  </div>
+  <div class="progress-row">
+    <div class="progress-label">Onboarding Test</div>
+    <div class="progress-track"><div class="progress-fill yellow" style="width:33%"></div></div>
+    <div class="progress-pct">1/3</div>
   </div>
   <div style="color:var(--text-dim);font-size:0.85rem;margin-top:8px">
-    File genealogy detects families by name patterns + idea graph. But <strong>actual code-level overlap comparison</strong> — reading two files and measuring shared logic — was designed but never built as a Python script.
+    Code similarity: 341 files, 14K matches, 7.7MB index. Phase 5: 73% credibility (22,812 checks). Schema normalization: 886 variants consolidated to 9 canonical, +798 fields recovered. Onboarding: Phase 0 tested on fresh session 02552cd9.
   </div>
 </div>
 
@@ -617,7 +642,7 @@
       <li><span class="icon">📄</span> Grounded markers (JSON)</li>
       <li><span class="icon">📊</span> 3 PDFs (System Guide, Processing Plan, Idea Evolution)</li>
       <li><span class="icon">🖥️</span> 19 HTML files (dashboards, panels, timelines)</li>
-      <li><span class="icon">🧬</span> 13 cross-session genealogy families</li>
+      <li><span class="icon">🧬</span> 18 cross-session genealogy families</li>
       <li><span class="icon">📦</span> 492 per-file hyperdoc inputs</li>
     </ul>
   </div>
@@ -672,9 +697,9 @@
       </svg>
       <div class="donut-labels">
         <div class="donut-label-item"><div class="donut-swatch" style="background:#00b894"></div> Phase 0 — Verified ✓</div>
-        <div class="donut-label-item"><div class="donut-swatch" style="background:#fdcb6e"></div> Phases 1-3 — 284 sessions complete</div>
+        <div class="donut-label-item"><div class="donut-swatch" style="background:#fdcb6e"></div> Phases 1-3 — 269 P1, 261 P2-P3</div>
         <div class="donut-label-item"><div class="donut-swatch" style="background:#74b9ff"></div> Phase 4 — 456/456 COMPLETE</div>
-        <div class="donut-label-item"><div class="donut-swatch" style="background:#a29bfe"></div> Phase 5 — Built, unverified</div>
+        <div class="donut-label-item"><div class="donut-swatch" style="background:#a29bfe"></div> Phase 5 — Verified 73%</div>
       </div>
     </div>
   </div>
@@ -720,12 +745,12 @@
     <div class="ws-tag high">High Priority</div>
   </div>
   <ul class="ws-items">
-    <li><span class="ws-icon" style="color:var(--red)">✗</span> Build code similarity script (compare actual file contents for overlap)</li>
+    <li><span class="ws-icon" style="color:var(--green)">✓</span> Code similarity — DONE (341 files, 14,176 matches, 7.7MB index)</li>
     <li><span class="ws-icon" style="color:var(--green)">✓</span> Phase 0 — verified, runs clean</li>
-    <li><span class="ws-icon" style="color:var(--green)">✓</span> Phases 1-3 — 284 sessions processed (259 fully complete)</li>
-    <li><span class="ws-icon" style="color:var(--green)">✓</span> Phase 4b — 456/456 hyperdocs COMPLETE (14MB)</li>
-    <li><span class="ws-icon" style="color:var(--yellow)">?</span> Phase 5 ground truth — needs re-run against current code state</li>
-    <li><span class="ws-icon" style="color:var(--yellow)">?</span> 25 partial sessions — missing synthesis/mapping outputs</li>
+    <li><span class="ws-icon" style="color:var(--green)">✓</span> Phases 1-3 — 285 sessions processed (261 fully complete)</li>
+    <li><span class="ws-icon" style="color:var(--green)">✓</span> Phase 4b — 456/456 hyperdocs COMPLETE (13.0MB)</li>
+    <li><span class="ws-icon" style="color:var(--green)">✓</span> Phase 5 ground truth — DONE, 73% credibility (22,812 checks)</li>
+    <li><span class="ws-icon" style="color:var(--yellow)">?</span> 24 partial sessions — missing synthesis/mapping outputs</li>
   </ul>
 </div>
 
@@ -750,7 +775,7 @@
     <div class="ws-tag medium">Before Launch</div>
   </div>
   <ul class="ws-items">
-    <li><span class="ws-icon" style="color:var(--red)">✗</span> User with messy file system (40 files, no structure)</li>
+    <li><span class="ws-icon" style="color:var(--yellow)">~</span> User with messy file system — Phase 0 tested on fresh session 02552cd9 (1/3 done)</li>
     <li><span class="ws-icon" style="color:var(--red)">✗</span> User who only wants future sessions (skip historical)</li>
     <li><span class="ws-icon" style="color:var(--red)">✗</span> User on budget (Haiku-only tier — what do they get?)</li>
     <li><span class="ws-icon" style="color:var(--red)">✗</span> User with 5 sessions vs. 500 sessions</li>
@@ -765,7 +790,7 @@
     <div class="ws-tag medium">Marketing Dependency</div>
   </div>
   <ul class="ws-items">
-    <li><span class="ws-icon" style="color:var(--red)">✗</span> What does $19/month actually buy? (compute budget mapping)</li>
+    <li><span class="ws-icon" style="color:var(--green)">✓</span> Pricing model RESOLVED: BYOK (bring your own API key), subscription covers platform</li>
     <li><span class="ws-icon" style="color:var(--red)">✗</span> Tiered analysis: Phase 0 only (free) → Haiku → Sonnet → Opus</li>
     <li><span class="ws-icon" style="color:var(--red)">✗</span> Deployment planner: show user time × cost × depth trade-offs</li>
     <li><span class="ws-icon" style="color:var(--red)">✗</span> "What do I get?" preview — before paying, show sample output</li>
@@ -838,7 +863,7 @@
 </div>
 
 <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:16px;color:var(--text-dim);font-size:0.9rem">
-  <strong style="color:var(--yellow)">Open question:</strong> The $19/month subscription doesn't cover Opus compute for even one session. Either the subscription covers the platform + visualization (user brings their own API key), or the pricing needs to include compute credits. This decision affects the entire marketing message.
+  <strong style="color:var(--green)">Resolved:</strong> BYOK (Bring Your Own Key) model. The $19/month subscription covers the platform + visualization. Users bring their own Anthropic API key for compute. This decouples platform pricing from per-session compute cost.
 </div>
 
 <!-- ═══════════════════════════════════════════ -->
@@ -854,7 +879,7 @@
     <div class="card-title" style="color:var(--green)">What's Strong</div>
     <ul style="list-style:none;padding:0;font-size:0.9rem">
       <li style="padding:6px 0;border-bottom:1px solid var(--border)">The pipeline architecture is sound</li>
-      <li style="padding:6px 0;border-bottom:1px solid var(--border)">284 sessions of real data processed (6,135 JSONs)</li>
+      <li style="padding:6px 0;border-bottom:1px solid var(--border)">285 sessions of real data processed (6,135 JSONs)</li>
       <li style="padding:6px 0;border-bottom:1px solid var(--border)">7 semantic primitives are a genuine innovation</li>
       <li style="padding:6px 0;border-bottom:1px solid var(--border)">The 10 commitments prove the analysis works</li>
       <li style="padding:6px 0">Nobody else is doing this</li>
@@ -864,10 +889,9 @@
     <div class="card-title" style="color:var(--red)">What's Missing</div>
     <ul style="list-style:none;padding:0;font-size:0.9rem">
       <li style="padding:6px 0;border-bottom:1px solid var(--border)">19 HTML files exist but need Tableau-quality upgrades</li>
-      <li style="padding:6px 0;border-bottom:1px solid var(--border)">Code content similarity script not built (name-only matching exists)</li>
-      <li style="padding:6px 0;border-bottom:1px solid var(--border)">Onboarding never tested on a real user</li>
-      <li style="padding:6px 0;border-bottom:1px solid var(--border)">Pricing model doesn't account for compute cost</li>
-      <li style="padding:6px 0">25 sessions with incomplete phase outputs</li>
+      <li style="padding:6px 0;border-bottom:1px solid var(--border)">Onboarding tested once (Phase 0 only) — needs full-pipeline test</li>
+      <li style="padding:6px 0;border-bottom:1px solid var(--border)">24 sessions with incomplete phase outputs</li>
+      <li style="padding:6px 0">No real user has tried the product yet</li>
     </ul>
   </div>
 </div>

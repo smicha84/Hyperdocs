@@ -434,6 +434,38 @@ body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSys
   </div>
 </div>
 
+<!-- ═══ NORMALIZATION FIELDS (added to all Phase 1-3 files) ═══ -->
+<div class="sec"><h2>Schema Normalization Fields</h2><div class="line"></div><span class="badge">Present in all 2,442 normalized files</span></div>
+
+<div style="background:var(--s1);border:1px solid var(--bdr);border-radius:12px;padding:20px;margin-bottom:16px">
+  <div style="color:var(--dim);font-size:0.85rem;margin-bottom:12px">
+    All Phase 1-3 agent-produced files were normalized on Feb 10, 2026. The normalizer found data under 886 different key names and mapped it to 9 canonical schemas. These 3 fields are added to every normalized file:
+  </div>
+  <table class="field-table">
+    <tr><th>Field</th><th>Type</th><th>Prov</th><th>Description</th></tr>
+    <tr><td class="fname">_normalized_at</td><td class="ftype">ISO timestamp</td><td><span class="prov prov-C">C</span></td><td class="fmissing">When this file was normalized. Absence means pre-normalization or Phase 0/5 (deterministic).</td></tr>
+    <tr><td class="fname">_normalization_log</td><td class="ftype">list of strings</td><td><span class="prov prov-C">C</span></td><td class="fmissing">What the normalizer found and did. E.g., "extractions list: 182 items &rarr; 5 threads"</td></tr>
+    <tr><td class="fname">_extra</td><td class="ftype">dict or null</td><td><span class="prov prov-A">A</span></td><td class="fmissing">All original keys not in the canonical schema. Preserves everything — nothing lost.</td></tr>
+  </table>
+  <div class="note-box"><strong>Safety:</strong> Original files backed up in <code>{session}/backups/{filename}</code>. The normalizer is idempotent — running twice produces the same result.</div>
+</div>
+
+<!-- ═══ INDEX FILES (~/PERMANENT_HYPERDOCS/indexes/) ═══ -->
+<div class="sec"><h2>Index Files</h2><div class="line"></div><span class="badge">~/PERMANENT_HYPERDOCS/indexes/</span></div>
+
+<div style="background:var(--s1);border:1px solid var(--bdr);border-radius:12px;padding:20px;margin-bottom:16px">
+  <table class="field-table">
+    <tr><th>File</th><th>Size</th><th>Producer</th><th>Description</th></tr>
+    <tr><td class="fname">code_similarity_index.json</td><td>7.7 MB</td><td>code_similarity.py</td><td class="fmissing">All-pairs comparison: 341 files, 57,970 pairs, 14,176 matches, 10 pattern types</td></tr>
+    <tr><td class="fname">cross_session_file_index.json</td><td>1.4 MB</td><td>aggregate_dossiers.py</td><td class="fmissing">1,379 unique files across 284 sessions. Per-file dossier extracts.</td></tr>
+    <tr><td class="fname">fingerprint_cache.json</td><td>476 KB</td><td>code_similarity_incremental.py</td><td class="fmissing">AST fingerprints for 341 files. Used for incremental re-scans.</td></tr>
+    <tr><td class="fname">completeness_report.json</td><td>835 KB</td><td>completeness_scanner.py</td><td class="fmissing">Field-level POPULATED/ZERO/MISSING/FILE_MISSING for all 285 sessions.</td></tr>
+    <tr><td class="fname">normalization_log.json</td><td>7 KB</td><td>schema_normalizer.py</td><td class="fmissing">Log of all 2,442 files normalized: per-file-type status + session details.</td></tr>
+    <tr><td class="fname">dashboard_data.json</td><td>375 KB</td><td>dashboard.py</td><td class="fmissing">Pre-computed dashboard statistics for the concierge HTML generator.</td></tr>
+    <tr><td class="fname">similarity_alerts.jsonl</td><td>40 KB</td><td>code_similarity_incremental.py</td><td class="fmissing">Append-only log of similarity alerts from incremental scans.</td></tr>
+  </table>
+</div>
+
 <!-- ═══ KNOWLEDGE GRAPH QUERIES ═══ -->
 <div class="sec"><h2>Knowledge Graph Queries</h2><div class="line"></div><span class="badge">What you can ask the data</span></div>
 
@@ -456,7 +488,7 @@ body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSys
 </div>
 
 <div style="margin-top:40px;padding:20px;background:var(--s1);border:1px solid var(--bdr);border-radius:12px;text-align:center;font-size:0.85rem;color:var(--dim)">
-  19 file types &bull; 100+ fields &bull; 5 provenance categories &bull; 15+ knowledge graph queries<br>
+  22 file types &bull; 100+ fields &bull; 5 provenance categories &bull; 7 index files &bull; 15+ knowledge graph queries<br>
   <span style="color:var(--txt);font-weight:600">Every number in the Hyperdocs system traces back to this dictionary.</span>
 </div>
 
