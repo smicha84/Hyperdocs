@@ -115,3 +115,6 @@ fatal: could not read Username for 'https://github.com': Device not configured
 [main 0feaf94] Auto-sync:  2 files changed, 86 insertions(+), 12 deletions(-)
  2 files changed, 86 insertions(+), 12 deletions(-)
 fatal: could not read Username for 'https://github.com': Device not configured
+[main 6a02728] Auto-sync:  2 files changed, 77 insertions(+), 13 deletions(-)
+ 2 files changed, 77 insertions(+), 13 deletions(-)
+fatal: could not read Username for 'https://github.com': Device not configured
