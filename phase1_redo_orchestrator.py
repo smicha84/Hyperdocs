@@ -19,6 +19,33 @@ Usage:
     python3 phase1_redo_orchestrator.py                  # process all sessions
     python3 phase1_redo_orchestrator.py --start-from 50  # resume from session 50
     python3 phase1_redo_orchestrator.py --session session_0012ebed  # one session
+
+CHANGE LOG — Prompt & Config Fixes
+====================================
+Round 1 (Feb 11): Initial implementation
+  - 4 agent prompts (Thread Analyst, Geological Reader, Primitives Tagger, Explorer)
+  - MAX_TOKENS=16000, no thinking budget
+  - Explorer runs last with verification mandate
+
+Round 2 (Feb 11): Streaming + thinking
+  - MAX_TOKENS raised to 64000, THINKING_BUDGET=32000
+  - Switched from client.messages.create() to client.messages.stream()
+    because extended thinking requires streaming for long operations
+  - Added .env file loading for ANTHROPIC_API_KEY
+
+Round 3 (Feb 11): Primitives truncation fix + content-referential warning
+  - Primitives Tagger prompt: pre-filters to tier 2+ messages only (was sending
+    all 1317 messages including 1111 tier-1 skips). Result: 206 tagged (was 23).
+  - Added CRITICAL WARNING to Primitives Tagger prompt about content-referential
+    filter_signals. Explorer found 5 messages mistagged because the Tagger treated
+    failure/frustration keyword counts as emotional state indicators.
+    Source: Explorer verification Round 2 on session_0012ebed.
+
+Test iterations on session_0012ebed:
+  Iter 1: quality=significant_issues (6 P0, 4 thread, 4 geo, 4 prims issues)
+  Iter 2: quality=significant_issues (4 P0, 3 thread, 2 geo, 5 prims issues)
+          Primitives tagged 206 (was 23). But content-ref signals still fooling Tagger.
+  Iter 3: Running...
 """
 
 import json
@@ -35,7 +62,17 @@ REPO = Path(__file__).resolve().parent
 SESSIONS_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
 PROGRESS_FILE = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "phase1_redo_progress.json"
 MODEL = "claude-opus-4-6"
-MAX_TOKENS = 16000
+MAX_TOKENS = 64000
+THINKING_BUDGET = 32000
+
+# Load API key from .env file
+ENV_FILE = REPO / ".env"
+if ENV_FILE.exists():
+    for line in ENV_FILE.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, val = line.split("=", 1)
+            os.environ[key.strip()] = val.strip()
 
 client = anthropic.Anthropic()
 
@@ -108,7 +145,22 @@ Return ONLY the JSON. No markdown. No explanation."""
 
 
 def primitives_tagger_prompt(session_id, safe_condensed, safe_tier4, session_summary):
-    return f"""You are the Primitives Tagger for the Hyperdocs pipeline. Tag tier 2+ messages with the 7 semantic primitives for session {session_id}.
+    # FIX 6: Pre-filter to only tier 2+ messages to prevent truncation on large sessions
+    tier2plus = []
+    msgs = safe_condensed.get("messages", []) if isinstance(safe_condensed, dict) else safe_condensed
+    if isinstance(msgs, list):
+        tier2plus = [m for m in msgs if m.get("t", m.get("filter_tier", 0)) >= 2]
+
+    return f"""You are the Primitives Tagger for the Hyperdocs pipeline. Tag ALL of the following tier 2+ messages with the 7 semantic primitives for session {session_id}.
+
+CRITICAL WARNING — Content-Referential Signals:
+The filter_signals field (frustration, failure, architecture counts) counts KEYWORDS in the text.
+When an assistant message DISCUSSES failure handling, error patterns, or frustration management,
+these signals describe the CONTENT TOPIC, NOT the assistant's actual emotional state or behavior.
+DO NOT let high failure/frustration signal counts influence your emotional_tenor or confidence_signal
+tagging. Read the actual content preview to determine the real emotional state.
+Example: "I've created a comprehensive implementation plan!" with failure:4 signal is EXCITED, not FRUSTRATED.
+The failure:4 comes from the plan discussing failure handling, not from the assistant experiencing failure.
 
 The 7 primitives:
 1. action_vector: created|modified|debugged|refactored|discovered|decided|abandoned|reverted
@@ -123,11 +175,10 @@ INPUT DATA:
 === session_summary.json ===
 {json.dumps(session_summary, indent=2)[:8000]}
 
-=== safe_tier4.json ===
-{json.dumps(safe_tier4, indent=2)[:30000]}
+=== TIER 2+ MESSAGES ONLY ({len(tier2plus)} messages to tag) ===
+{json.dumps(tier2plus, indent=2)[:120000]}
 
-=== safe_condensed.json ===
-{json.dumps(safe_condensed, indent=2)[:60000]}
+IMPORTANT: You MUST tag ALL {len(tier2plus)} messages above. Do not stop early. Do not truncate.
 
 OUTPUT: Return ONLY valid JSON:
 {{
@@ -137,10 +188,10 @@ OUTPUT: Return ONLY valid JSON:
   "_normalized_at": "{datetime.now(timezone.utc).isoformat()}",
   "tagged_messages": [{{"msg_index": 0, "role": "user", "tier": 4, "timestamp": "...", "action_vector": "...", "confidence_signal": "...", "emotional_tenor": "...", "intent_marker": "...", "friction_log": "", "decision_trace": "", "disclosure_pointer": "{session_id}:msg0"}}],
   "distributions": {{}},
-  "summary_statistics": {{}}
+  "summary_statistics": {{"total_tier2plus": {len(tier2plus)}, "total_tagged": "MUST EQUAL {len(tier2plus)}"}}
 }}
 
-Only tag tier 2+ messages. Return ONLY JSON."""
+Return ONLY JSON."""
 
 
 def explorer_verification_prompt(session_id, safe_condensed, safe_tier4, session_summary,
@@ -209,14 +260,31 @@ Return ONLY JSON. No markdown. No explanation."""
 # ── Processing ──────────────────────────────────────────────────────────
 
 def call_opus(prompt):
-    """Make a single Opus API call. Returns parsed JSON or None."""
+    """Make a single Opus API call with extended thinking via streaming. Returns parsed JSON or None."""
     try:
-        response = client.messages.create(
+        text_parts = []
+        with client.messages.stream(
             model=MODEL,
             max_tokens=MAX_TOKENS,
+            thinking={
+                "type": "enabled",
+                "budget_tokens": THINKING_BUDGET,
+            },
             messages=[{"role": "user", "content": prompt}],
-        )
-        text = response.content[0].text.strip()
+        ) as stream:
+            for event in stream:
+                if hasattr(event, 'type'):
+                    if event.type == 'content_block_start' and hasattr(event, 'content_block'):
+                        if event.content_block.type == 'text':
+                            pass  # text block starting
+                    elif event.type == 'content_block_delta' and hasattr(event, 'delta'):
+                        if event.delta.type == 'text_delta':
+                            text_parts.append(event.delta.text)
+
+        text = ''.join(text_parts).strip()
+        if not text:
+            print("    No text in response")
+            return None
         # Strip markdown code fences if present
         if text.startswith("```"):
             text = text.split("\n", 1)[1] if "\n" in text else text[3:]
