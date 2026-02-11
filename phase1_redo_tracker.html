@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 1 Redo — Live Tracker</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --dim: #8b949e; --green: #3fb950; --red: #f85149; --yellow: #d29922; --blue: #58a6ff; --purple: #bc8cff; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,sans-serif; padding:32px; max-width:1200px; margin:0 auto; }
+  h1 { font-size:1.8rem; font-weight:700; margin-bottom:4px; }
+  .sub { color:var(--dim); font-size:0.9rem; margin-bottom:24px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:24px; }
+  .stat { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
+  .stat-val { font-size:2rem; font-weight:700; }
+  .stat-label { font-size:0.75rem; color:var(--dim); text-transform:uppercase; letter-spacing:0.05em; margin-top:4px; }
+  .progress-bar { width:100%; height:24px; background:var(--surface); border-radius:12px; overflow:hidden; margin-bottom:24px; border:1px solid var(--border); }
+  .progress-fill { height:100%; border-radius:12px; transition:width 0.5s; background:linear-gradient(90deg,var(--green),var(--blue)); }
+  .section { margin:32px 0 16px; display:flex; align-items:center; gap:12px; }
+  .section h2 { font-size:1.2rem; white-space:nowrap; }
+  .section .line { flex:1; height:1px; background:var(--border); }
+  table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+  th { text-align:left; padding:8px 12px; color:var(--dim); border-bottom:1px solid var(--border); font-weight:500; }
+  td { padding:6px 12px; border-bottom:1px solid var(--border); }
+  .ok { color:var(--green); } .fail { color:var(--red); } .warn { color:var(--yellow); }
+  .badge { font-size:0.7rem; padding:2px 6px; border-radius:6px; }
+  .badge-clean { background:rgba(63,185,80,0.15); color:var(--green); }
+  .badge-minor { background:rgba(210,153,34,0.15); color:var(--yellow); }
+  .badge-sig { background:rgba(248,81,73,0.15); color:var(--red); }
+  .refresh { color:var(--blue); cursor:pointer; font-size:0.85rem; }
+  #status { color:var(--dim); font-size:0.85rem; margin-bottom:8px; }
+</style>
+</head>
+<body>
+<h1>Phase 1 Full Redo — Live Tracker</h1>
+<p class="sub">279 sessions, 4 agents per session (Thread Analyst, Geological Reader, Primitives Tagger, Explorer+Verification)</p>
+<div id="status">Loading...</div>
+
+<div class="progress-bar"><div class="progress-fill" id="pbar" style="width:0%"></div></div>
+
+<div class="stats" id="stats">
+  <div class="stat"><div class="stat-val" id="s-done">0</div><div class="stat-label">Sessions Done</div></div>
+  <div class="stat"><div class="stat-val" id="s-total">279</div><div class="stat-label">Total</div></div>
+  <div class="stat"><div class="stat-val" id="s-passes">0</div><div class="stat-label">Passes OK</div></div>
+  <div class="stat"><div class="stat-val" id="s-fails">0</div><div class="stat-label">Passes Failed</div></div>
+  <div class="stat"><div class="stat-val" id="s-clean">0</div><div class="stat-label">Clean Quality</div></div>
+  <div class="stat"><div class="stat-val" id="s-issues">0</div><div class="stat-label">Issues Found</div></div>
+</div>
+
+<div class="section"><h2>Recent Sessions</h2><div class="line"></div><span class="refresh" onclick="loadData()">Refresh</span></div>
+<table>
+  <thead><tr><th>Session</th><th>Threads</th><th>Geo</th><th>Prims</th><th>Explorer</th><th>Quality</th><th>Time</th></tr></thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<div class="section"><h2>Verification Issues</h2><div class="line"></div></div>
+<div id="issues" style="font-size:0.85rem;color:var(--dim)">No issues yet.</div>
+
+<script>
+const PROGRESS_URL = 'file:///Users/stefanmichaelcheck/PERMANENT_HYPERDOCS/indexes/phase1_redo_progress.json';
+
+async function loadData() {
+  try {
+    const resp = await fetch(PROGRESS_URL);
+    const data = await resp.json();
+    update(data);
+  } catch(e) {
+    // For file:// URLs, use XMLHttpRequest
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', PROGRESS_URL, true);
+    xhr.onload = function() {
+      if (xhr.status === 200 || xhr.status === 0) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          update(data);
+        } catch(e2) { document.getElementById('status').textContent = 'Error parsing progress data'; }
+      }
+    };
+    xhr.onerror = function() { document.getElementById('status').textContent = 'Waiting for progress data...'; };
+    xhr.send();
+  }
+}
+
+function update(data) {
+  const done = data.completed ? data.completed.length : 0;
+  const total = data.total_sessions || 279;
+  const pct = data.pct_complete || 0;
+  const fails = data.failed ? data.failed.length : 0;
+
+  document.getElementById('s-done').textContent = done;
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-passes').textContent = data.totals ? data.totals.successful_passes : 0;
+  document.getElementById('s-fails').textContent = data.totals ? data.totals.failed_passes : 0;
+  document.getElementById('pbar').style.width = pct + '%';
+  document.getElementById('status').textContent =
+    `Updated: ${data.updated_at || '?'} | Session ${data.current_session || 0}/${total} (${pct}%)` +
+    (data.completed_at ? ' | COMPLETE' : ' | Running...');
+
+  // Count quality ratings
+  let clean = 0, issues = 0;
+  (data.completed || []).forEach(s => {
+    const q = s.verification ? s.verification.overall_data_quality : 'unknown';
+    if (q === 'clean') clean++;
+    else issues++;
+  });
+  document.getElementById('s-clean').textContent = clean;
+  document.getElementById('s-issues').textContent = issues;
+
+  // Recent sessions table (last 20)
+  const recent = (data.completed || []).slice(-20).reverse();
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  recent.forEach(s => {
+    const tr = document.createElement('tr');
+    const p = s.passes || {};
+    const q = s.verification ? s.verification.overall_data_quality : '?';
+    const qClass = q === 'clean' ? 'badge-clean' : q === 'minor_issues' ? 'badge-minor' : 'badge-sig';
+    const totalTime = Object.values(p).reduce((a, v) => a + (v.time || 0), 0);
+    tr.innerHTML = `
+      <td>${s.session}</td>
+      <td class="${p.thread_analyst?.status === 'ok' ? 'ok' : 'fail'}">${p.thread_analyst?.entries || '?'}</td>
+      <td class="${p.geological_reader?.status === 'ok' ? 'ok' : 'fail'}">${p.geological_reader?.observations || '?'}</td>
+      <td class="${p.primitives_tagger?.status === 'ok' ? 'ok' : 'fail'}">${p.primitives_tagger?.tagged || '?'}</td>
+      <td class="${p.explorer?.status === 'ok' ? 'ok' : 'fail'}">${p.explorer?.observations || '?'}</td>
+      <td><span class="badge ${qClass}">${q}</span></td>
+      <td style="color:var(--dim)">${totalTime}s</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Issues
+  const issueDiv = document.getElementById('issues');
+  const allIssues = [];
+  (data.completed || []).forEach(s => {
+    const v = s.verification || {};
+    ['phase0_issues_found', 'thread_analyst_issues', 'geological_reader_issues', 'primitives_tagger_issues'].forEach(k => {
+      if (v[k] && v[k].length > 0) {
+        v[k].forEach(issue => allIssues.push({ session: s.session, type: k, issue: typeof issue === 'string' ? issue : JSON.stringify(issue) }));
+      }
+    });
+  });
+  if (allIssues.length > 0) {
+    issueDiv.innerHTML = allIssues.slice(-30).map(i =>
+      `<div style="padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--yellow)">${i.session}</span> [${i.type}]: ${i.issue}</div>`
+    ).join('');
+  }
+}
+
+loadData();
+setInterval(loadData, 10000); // Auto-refresh every 10s
+</script>
+</body>
+</html>
