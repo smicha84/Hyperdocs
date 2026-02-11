@@ -41,11 +41,32 @@ Round 3 (Feb 11): Primitives truncation fix + content-referential warning
     failure/frustration keyword counts as emotional state indicators.
     Source: Explorer verification Round 2 on session_0012ebed.
 
+Round 4 (Feb 11): Output + prompt fixes
+  - MAX_TOKENS raised to 128000 (was 64000) to prevent Primitives Tagger
+    output truncation on large sessions (206 messages need ~100K output).
+  - Thread Analyst prompt: added CRITICAL warning against fabricating
+    round-number indices (900, 1000). Must only reference indices from data.
+  - Session continuation detection added to Phase 0 (FIX 12).
+  - Content-referential detection further improved in Phase 0 (FIX 14).
+
 Test iterations on session_0012ebed:
-  Iter 1: quality=significant_issues (6 P0, 4 thread, 4 geo, 4 prims issues)
-  Iter 2: quality=significant_issues (4 P0, 3 thread, 2 geo, 5 prims issues)
-          Primitives tagged 206 (was 23). But content-ref signals still fooling Tagger.
-  Iter 3: Running...
+  Iter 1: significant_issues (6 P0, 4 thread, 4 geo, 4 prims issues)
+  Iter 2: significant_issues (4 P0, 3 thread, 2 geo, 5 prims) — 206 tagged
+  Iter 3: significant_issues (4 P0, 3 thread, 3 geo, 3 prims) — 169 tagged
+  Iter 4: significant_issues (3 P0 minor, 1 thread CRITICAL json fail, 3 geo minor, 3 prims moderate)
+
+Round 5 (Feb 11): JSON recovery + prompt hardening
+  - JSON parse fallback: 3-strategy recovery (outermost braces, trailing comma fix,
+    truncation repair by counting unmatched braces). Thread Analyst failed with
+    malformed JSON in iter 4 — the 7603-char cutoff suggests output truncation.
+  - MAX_TOKENS already at 128K, so the issue is likely the model stopping mid-JSON.
+  - Primitives Tagger prompt: added WRONG examples with corrections for content-ref
+    misclassification. "IGNORE filter_signals entirely for emotional tagging."
+  - Geological Reader prompt: added RULES about only citing verifiable data,
+    using temporal gaps for phase boundaries, content-ref signal awareness.
+  - Thread Analyst prompt: already has fabrication warning from Round 4.
+
+  Iter 5: Running...
 """
 
 import json
@@ -62,7 +83,7 @@ REPO = Path(__file__).resolve().parent
 SESSIONS_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
 PROGRESS_FILE = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "phase1_redo_progress.json"
 MODEL = "claude-opus-4-6"
-MAX_TOKENS = 64000
+MAX_TOKENS = 128000
 THINKING_BUDGET = 32000
 
 # Load API key from .env file
@@ -85,6 +106,10 @@ from schema_normalizer import NORMALIZERS, normalize_file
 
 def thread_analyst_prompt(session_id, safe_condensed, safe_tier4, session_summary):
     return f"""You are the Thread Analyst for the Hyperdocs pipeline. Extract 6 analytical threads from session {session_id}.
+
+CRITICAL: Only reference msg_index values that actually appear in the input data.
+Do NOT fabricate round-number indices (e.g., 900, 1000) as approximations.
+If you cannot determine the exact index, omit the entry or note it as estimated.
 
 INPUT DATA:
 === session_summary.json ===
@@ -117,6 +142,12 @@ IMPORTANT: Return ONLY the JSON. No markdown code fences. No explanation text.""
 
 def geological_reader_prompt(session_id, safe_condensed, safe_tier4, session_summary):
     return f"""You are the Geological Reader for the Hyperdocs pipeline. Perform multi-resolution analysis of session {session_id}.
+
+RULES:
+- Only cite data that appears in the input. Do not infer port numbers, file sizes, or counts not present.
+- Use temporal gaps between timestamps to identify phase boundaries (gaps > 30 min are significant).
+- Filter signals (failure, frustration) may be content-referential — check if the message DISCUSSES failures vs EXPERIENCES them.
+- Distinguish between "session had errors" and "session discussed error handling."
 
 INPUT DATA:
 === session_summary.json ===
@@ -155,12 +186,18 @@ def primitives_tagger_prompt(session_id, safe_condensed, safe_tier4, session_sum
 
 CRITICAL WARNING — Content-Referential Signals:
 The filter_signals field (frustration, failure, architecture counts) counts KEYWORDS in the text.
-When an assistant message DISCUSSES failure handling, error patterns, or frustration management,
-these signals describe the CONTENT TOPIC, NOT the assistant's actual emotional state or behavior.
-DO NOT let high failure/frustration signal counts influence your emotional_tenor or confidence_signal
-tagging. Read the actual content preview to determine the real emotional state.
-Example: "I've created a comprehensive implementation plan!" with failure:4 signal is EXCITED, not FRUSTRATED.
-The failure:4 comes from the plan discussing failure handling, not from the assistant experiencing failure.
+When an assistant message DISCUSSES failure handling, error patterns, or architecture design,
+these signals describe the CONTENT TOPIC, NOT the assistant's actual emotional state.
+
+IGNORE filter_signals entirely for emotional_tenor and confidence_signal tagging.
+ONLY read the actual content preview text to determine the real state.
+
+WRONG examples (do NOT repeat these):
+  - "I've created a comprehensive implementation plan!" + failure:4 → debugged/frustrated (WRONG)
+    CORRECT: created/excited — the failures are what the plan ADDRESSES, not what the assistant FEELS
+  - "Step 3: The Orchestrator — This is the heart of the system" + failure:3 → debugged/fragile/bugfix (WRONG)
+    CORRECT: created/working/confident/feature — this is architectural design, not debugging
+  - Content describing error-handling mechanisms is NOT a bugfix — it is feature creation
 
 The 7 primitives:
 1. action_vector: created|modified|debugged|refactored|discovered|decided|abandoned|reverted
@@ -297,12 +334,36 @@ def call_opus(prompt):
         return json.loads(text)
     except json.JSONDecodeError as e:
         print(f"    JSON parse error: {e}")
-        # Try to extract JSON from the response
+        # Try progressively aggressive JSON extraction
+        # Strategy 1: find outermost { }
         try:
             start = text.index("{")
             end = text.rindex("}") + 1
-            return json.loads(text[start:end])
+            candidate = text[start:end]
+            return json.loads(candidate)
         except (ValueError, json.JSONDecodeError):
+            pass
+        # Strategy 2: try to fix common issues (trailing comma, missing closing)
+        try:
+            candidate = text[text.index("{"):text.rindex("}") + 1]
+            # Remove trailing commas before } or ]
+            import re as _re
+            candidate = _re.sub(r',\s*([}\]])', r'\1', candidate)
+            return json.loads(candidate)
+        except (ValueError, json.JSONDecodeError):
+            pass
+        # Strategy 3: truncated JSON — try adding closing braces
+        try:
+            candidate = text[text.index("{"):]
+            # Count open vs close braces
+            opens = candidate.count("{") - candidate.count("}")
+            candidate += "}" * opens
+            # Same for brackets
+            opens_b = candidate.count("[") - candidate.count("]")
+            candidate += "]" * opens_b
+            return json.loads(candidate)
+        except (ValueError, json.JSONDecodeError):
+            print(f"    All JSON recovery strategies failed. Response length: {len(text)}")
             return None
     except anthropic.APIError as e:
         print(f"    API error: {e}")
