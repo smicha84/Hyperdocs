@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gap Analysis — Session 0012ebed / hyperdoc_pipeline.py</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-body: 'Space Grotesk', system-ui, sans-serif;
+    --font-mono: 'Space Mono', 'SF Mono', Consolas, monospace;
+    --bg: #0b0d1a; --surface: #12152a; --surface2: #1a1e38; --surface3: #222748;
+    --border: rgba(139,92,246,0.1); --border-bright: rgba(139,92,246,0.25);
+    --text: #e8e6f0; --text-dim: #7a7896;
+    --accent: #8b5cf6; --accent-dim: rgba(139,92,246,0.08);
+    --green: #10b981; --green-dim: rgba(16,185,129,0.08);
+    --amber: #f59e0b; --amber-dim: rgba(245,158,11,0.08);
+    --red: #ef4444; --red-dim: rgba(239,68,68,0.08);
+    --cyan: #06b6d4; --cyan-dim: rgba(6,182,212,0.08);
+    --pink: #ec4899; --pink-dim: rgba(236,72,153,0.08);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #faf8ff; --surface: #ffffff; --surface2: #f5f3ff; --surface3: #ede9fe;
+      --border: rgba(139,92,246,0.1); --border-bright: rgba(139,92,246,0.25);
+      --text: #1e1b3a; --text-dim: #6b6589;
+      --accent: #7c3aed; --accent-dim: rgba(124,58,237,0.06);
+      --green: #059669; --green-dim: rgba(5,150,105,0.06);
+      --amber: #d97706; --amber-dim: rgba(217,119,6,0.06);
+      --red: #dc2626; --red-dim: rgba(220,38,38,0.06);
+      --cyan: #0891b2; --cyan-dim: rgba(8,145,178,0.06);
+      --pink: #db2777; --pink-dim: rgba(219,39,119,0.06);
+    }
+  }
+  * { margin:0; padding:0; box-sizing:border-box; min-width:0; }
+  body { background:var(--bg); background-image:radial-gradient(at 10% 20%, rgba(239,68,68,0.04) 0%, transparent 50%); color:var(--text); font-family:var(--font-body); line-height:1.6; padding:32px 20px 80px; overflow-wrap:break-word; }
+  .container { max-width:1100px; margin:0 auto; }
+  h1 { font-size:36px; font-weight:700; letter-spacing:-1.5px; margin-bottom:6px; }
+  h1 span { color:var(--red); }
+  .subtitle { font-size:15px; color:var(--text-dim); margin-bottom:6px; }
+  .meta { font-family:var(--font-mono); font-size:11px; color:var(--text-dim); margin-bottom:36px; display:flex; gap:12px; flex-wrap:wrap; }
+  .meta span { background:var(--surface2); padding:3px 10px; border-radius:4px; }
+  .sec-head { font-family:var(--font-mono); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; padding:8px 0; margin-top:44px; margin-bottom:16px; border-bottom:2px solid var(--border-bright); display:flex; align-items:center; gap:8px; }
+  .sec-head .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+  /* Covered list */
+  .covered { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:8px; margin-bottom:20px; }
+  .covered-item { background:var(--green-dim); border:1px solid rgba(16,185,129,0.15); border-radius:6px; padding:8px 12px; font-size:12px; display:flex; gap:8px; align-items:baseline; }
+  .covered-item .check { color:var(--green); font-weight:700; flex-shrink:0; }
+  .covered-item .label { font-weight:600; }
+  .covered-item .detail { color:var(--text-dim); font-size:11px; }
+  .stat-row { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+  .stat { font-family:var(--font-mono); font-size:12px; background:var(--surface2); padding:4px 12px; border-radius:4px; }
+  .stat b { color:var(--green); }
+
+  /* Gap cards */
+  .gap-card { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--red); border-radius:0 10px 10px 0; padding:20px; margin-bottom:16px; }
+  .gap-card h3 { font-size:16px; margin-bottom:4px; color:var(--red); }
+  .gap-card .what { font-size:13px; margin-bottom:12px; line-height:1.65; }
+  .gap-card .fields { display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:12px; }
+  @media (max-width:700px) { .gap-card .fields { grid-template-columns:1fr; } }
+  .gap-card .field-box { background:var(--surface2); border-radius:6px; padding:10px 12px; }
+  .gap-card .field-box h4 { font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-dim); margin-bottom:6px; }
+  .gap-card .field-box p { color:var(--text-dim); line-height:1.5; }
+  .gap-card .field-box code { font-family:var(--font-mono); font-size:10px; background:var(--surface3); padding:1px 4px; border-radius:2px; }
+  .gap-card .root-cause { margin-top:12px; font-family:var(--font-mono); font-size:11px; padding:8px 12px; border-radius:6px; }
+  .gap-card .root-cause.disconnect { background:var(--red-dim); color:var(--red); }
+  .gap-card .root-cause.structural { background:var(--amber-dim); color:var(--amber); }
+  .gap-card .root-cause.missing { background:var(--cyan-dim); color:var(--cyan); }
+
+  /* Trace table */
+  .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:var(--surface); margin-bottom:20px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  thead th { background:var(--surface2); font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-dim); padding:8px 10px; text-align:left; border-bottom:1px solid var(--border-bright); }
+  tbody td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tbody tr:hover { background:var(--accent-dim); }
+  td code { font-family:var(--font-mono); font-size:10px; background:var(--surface2); padding:1px 4px; border-radius:2px; }
+  .cost-tag { font-family:var(--font-mono); font-size:10px; font-weight:600; padding:2px 6px; border-radius:3px; }
+  .cost-tag.free { background:var(--green-dim); color:var(--green); }
+  .cost-tag.low { background:var(--cyan-dim); color:var(--cyan); }
+  .cost-tag.med { background:var(--amber-dim); color:var(--amber); }
+  .cost-tag.design { background:var(--pink-dim); color:var(--pink); }
+
+  .callout { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:8px; padding:14px 18px; margin:16px 0; font-size:13px; line-height:1.65; }
+  .callout.red { border-left-color:var(--red); }
+  .callout.amber { border-left-color:var(--amber); }
+  .callout.cyan { border-left-color:var(--cyan); }
+  .callout strong { color:var(--text); }
+
+  .kpi-row { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:20px 0; }
+  .kpi { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
+  .kpi .num { font-family:var(--font-mono); font-size:28px; font-weight:700; }
+  .kpi .lbl { font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Gap Analysis: <span>0012ebed</span></h1>
+<p class="subtitle">What's missing from the final hyperdoc, and where should it have come from?</p>
+<div class="meta">
+  <span>hyperdoc_pipeline.py</span>
+  <span>10 sessions</span>
+  <span>32 mentions</span>
+  <span>exists_on_disk = false</span>
+  <span>27KB header + 14KB footer</span>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="num" style="color:var(--green)">12</div><div class="lbl">Sections Present</div></div>
+  <div class="kpi"><div class="num" style="color:var(--red)">8</div><div class="lbl">Gaps Found</div></div>
+  <div class="kpi"><div class="num" style="color:var(--amber)">5</div><div class="lbl">Same Root Cause</div></div>
+</div>
+
+<!-- SECTION 1: WHAT'S COVERED -->
+<div class="sec-head"><div class="dot" style="background:var(--green)"></div>What the Hyperdoc Contains</div>
+
+<div class="covered">
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Story Arc</span> <span class="detail">PoC (msg 656) &rarr; 28.2% completion (msg 955)</span></span></div>
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Friction</span> <span class="detail">Values violation: LLM opt-in, 2 corrections (msg 1108, 1235)</span></span></div>
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Confidence</span> <span class="detail">@ctx:state=fragile, oscillating</span></span></div>
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Behavioral</span> <span class="detail">Claude pattern: cost-over-quality</span></span></div>
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Cross-Session</span> <span class="detail">10 sessions cited in header</span></span></div>
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Idea Graph</span> <span class="detail">Nodes N17, N23, N24, N25, N26</span></span></div>
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Version History</span> <span class="detail">Documented in footer</span></span></div>
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Decisions</span> <span class="detail">4 key decisions captured</span></span></div>
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Architecture</span> <span class="detail">8-module pipeline described</span></span></div>
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Related Files</span> <span class="detail">11 files listed</span></span></div>
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Unresolved</span> <span class="detail">Checkpoint/resume noted as missing</span></span></div>
+  <div class="covered-item"><span class="check">&#10003;</span><span><span class="label">Warnings</span> <span class="detail">9 [W-] markers</span></span></div>
+</div>
+
+<div class="stat-row">
+  <div class="stat"><b>93</b> @ctx tags</div>
+  <div class="stat"><b>9</b> warning markers</div>
+  <div class="stat"><b>27,219</b> chars header</div>
+  <div class="stat"><b>14,527</b> chars footer</div>
+  <div class="stat"><b>2</b> chars inline (empty)</div>
+</div>
+
+<!-- SECTION 2: GAPS -->
+<div class="sec-head"><div class="dot" style="background:var(--red)"></div>What's Missing &mdash; 8 Gaps Found</div>
+
+<div class="gap-card">
+  <h3>Gap 1: No Genealogy</h3>
+  <div class="what">This file was <strong>superseded</strong> by the multi-agent pipeline. It no longer exists on disk. But the hyperdoc doesn't trace the lineage: <code>hyperdoc_pipeline.py</code> &rarr; <code>unified_orchestrator.py</code> &rarr; <code>deterministic_prep.py</code> + 4 agents. The concept evolved but the hyperdoc treats it as a dead file, not a parent.</div>
+  <div class="fields">
+    <div class="field-box"><h4>Data Exists?</h4><p><code>cross_session_genealogy.json</code> was supposed to track this. <strong>The file doesn't exist</strong> at <code>~/PERMANENT_HYPERDOCS/indexes/</code>. Per-session <code>file_genealogy.json</code> exists but was never aggregated.</p></div>
+    <div class="field-box"><h4>Source Phase</h4><p>Phase 2 (<code>file_genealogy.py</code>) computes per-session. Cross-session aggregation never built. Phase 4b never reads it.</p></div>
+  </div>
+  <div class="root-cause disconnect">ROOT CAUSE: DEAD END. Genealogy computed per-session but never aggregated cross-session and never reaches the hyperdoc writer.</div>
+</div>
+
+<div class="gap-card">
+  <h3>Gap 2: No Code Similarity</h3>
+  <div class="what"><code>hyperdoc_pipeline.py</code> shares structural patterns with <code>unified_orchestrator.py</code>, <code>opus_pipeline.py</code>, <code>batch_hyperdoc_processor.py</code>. None of these relationships appear in the hyperdoc.</div>
+  <div class="fields">
+    <div class="field-box"><h4>Data Exists?</h4><p><code>code_similarity_index.json</code> (7.9MB) has this data. 14,176 matches computed.</p></div>
+    <div class="field-box"><h4>Source Phase</h4><p>Phase 2 (<code>code_similarity.py</code>). Output never read by any downstream phase.</p></div>
+  </div>
+  <div class="root-cause disconnect">ROOT CAUSE: DEAD END. Code similarity computed but never consumed downstream.</div>
+</div>
+
+<div class="gap-card">
+  <h3>Gap 3: No Confidence Trajectory</h3>
+  <div class="what">Confidence oscillated across 10 sessions: <code>working &rarr; low &rarr; working &rarr; tentative &rarr; working</code>. This oscillation pattern is a strong signal of unreliability. The hyperdoc says "fragile" but doesn't show the <strong>trajectory</strong>.</div>
+  <div class="fields">
+    <div class="field-box"><h4>Data Exists?</h4><p><code>cross_session_file_index.json</code> has <code>confidence_history</code> with all 10 session values.</p></div>
+    <div class="field-box"><h4>Source Phase</h4><p>Phase 4a (<code>aggregate_dossiers.py</code>) aggregated this. Phase 4b agents didn't use it &mdash; they read narrow per-file extracts from <code>hyperdoc_inputs/</code>.</p></div>
+  </div>
+  <div class="root-cause disconnect">ROOT CAUSE: Phase 4a → 4b DISCONNECT. Trajectory data exists but isn't passed to the writer.</div>
+</div>
+
+<div class="gap-card">
+  <h3>Gap 4: No Cross-Session Story Arcs</h3>
+  <div class="what">Other sessions have different stories about this file. Session <code>3b7084d5</code> discovered the <code>[:10]</code> demo limit. Session <code>fd3de2dc</code> referenced it during MASTER_CODE_REVIEW. These stories add context the hyperdoc lacks.</div>
+  <div class="fields">
+    <div class="field-box"><h4>Data Exists?</h4><p><code>cross_session_file_index.json</code> has <code>story_arcs</code> from 5 sessions.</p></div>
+    <div class="field-box"><h4>Source Phase</h4><p>Phase 4a aggregated. Phase 4b didn't use. Same root cause as Gap 3.</p></div>
+  </div>
+  <div class="root-cause disconnect">ROOT CAUSE: Phase 4a → 4b DISCONNECT. Story arc data exists but isn't passed to the writer.</div>
+</div>
+
+<div class="gap-card">
+  <h3>Gap 5: Inline Annotations Empty (2 chars)</h3>
+  <div class="what">Header is 27KB, footer is 14KB, but inline annotations are <strong>2 characters</strong>. Zero function-level annotations. For a pipeline orchestrator, knowing what each function does across sessions is critical.</div>
+  <div class="fields">
+    <div class="field-box"><h4>Data Exists?</h4><p>The dossier has <code>source_messages</code> (10 indices) that could map to specific functions. But no source code to annotate.</p></div>
+    <div class="field-box"><h4>Source Phase</h4><p>Phase 4b agent asks for inline annotations but the file doesn't exist on disk &mdash; no AST to parse, no functions to annotate.</p></div>
+  </div>
+  <div class="root-cause structural">ROOT CAUSE: STRUCTURAL. File doesn't exist on disk → no source code → inline annotations impossible.</div>
+</div>
+
+<div class="gap-card">
+  <h3>Gap 6: Ground Truth = 0 Verified, 0 Failed (54 Unverified)</h3>
+  <div class="what">54 claims extracted. <strong>None verified.</strong> The verification column is entirely empty. Ground truth ran but produced no results.</div>
+  <div class="fields">
+    <div class="field-box"><h4>Data Exists?</h4><p><code>ground_truth_verification.json</code> has 54 claims, all without <code>verification_status</code>.</p></div>
+    <div class="field-box"><h4>Source Phase</h4><p>Phase 5 (<code>ground_truth_verifier.py</code>) checks claims against files on disk. File doesn't exist &rarr; can't verify.</p></div>
+  </div>
+  <div class="root-cause structural">ROOT CAUSE: STRUCTURAL. Verifier checks against disk. Deleted files = impossible to verify. Need alternative verification against session data.</div>
+</div>
+
+<div class="gap-card">
+  <h3>Gap 7: No Frustration Attribution</h3>
+  <div class="what">Session had 6 frustration peaks. At least 2 (msg 1108, 1235) were <strong>directly about this file</strong> (LLM opt-in issue). But the dossier doesn't connect frustration peaks to specific files. It knows frustration happened AND this file was discussed &mdash; but not that they're <strong>connected</strong>.</div>
+  <div class="fields">
+    <div class="field-box"><h4>Data Exists?</h4><p>Phase 0 has <code>frustration_peaks[]</code> with message indices. Dossier has <code>source_messages</code>. The <strong>intersection</strong> would show which peaks targeted which files.</p></div>
+    <div class="field-box"><h4>Source Phase</h4><p>Should be Phase 0.5 or Phase 1. The join between frustration indices and file mention indices never happens anywhere.</p></div>
+  </div>
+  <div class="root-cause missing">ROOT CAUSE: MISSING JOIN. Phase 0 detects frustration. Phase 3 maps files. Nobody connects them.</div>
+</div>
+
+<div class="gap-card">
+  <h3>Gap 8: Chaotic Significance Scores</h3>
+  <div class="what">Across 10 sessions, significance is: <code>"high"</code> (1), <code>"unknown"</code> (6), <code>"v5_code_subject"</code> (1), <code>"core_v5_python"</code> (1), and one full sentence used as a score value. 60% of sessions rated it "unknown."</div>
+  <div class="fields">
+    <div class="field-box"><h4>Data Exists?</h4><p><code>cross_session_file_index.json</code> <code>significance_scores</code> captures the chaos.</p></div>
+    <div class="field-box"><h4>Source Phase</h4><p>Phase 3 (file mapper agent) assigns significance per session. No schema enforcement &mdash; agent uses free text, categories, or "unknown" inconsistently.</p></div>
+  </div>
+  <div class="root-cause missing">ROOT CAUSE: SCHEMA INCONSISTENCY. File mapper agent has no enforced vocabulary for significance. Output varies wildly between sessions.</div>
+</div>
+
+<!-- SECTION 3: TRACE TABLE -->
+<div class="sec-head"><div class="dot" style="background:var(--amber)"></div>Gap &rarr; Phase Trace</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Gap</th><th>Traces Back To</th><th>Fix Required</th><th>Cost</th></tr></thead>
+<tbody>
+<tr><td><strong>No genealogy</strong></td><td>Phase 2 &rarr; Phase 4b disconnect</td><td>Aggregate per-session <code>file_genealogy.json</code> cross-session. Connect to hyperdoc writer.</td><td><span class="cost-tag free">$0 Python</span></td></tr>
+<tr><td><strong>No code similarity</strong></td><td>Phase 2 &rarr; Phase 4b disconnect</td><td>Connect <code>code_similarity_index.json</code> to hyperdoc writer input.</td><td><span class="cost-tag free">$0 Python</span></td></tr>
+<tr><td><strong>No confidence trajectory</strong></td><td>Phase 4a &rarr; Phase 4b disconnect</td><td>Include <code>confidence_history</code> from <code>cross_session_file_index.json</code> in <code>hyperdoc_inputs/</code>.</td><td><span class="cost-tag free">$0 data pass</span></td></tr>
+<tr><td><strong>No cross-session stories</strong></td><td>Phase 4a &rarr; Phase 4b disconnect</td><td>Include <code>story_arcs</code> from other sessions in <code>hyperdoc_inputs/</code>.</td><td><span class="cost-tag free">$0 data pass</span></td></tr>
+<tr><td><strong>Empty inline annotations</strong></td><td>File doesn't exist on disk</td><td>Design decision: reconstruct from session data? Or accept empty for deleted files?</td><td><span class="cost-tag design">Design</span></td></tr>
+<tr><td><strong>Ground truth unverified</strong></td><td>Phase 5 can't check deleted files</td><td>Alternative verification: check claims against session data (message content, tool results) instead of disk.</td><td><span class="cost-tag med">Medium</span></td></tr>
+<tr><td><strong>No frustration attribution</strong></td><td>Phase 0 + Phase 3 never joined</td><td>New: <code>frustration_file_associations</code> field. Intersect frustration peak indices with file mention indices.</td><td><span class="cost-tag low">Low Python</span></td></tr>
+<tr><td><strong>Chaotic significance</strong></td><td>Phase 3 agent inconsistency</td><td>Schema enforcement in <code>file-mapper.md</code> prompt. Constrain to: <code>critical | high | medium | low | peripheral</code>.</td><td><span class="cost-tag low">Low prompt</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- SECTION 4: THE PATTERN -->
+<div class="sec-head"><div class="dot" style="background:var(--accent)"></div>The Pattern</div>
+
+<div class="callout red">
+<strong>5 of 8 gaps trace to the same root cause:</strong> Phase 4a aggregates cross-session data but Phase 4b doesn't read it. The data EXISTS. It's just not CONNECTED. This is a wiring problem, not a computation problem. Fixing the Phase 4a &rarr; 4b connection resolves gaps 1-4 at once.
+</div>
+
+<div class="callout amber">
+<strong>2 of 8 gaps trace to structural limitations:</strong> The file doesn't exist on disk. Inline annotations can't be generated without source code. Ground truth can't verify claims against a missing file. These require design decisions about how to handle deleted/superseded files.
+</div>
+
+<div class="callout cyan">
+<strong>1 gap (frustration attribution) is a missing JOIN:</strong> Phase 0 detects frustration (message indices). Phase 3 maps files (message indices). The intersection would tell you which files caused the frustration. This join doesn't exist anywhere in the pipeline. It's a new extraction &mdash; cheap (pure Python) and high-value.
+</div>
+
+<div style="text-align:center; margin-top:48px; color:var(--text-dim); font-size:11px; font-family:var(--font-mono);">
+Gap Analysis: session_0012ebed / hyperdoc_pipeline.py &bull; 8 gaps traced to 3 root causes &bull; Feb 20, 2026
+</div>
+
+</div>
+</body>
+</html>
