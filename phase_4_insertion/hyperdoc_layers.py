@@ -157,7 +157,7 @@ class HyperdocLayerManager:
             "alternatives_considered": alternatives or [],
             "related_files": related_files or [],
             "header": f"@ctx:type=seed @ctx:created={datetime.now().strftime('%Y-%m-%d')} @ctx:state=new\n"
-                      f"@ctx:context=\"{context[:200]}\"\n"
+                      f"@ctx:context=\"{context}\"\n"
                       f"This file was created with documented provenance. The conversation that led to\n"
                       f"its creation has been captured before any code was written.",
             "inline_annotations": [],

@@ -142,7 +142,7 @@ class SessionTracker:
             "py_files": len(s["py_files_edited"]),
             "churn_files": s["churn_files"],
             "debugging_loops": s["debugging_loops"],
-            "top_files": sorted_files[:10],
+            "top_files": sorted_files,
             "extensions": s["extensions_seen"],
         }
 

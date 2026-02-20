@@ -26,6 +26,13 @@ from typing import Dict, List, Any, Optional, Iterator
 from dataclasses import dataclass, field
 from collections import defaultdict
 
+import tiktoken
+_encoder = tiktoken.get_encoding("cl100k_base")
+
+def _count_tokens(text: str) -> int:
+    """Count tokens using tiktoken (more accurate than JSONL output_tokens)."""
+    return len(_encoder.encode(text)) if text else 0
+
 
 @dataclass
 class ClaudeUsage:
@@ -229,7 +236,9 @@ class ClaudeSessionReader:
                             # Aggregate usage
                             if msg.usage:
                                 total_input += msg.usage.total_input
-                                total_output += msg.usage.output_tokens
+                                # output_tokens from JSONL is a streaming snapshot (often 1-3),
+                                # not real output. Use tiktoken on actual content instead.
+                                total_output += _count_tokens(msg.content or "")
                             if msg.thinking:
                                 total_thinking += len(msg.thinking)
 

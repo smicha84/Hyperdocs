@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hyperdocs — Extraction Causal Diagram</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0d1117; overflow:hidden; font-family:'SF Mono',monospace; }
+svg { width:100vw; height:100vh; }
+.node-label { font-size:10px; fill:#c9d1d9; text-anchor:middle; pointer-events:none; }
+.edge-label { font-size:8px; fill:#484f58; pointer-events:none; }
+.legend { position:fixed; top:16px; left:16px; background:#161b22ee; border:1px solid #30363d; border-radius:8px; padding:12px; font-size:11px; color:#8b949e; z-index:10; }
+.legend div { margin:3px 0; display:flex; align-items:center; gap:6px; }
+.legend-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+.title { position:fixed; top:16px; right:16px; color:#58a6ff; font-size:16px; font-weight:700; z-index:10; }
+.tooltip { position:fixed; background:#161b22; border:1px solid #30363d; border-radius:6px; padding:8px 12px; font-size:11px; color:#c9d1d9; pointer-events:none; display:none; z-index:20; max-width:300px; }
+.tooltip .tt-label { color:#f0f6fc; font-weight:700; margin-bottom:4px; }
+.tooltip .tt-method { color:#58a6ff; }
+.tooltip .tt-acc { color:#3fb950; }
+.controls { position:fixed; bottom:16px; left:16px; z-index:10; display:flex; gap:8px; }
+.controls button { background:#161b22; border:1px solid #30363d; color:#8b949e; padding:4px 12px; border-radius:6px; cursor:pointer; font-family:inherit; font-size:11px; }
+.controls button:hover { border-color:#58a6ff; color:#58a6ff; }
+</style>
+</head>
+<body>
+
+<div class="title">Extraction Causal Diagram</div>
+
+<div class="legend">
+  <div style="font-weight:700;color:#f0f6fc;margin-bottom:6px">Phases</div>
+  <div><span class="legend-dot" style="background:#3fb950"></span> Phase 0: Python ($0)</div>
+  <div><span class="legend-dot" style="background:#58a6ff"></span> Phase 0 LLM + Phase 1: Opus/Haiku</div>
+  <div><span class="legend-dot" style="background:#bc8cff"></span> Phase 2: Synthesis</div>
+  <div><span class="legend-dot" style="background:#d29922"></span> Phase 3: Hyperdoc Writing</div>
+  <div><span class="legend-dot" style="background:#f0f6fc"></span> Phase 4: Insertion</div>
+  <div><span class="legend-dot" style="background:#f85149"></span> Phase 5: Ground Truth</div>
+  <div style="margin-top:8px;font-weight:700;color:#f0f6fc">Edges</div>
+  <div><span style="color:#30363d">—→</span> Data flow</div>
+  <div><span style="color:#f85149">—→</span> Feedback loop</div>
+  <div><span style="color:#3fb950">—→</span> Upgrade (LLM replaces Python)</div>
+  <div style="margin-top:8px;font-weight:700;color:#f0f6fc">Controls</div>
+  <div><b>Drag</b> a node to pin it in place</div>
+  <div><b>Double-click</b> a pinned node to release it</div>
+  <div><b>Pause Layout</b> freezes all physics</div>
+  <div><b>Release All Pins</b> unpins every node</div>
+  <div>Pinned nodes show a <span style="border:2px dashed #58a6ff;padding:0 4px;border-radius:4px">dashed border</span></div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="tt-label" id="tt-label"></div>
+  <div class="tt-method" id="tt-method"></div>
+  <div class="tt-acc" id="tt-acc"></div>
+  <div id="tt-desc" style="margin-top:4px;color:#8b949e"></div>
+</div>
+
+<div class="controls">
+  <button onclick="resetZoom()">Reset View</button>
+  <button id="pauseBtn" onclick="togglePhysics()">Pause Layout</button>
+  <button onclick="releaseAll()">Release All Pins</button>
+</div>
+
+<svg id="graph"></svg>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+const data = {"nodes": [{"id": "raw_jsonl", "label": "Raw JSONL\nChat History", "phase": "input", "type": "file", "accuracy": null, "method": null, "description": "~3400 JSONL files from Claude Code sessions"}, {"id": "protocol_detect", "label": "Protocol\nDetection", "phase": "phase0", "type": "extraction", "accuracy": "95%", "method": "Python", "description": "5 types: empty wrappers, XML tags, continuations, skill injections, subagent relays"}, {"id": "char_decode", "label": "Char-per-line\nDecoding", "phase": "phase0", "type": "extraction", "accuracy": "95%", "method": "Python", "description": "A\\nL\\nW\\nA\\nY\\nS \u2192 ALWAYS"}, {"id": "metadata_extract", "label": "Metadata\nExtraction", "phase": "phase0", "type": "extraction", "accuracy": "80%", "method": "Python", "description": "50+ signals: files, errors, code blocks, ports, terminal, frustration"}, {"id": "tier_classify", "label": "Tier\nClassification", "phase": "phase0", "type": "extraction", "accuracy": "85%", "method": "Python", "description": "T1 skip, T2 basic, T3 standard, T4 priority"}, {"id": "content_ref", "label": "Content-Referential\nDetection", "phase": "phase0", "type": "extraction", "accuracy": "60%", "method": "Python\u2192Haiku", "description": "Is failure signal about code topic or real failure?"}, {"id": "behavior_python", "label": "Behavior Analysis\n(15 patterns)", "phase": "phase0", "type": "extraction", "accuracy": "85-100%", "method": "Python", "description": "confusion, forgetting, rushing, apologizes, asks_questions, etc."}, {"id": "frustration", "label": "Frustration\nPeaks", "phase": "phase0", "type": "extraction", "accuracy": "90%", "method": "Python", "description": "User msgs with profanity or high caps ratio"}, {"id": "emergency", "label": "Emergency\nInterventions", "phase": "phase0", "type": "extraction", "accuracy": "85%", "method": "Python", "description": "User catching Claude mistakes"}, {"id": "subagent", "label": "Subagent\nDetection", "phase": "phase0", "type": "extraction", "accuracy": "95%", "method": "Python", "description": "3 strategies: ID, filename, content"}, {"id": "file_mentions", "label": "File Mention\nExtraction", "phase": "phase0", "type": "extraction", "accuracy": "80%", "method": "Python", "description": "Regex + blocklist + substring pruning"}, {"id": "duplicate_detect", "label": "Duplicate\nSession Manifest", "phase": "phase0", "type": "extraction", "accuracy": "99%", "method": "Python", "description": "Content hash, 624 duplicates found"}, {"id": "llm_content_ref", "label": "LLM Content-Ref\nJudgment", "phase": "phase0_llm", "type": "extraction", "accuracy": "90%", "method": "Haiku", "description": "Replaces Python 60% heuristic"}, {"id": "llm_silent", "label": "LLM Silent\nDecision Detection", "phase": "phase0_llm", "type": "extraction", "accuracy": "85%", "method": "Opus", "description": "Python caught 0/12, Opus catches 85%"}, {"id": "llm_claims", "label": "LLM Unverified\nClaim Detection", "phase": "phase0_llm", "type": "extraction", "accuracy": "90%", "method": "Opus", "description": "Round 3 prompt, 90% agreement"}, {"id": "llm_overconf", "label": "LLM Overconfidence\nDetection", "phase": "phase0_llm", "type": "extraction", "accuracy": "92%", "method": "Opus", "description": "Round 3 prompt, 92% agreement"}, {"id": "llm_assumptions", "label": "LLM Assumption\nSubtypes (5)", "phase": "phase0_llm", "type": "extraction", "accuracy": "82-100%", "method": "Haiku+Opus", "description": "code 82%, format 94%, direction 100%, scope 88%, intent 67-80%"}, {"id": "llm_importance", "label": "LLM Strategic\nImportance Score", "phase": "phase0_llm", "type": "extraction", "accuracy": "NEW", "method": "Haiku", "description": "1-10 importance for every tier 2+ message"}, {"id": "enriched", "label": "enriched_session.json", "phase": "phase0_out", "type": "file", "accuracy": null, "method": null, "description": "Full metadata per message"}, {"id": "safe_condensed", "label": "safe_condensed.json", "phase": "phase0_out", "type": "file", "accuracy": null, "method": null, "description": "Cleaned, sanitized, categorized messages for agents"}, {"id": "safe_tier4", "label": "safe_tier4.json", "phase": "phase0_out", "type": "file", "accuracy": null, "method": null, "description": "Priority messages with full content"}, {"id": "session_summary", "label": "session_summary.json", "phase": "phase0_out", "type": "file", "accuracy": null, "method": null, "description": "Stats, file counts, frustration peaks"}, {"id": "cleaning", "label": "Data Cleaning\n(7 decisions)", "phase": "phase0", "type": "transformation", "accuracy": null, "method": "Python", "description": "Char-decode, exclude empties, tag categories, sanitize, dedup"}, {"id": "upset_score", "label": "User Upset\nScore", "phase": "phase0", "type": "extraction", "accuracy": null, "method": "Python", "description": "User-scored: ignores_context=20, silent_decision=10, etc."}, {"id": "commitments", "label": "12 Commitments\n(2,556 tokens)", "phase": "phase1", "type": "extraction", "accuracy": null, "method": "Prepended", "description": "Included in every API call"}, {"id": "chunking", "label": "Token Measurement\n& Chunking", "phase": "phase1", "type": "transformation", "accuracy": null, "method": "Python+tiktoken", "description": "868,686 tokens per chunk, whole messages only"}, {"id": "thread_analyst", "label": "Thread Analyst\n(Opus)", "phase": "phase1", "type": "agent", "accuracy": null, "method": null, "description": "6 threads: ideas, reactions, software, code, plans, behavior"}, {"id": "geo_reader", "label": "Geological Reader\n(Opus)", "phase": "phase1", "type": "agent", "accuracy": null, "method": null, "description": "Multi-resolution: micro, meso, macro observations"}, {"id": "prims_tagger", "label": "Primitives Tagger\n(Opus)", "phase": "phase1", "type": "agent", "accuracy": null, "method": null, "description": "7 semantic primitives per tier 2+ message"}, {"id": "explorer", "label": "Explorer +\nVerification (Opus)", "phase": "phase1", "type": "agent", "accuracy": null, "method": null, "description": "Verifies all prior outputs, rates quality"}, {"id": "thread_out", "label": "thread_extractions.json", "phase": "phase1_out", "type": "file", "accuracy": null, "method": null, "description": ""}, {"id": "geo_out", "label": "geological_notes.json", "phase": "phase1_out", "type": "file", "accuracy": null, "method": null, "description": ""}, {"id": "prims_out", "label": "semantic_primitives.json", "phase": "phase1_out", "type": "file", "accuracy": null, "method": null, "description": ""}, {"id": "explorer_out", "label": "explorer_notes.json", "phase": "phase1_out", "type": "file", "accuracy": null, "method": null, "description": ""}, {"id": "idea_graph", "label": "Idea Graph\nBuilder (Opus)", "phase": "phase2", "type": "agent", "accuracy": null, "method": null, "description": "Nodes=idea-states, Edges=transitions (10 types)"}, {"id": "synthesis", "label": "6-Pass Synthesis\n(Opus)", "phase": "phase2", "type": "agent", "accuracy": null, "method": null, "description": "Temperature ramp 0.3\u21921.0\u21920"}, {"id": "genealogy", "label": "File Genealogy\nDetector", "phase": "phase2", "type": "extraction", "accuracy": null, "method": "Python", "description": "3 signals: idea lineage, temporal succession, name similarity"}, {"id": "code_sim", "label": "Code Similarity\nEngine", "phase": "phase2", "type": "extraction", "accuracy": null, "method": "Python", "description": "AST fingerprints, 8 pattern types"}, {"id": "idea_out", "label": "idea_graph.json", "phase": "phase2_out", "type": "file", "accuracy": null, "method": null, "description": ""}, {"id": "synthesis_out", "label": "synthesis.json\ngrounded_markers.json", "phase": "phase2_out", "type": "file", "accuracy": null, "method": null, "description": ""}, {"id": "genealogy_out", "label": "file_genealogy.json", "phase": "phase2_out", "type": "file", "accuracy": null, "method": null, "description": ""}, {"id": "similarity_out", "label": "code_similarity_index.json", "phase": "phase2_out", "type": "file", "accuracy": null, "method": null, "description": ""}, {"id": "file_mapper", "label": "File Mapper\n(Opus agent)", "phase": "phase3", "type": "agent", "accuracy": null, "method": null, "description": "Maps analysis to specific code files"}, {"id": "aggregator", "label": "Cross-Session\nAggregator", "phase": "phase3", "type": "transformation", "accuracy": null, "method": "Python", "description": "Normalize schemas, build cross-session index"}, {"id": "hyperdoc_writer", "label": "Per-File Hyperdoc\nWriter (Opus)", "phase": "phase3", "type": "agent", "accuracy": null, "method": null, "description": "One agent per file, 456 files"}, {"id": "dossiers_out", "label": "file_dossiers.json", "phase": "phase3_out", "type": "file", "accuracy": null, "method": null, "description": ""}, {"id": "cross_index", "label": "cross_session_file_index.json", "phase": "phase3_out", "type": "file", "accuracy": null, "method": null, "description": ""}, {"id": "hyperdoc_json", "label": "hyperdoc JSON\n(456 files)", "phase": "phase3_out", "type": "file", "accuracy": null, "method": null, "description": ""}, {"id": "layer_mgmt", "label": "Layer\nManagement", "phase": "phase4", "type": "transformation", "accuracy": null, "method": "Python", "description": "Hyperdocs grow, never replace"}, {"id": "insertion", "label": "Source File\nInsertion", "phase": "phase4", "type": "transformation", "accuracy": null, "method": "Python", "description": "@ctx annotations into Python files"}, {"id": "enhanced_files", "label": "Enhanced Python Files\nwith Hyperdoc Comments", "phase": "phase4_out", "type": "output", "accuracy": null, "method": null, "description": "The final product"}, {"id": "claim_extract", "label": "Claim\nExtractor", "phase": "phase5", "type": "extraction", "accuracy": null, "method": "Python", "description": ""}, {"id": "gt_verify", "label": "Ground Truth\nVerifier", "phase": "phase5", "type": "extraction", "accuracy": null, "method": "Python", "description": "AST checks against source files"}, {"id": "gap_report", "label": "Gap Reporter\n+ Credibility", "phase": "phase5", "type": "extraction", "accuracy": null, "method": "Python", "description": ""}, {"id": "schema_norm", "label": "Schema\nNormalizer", "phase": "phase5", "type": "extraction", "accuracy": null, "method": "Python", "description": ""}, {"id": "completeness", "label": "Completeness\nScanner", "phase": "phase5", "type": "extraction", "accuracy": null, "method": "Python", "description": ""}, {"id": "credibility", "label": "Credibility Score\n(verified/total)", "phase": "phase5_out", "type": "output", "accuracy": null, "method": null, "description": ""}], "edges": [{"source": "raw_jsonl", "target": "protocol_detect", "label": "parse", "type": "data"}, {"source": "raw_jsonl", "target": "char_decode", "label": "parse", "type": "data"}, {"source": "raw_jsonl", "target": "metadata_extract", "label": "parse", "type": "data"}, {"source": "raw_jsonl", "target": "subagent", "label": "filename", "type": "data"}, {"source": "raw_jsonl", "target": "duplicate_detect", "label": "hash", "type": "data"}, {"source": "protocol_detect", "target": "tier_classify", "label": "gates", "type": "data"}, {"source": "protocol_detect", "target": "frustration", "label": "suppresses", "type": "data"}, {"source": "protocol_detect", "target": "emergency", "label": "suppresses", "type": "data"}, {"source": "protocol_detect", "target": "behavior_python", "label": "skips", "type": "data"}, {"source": "char_decode", "target": "metadata_extract", "label": "clean content", "type": "data"}, {"source": "char_decode", "target": "content_ref", "label": "clean content", "type": "data"}, {"source": "metadata_extract", "target": "tier_classify", "label": "signals", "type": "data"}, {"source": "metadata_extract", "target": "file_mentions", "label": "files[]", "type": "data"}, {"source": "metadata_extract", "target": "frustration", "label": "caps+profanity", "type": "data"}, {"source": "metadata_extract", "target": "emergency", "label": "urgency signals", "type": "data"}, {"source": "tier_classify", "target": "enriched", "label": "filter_tier", "type": "data"}, {"source": "content_ref", "target": "enriched", "label": "content_ref flag", "type": "data"}, {"source": "behavior_python", "target": "enriched", "label": "behavior_flags", "type": "data"}, {"source": "behavior_python", "target": "upset_score", "label": "flags", "type": "data"}, {"source": "upset_score", "target": "enriched", "label": "user_upset_score", "type": "data"}, {"source": "frustration", "target": "enriched", "label": "frustration_peaks", "type": "data"}, {"source": "emergency", "target": "enriched", "label": "emergency_interventions", "type": "data"}, {"source": "file_mentions", "target": "enriched", "label": "file_mention_counts", "type": "data"}, {"source": "subagent", "target": "enriched", "label": "is_subagent", "type": "data"}, {"source": "protocol_detect", "target": "enriched", "label": "is_protocol", "type": "data"}, {"source": "enriched", "target": "cleaning", "label": "full data", "type": "data"}, {"source": "cleaning", "target": "safe_condensed", "label": "7 decisions", "type": "data"}, {"source": "cleaning", "target": "safe_tier4", "label": "7 decisions", "type": "data"}, {"source": "cleaning", "target": "session_summary", "label": "stats only", "type": "data"}, {"source": "duplicate_detect", "target": "cleaning", "label": "skip list", "type": "data"}, {"source": "safe_condensed", "target": "llm_content_ref", "label": "messages", "type": "data"}, {"source": "safe_condensed", "target": "llm_silent", "label": "messages", "type": "data"}, {"source": "safe_condensed", "target": "llm_claims", "label": "messages", "type": "data"}, {"source": "safe_condensed", "target": "llm_overconf", "label": "messages", "type": "data"}, {"source": "safe_condensed", "target": "llm_assumptions", "label": "messages", "type": "data"}, {"source": "safe_condensed", "target": "llm_importance", "label": "messages", "type": "data"}, {"source": "llm_content_ref", "target": "safe_condensed", "label": "llm_behavior", "type": "feedback"}, {"source": "llm_silent", "target": "safe_condensed", "label": "llm_behavior", "type": "feedback"}, {"source": "llm_claims", "target": "safe_condensed", "label": "llm_behavior", "type": "feedback"}, {"source": "llm_overconf", "target": "safe_condensed", "label": "llm_behavior", "type": "feedback"}, {"source": "llm_assumptions", "target": "safe_condensed", "label": "llm_behavior", "type": "feedback"}, {"source": "llm_importance", "target": "safe_condensed", "label": "llm_behavior", "type": "feedback"}, {"source": "content_ref", "target": "llm_content_ref", "label": "replaces", "type": "upgrade"}, {"source": "safe_condensed", "target": "chunking", "label": "token count", "type": "data"}, {"source": "commitments", "target": "thread_analyst", "label": "prepended", "type": "data"}, {"source": "commitments", "target": "geo_reader", "label": "prepended", "type": "data"}, {"source": "commitments", "target": "prims_tagger", "label": "prepended", "type": "data"}, {"source": "commitments", "target": "explorer", "label": "prepended", "type": "data"}, {"source": "chunking", "target": "thread_analyst", "label": "chunk plan", "type": "data"}, {"source": "chunking", "target": "geo_reader", "label": "chunk plan", "type": "data"}, {"source": "chunking", "target": "prims_tagger", "label": "chunk plan", "type": "data"}, {"source": "safe_condensed", "target": "thread_analyst", "label": "messages", "type": "data"}, {"source": "safe_tier4", "target": "thread_analyst", "label": "priority msgs", "type": "data"}, {"source": "session_summary", "target": "thread_analyst", "label": "stats", "type": "data"}, {"source": "safe_condensed", "target": "geo_reader", "label": "messages", "type": "data"}, {"source": "safe_tier4", "target": "geo_reader", "label": "priority msgs", "type": "data"}, {"source": "session_summary", "target": "geo_reader", "label": "stats", "type": "data"}, {"source": "safe_condensed", "target": "prims_tagger", "label": "tier 2+ msgs", "type": "data"}, {"source": "safe_tier4", "target": "prims_tagger", "label": "full content", "type": "data"}, {"source": "content_ref", "target": "prims_tagger", "label": "RULE 2", "type": "data"}, {"source": "thread_analyst", "target": "thread_out", "label": "writes", "type": "data"}, {"source": "geo_reader", "target": "geo_out", "label": "writes", "type": "data"}, {"source": "prims_tagger", "target": "prims_out", "label": "writes", "type": "data"}, {"source": "thread_out", "target": "explorer", "label": "verifies", "type": "data"}, {"source": "geo_out", "target": "explorer", "label": "verifies", "type": "data"}, {"source": "prims_out", "target": "explorer", "label": "verifies", "type": "data"}, {"source": "safe_condensed", "target": "explorer", "label": "P0 data", "type": "data"}, {"source": "explorer", "target": "explorer_out", "label": "writes", "type": "data"}, {"source": "thread_out", "target": "idea_graph", "label": "threads", "type": "data"}, {"source": "prims_out", "target": "idea_graph", "label": "primitives", "type": "data"}, {"source": "thread_out", "target": "synthesis", "label": "threads", "type": "data"}, {"source": "geo_out", "target": "synthesis", "label": "observations", "type": "data"}, {"source": "prims_out", "target": "synthesis", "label": "primitives", "type": "data"}, {"source": "idea_graph", "target": "idea_out", "label": "writes", "type": "data"}, {"source": "idea_out", "target": "synthesis", "label": "graph", "type": "data"}, {"source": "synthesis", "target": "synthesis_out", "label": "writes", "type": "data"}, {"source": "thread_out", "target": "genealogy", "label": "software thread", "type": "data"}, {"source": "idea_out", "target": "genealogy", "label": "lineage", "type": "data"}, {"source": "genealogy", "target": "genealogy_out", "label": "writes", "type": "data"}, {"source": "code_sim", "target": "similarity_out", "label": "writes", "type": "data"}, {"source": "session_summary", "target": "file_mapper", "label": "file counts", "type": "data"}, {"source": "synthesis_out", "target": "file_mapper", "label": "markers", "type": "data"}, {"source": "thread_out", "target": "file_mapper", "label": "file refs", "type": "data"}, {"source": "idea_out", "target": "file_mapper", "label": "subgraphs", "type": "data"}, {"source": "file_mapper", "target": "dossiers_out", "label": "writes", "type": "data"}, {"source": "dossiers_out", "target": "aggregator", "label": "all sessions", "type": "data"}, {"source": "aggregator", "target": "cross_index", "label": "writes", "type": "data"}, {"source": "cross_index", "target": "hyperdoc_writer", "label": "per-file data", "type": "data"}, {"source": "dossiers_out", "target": "hyperdoc_writer", "label": "dossier", "type": "data"}, {"source": "synthesis_out", "target": "hyperdoc_writer", "label": "markers", "type": "data"}, {"source": "idea_out", "target": "hyperdoc_writer", "label": "graph", "type": "data"}, {"source": "hyperdoc_writer", "target": "hyperdoc_json", "label": "writes", "type": "data"}, {"source": "hyperdoc_json", "target": "layer_mgmt", "label": "new layer", "type": "data"}, {"source": "layer_mgmt", "target": "insertion", "label": "layered hyperdoc", "type": "data"}, {"source": "insertion", "target": "enhanced_files", "label": "@ctx annotations", "type": "data"}, {"source": "synthesis_out", "target": "claim_extract", "label": "markers", "type": "data"}, {"source": "prims_out", "target": "claim_extract", "label": "confidence claims", "type": "data"}, {"source": "idea_out", "target": "claim_extract", "label": "idea claims", "type": "data"}, {"source": "claim_extract", "target": "gt_verify", "label": "claims", "type": "data"}, {"source": "enhanced_files", "target": "gt_verify", "label": "source files", "type": "data"}, {"source": "gt_verify", "target": "gap_report", "label": "results", "type": "data"}, {"source": "gap_report", "target": "credibility", "label": "score", "type": "data"}, {"source": "explorer_out", "target": "credibility", "label": "quality rating", "type": "data"}, {"source": "credibility", "target": "enriched", "label": "credibility feeds back", "type": "feedback"}, {"source": "explorer_out", "target": "protocol_detect", "label": "discovers gaps", "type": "feedback"}], "phase_colors": {"input": "#8b949e", "phase0": "#3fb950", "phase0_llm": "#58a6ff", "phase0_out": "#2ea043", "phase1": "#58a6ff", "phase1_out": "#1f6feb", "phase2": "#bc8cff", "phase2_out": "#8b5cf6", "phase3": "#d29922", "phase3_out": "#b87d15", "phase4": "#f0f6fc", "phase4_out": "#f0f6fc", "phase5": "#f85149", "phase5_out": "#da3633"}};
+
+const width = window.innerWidth;
+const height = window.innerHeight;
+
+const svg = d3.select('#graph')
+  .attr('width', width)
+  .attr('height', height);
+
+const g = svg.append('g');
+
+// Zoom
+const zoom = d3.zoom()
+  .scaleExtent([0.2, 4])
+  .on('zoom', (e) => g.attr('transform', e.transform));
+svg.call(zoom);
+
+function resetZoom() {
+  svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(width/2 - 400, height/2 - 300).scale(0.7));
+}
+
+// Arrow markers
+const defs = svg.append('defs');
+['data', 'feedback', 'upgrade'].forEach(type => {
+  const color = type === 'feedback' ? '#f85149' : type === 'upgrade' ? '#3fb950' : '#30363d';
+  defs.append('marker')
+    .attr('id', 'arrow-' + type)
+    .attr('viewBox', '0 0 10 10')
+    .attr('refX', 20)
+    .attr('refY', 5)
+    .attr('markerWidth', 8)
+    .attr('markerHeight', 8)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+    .attr('fill', color);
+});
+
+// Force simulation
+const simulation = d3.forceSimulation(data.nodes)
+  .force('link', d3.forceLink(data.edges).id(d => d.id).distance(120).strength(0.3))
+  .force('charge', d3.forceManyBody().strength(-400))
+  .force('center', d3.forceCenter(width/2, height/2))
+  .force('collision', d3.forceCollide().radius(40))
+  .force('x', d3.forceX(d => {
+    // Cluster by phase horizontally
+    const phaseX = {
+      'input': 100, 'phase0': 300, 'phase0_llm': 450, 'phase0_out': 550,
+      'phase1': 700, 'phase1_out': 850,
+      'phase2': 1000, 'phase2_out': 1100,
+      'phase3': 1250, 'phase3_out': 1350,
+      'phase4': 1450, 'phase4_out': 1550,
+      'phase5': 1650, 'phase5_out': 1750,
+    };
+    return phaseX[d.phase] || width/2;
+  }).strength(0.15))
+  .force('y', d3.forceY(height/2).strength(0.05));
+
+// Edges
+const link = g.append('g')
+  .selectAll('line')
+  .data(data.edges)
+  .join('line')
+  .attr('stroke', d => d.type === 'feedback' ? '#f8514966' : d.type === 'upgrade' ? '#3fb95066' : '#30363d')
+  .attr('stroke-width', d => d.type === 'feedback' ? 2 : 1.5)
+  .attr('stroke-dasharray', d => d.type === 'feedback' ? '4,4' : 'none')
+  .attr('marker-end', d => 'url(#arrow-' + (d.type || 'data') + ')');
+
+// Edge labels
+const edgeLabel = g.append('g')
+  .selectAll('text')
+  .data(data.edges.filter(d => d.label))
+  .join('text')
+  .attr('class', 'edge-label')
+  .text(d => d.label);
+
+// Physics toggle
+let physicsRunning = true;
+
+function togglePhysics() {
+  physicsRunning = !physicsRunning;
+  if (physicsRunning) {
+    simulation.alpha(0.3).restart();
+    document.getElementById('pauseBtn').textContent = 'Pause Layout';
+    document.getElementById('pauseBtn').style.borderColor = '#30363d';
+    document.getElementById('pauseBtn').style.color = '#8b949e';
+  } else {
+    simulation.stop();
+    document.getElementById('pauseBtn').textContent = 'Resume Layout';
+    document.getElementById('pauseBtn').style.borderColor = '#f85149';
+    document.getElementById('pauseBtn').style.color = '#f85149';
+  }
+}
+
+function releaseAll() {
+  data.nodes.forEach(d => { d.fx = null; d.fy = null; });
+  if (physicsRunning) simulation.alpha(0.3).restart();
+}
+
+// Nodes — dragged nodes stay pinned (fx/fy persist after drag)
+const node = g.append('g')
+  .selectAll('g')
+  .data(data.nodes)
+  .join('g')
+  .call(d3.drag()
+    .on('start', (e, d) => {
+      if (physicsRunning && !e.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    })
+    .on('drag', (e, d) => {
+      d.fx = e.x;
+      d.fy = e.y;
+    })
+    .on('end', (e, d) => {
+      if (physicsRunning && !e.active) simulation.alphaTarget(0);
+      // Keep fx/fy set — node stays pinned where you dropped it
+      // Physics won't move it. Double-click to unpin.
+    })
+  )
+  .on('dblclick', (e, d) => {
+    // Double-click to unpin a node
+    d.fx = null;
+    d.fy = null;
+    if (physicsRunning) simulation.alpha(0.1).restart();
+  });
+
+node.append('circle')
+  .attr('r', d => d.type === 'file' || d.type === 'output' ? 14 : d.type === 'agent' ? 18 : 16)
+  .attr('fill', d => data.phase_colors[d.phase] || '#484f58')
+  .attr('fill-opacity', 0.3)
+  .attr('stroke', d => data.phase_colors[d.phase] || '#484f58')
+  .attr('stroke-width', 2);
+
+node.append('text')
+  .attr('class', 'node-label')
+  .each(function(d) {
+    const lines = d.label.split('\n');
+    const el = d3.select(this);
+    lines.forEach((line, i) => {
+      el.append('tspan')
+        .attr('x', 0)
+        .attr('dy', i === 0 ? -((lines.length-1) * 6) : 12)
+        .text(line);
+    });
+  });
+
+// Tooltip
+const tooltip = document.getElementById('tooltip');
+node.on('mouseover', (e, d) => {
+  document.getElementById('tt-label').textContent = d.label.replace(/\n/g, ' ');
+  document.getElementById('tt-method').textContent = d.method ? 'Method: ' + d.method : '';
+  document.getElementById('tt-acc').textContent = d.accuracy ? 'Accuracy: ' + d.accuracy : '';
+  document.getElementById('tt-desc').textContent = d.description || '';
+  tooltip.style.display = 'block';
+  tooltip.style.left = (e.pageX + 12) + 'px';
+  tooltip.style.top = (e.pageY - 12) + 'px';
+}).on('mouseout', () => {
+  tooltip.style.display = 'none';
+}).on('mousemove', (e) => {
+  tooltip.style.left = (e.pageX + 12) + 'px';
+  tooltip.style.top = (e.pageY - 12) + 'px';
+});
+
+// Tick
+simulation.on('tick', () => {
+  link
+    .attr('x1', d => d.source.x)
+    .attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x)
+    .attr('y2', d => d.target.y);
+
+  edgeLabel
+    .attr('x', d => (d.source.x + d.target.x) / 2)
+    .attr('y', d => (d.source.y + d.target.y) / 2);
+
+  node.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
+
+  // Show pin indicator on fixed nodes
+  node.select('circle')
+    .attr('stroke-width', d => (d.fx !== null && d.fx !== undefined) ? 3.5 : 2)
+    .attr('stroke-dasharray', d => (d.fx !== null && d.fx !== undefined) ? '4,2' : 'none');
+});
+
+// Initial zoom
+setTimeout(() => resetZoom(), 500);
+</script>
+</body>
+</html>

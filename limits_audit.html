@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperdocs — All Parameters &amp; Limits</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+  background: #0d1117;
+  color: #c9d1d9;
+  padding: 32px;
+  line-height: 1.6;
+}
+h1 { color: #58a6ff; font-size: 22px; margin-bottom: 4px; }
+.subtitle { color: #8b949e; font-size: 12px; margin-bottom: 32px; }
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.summary-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.summary-card .n { font-size: 28px; font-weight: 700; }
+.summary-card .l { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+.file-section {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.file-header {
+  padding: 12px 16px;
+  background: #1c2128;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+.file-header:hover { background: #22272e; }
+.file-name { color: #58a6ff; font-weight: 600; font-size: 14px; }
+.file-count {
+  background: #30363d;
+  color: #8b949e;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+.file-body { padding: 0; }
+.file-body.collapsed { display: none; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+th {
+  text-align: left;
+  padding: 8px 12px;
+  color: #8b949e;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #21262d;
+  background: #161b22;
+  position: sticky;
+  top: 0;
+}
+td {
+  padding: 6px 12px;
+  border-bottom: 1px solid #21262d;
+  vertical-align: top;
+}
+tr:hover td { background: #1c2128; }
+
+.type-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.type-truncation { background: #4a1c1c; color: #f85149; }
+.type-threshold { background: #3d2e00; color: #d29922; }
+.type-api_param { background: #1a3a5c; color: #58a6ff; }
+.type-constant { background: #0d4429; color: #3fb950; }
+.type-batch_size { background: #2d1a4e; color: #bc8cff; }
+.type-timeout { background: #4a3000; color: #e0af68; }
+
+code {
+  background: #21262d;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #e6edf3;
+}
+.value { color: #f0f6fc; font-weight: 600; }
+.line-num { color: #484f58; font-size: 11px; }
+.desc { color: #8b949e; }
+
+.legend {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.filter-btn {
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: 1px solid #30363d;
+  background: #161b22;
+  color: #8b949e;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.filter-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+.filter-btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+</style>
+</head>
+<body>
+
+<h1>Hyperdocs — All Parameters &amp; Limits</h1>
+<div class="subtitle">Generated 2026-02-12 | Audit of all hardcoded limits, truncations, thresholds, and configuration across 42 Python files</div>
+
+<div class="summary-grid" id="summary"></div>
+
+<div class="legend">
+  <div class="legend-item"><span class="type-tag type-truncation">truncation</span> Data loss — content cut at N chars</div>
+  <div class="legend-item"><span class="type-tag type-threshold">threshold</span> Classification boundary</div>
+  <div class="legend-item"><span class="type-tag type-api_param">api_param</span> API configuration</div>
+  <div class="legend-item"><span class="type-tag type-constant">constant</span> Fixed value</div>
+  <div class="legend-item"><span class="type-tag type-batch_size">batch_size</span> Display/processing limit</div>
+</div>
+
+<div class="filter-bar" id="filter-bar">
+  <button class="filter-btn active" onclick="filterType('all')">All</button>
+  <button class="filter-btn" onclick="filterType('truncation')">Truncations</button>
+  <button class="filter-btn" onclick="filterType('threshold')">Thresholds</button>
+  <button class="filter-btn" onclick="filterType('api_param')">API Params</button>
+  <button class="filter-btn" onclick="filterType('constant')">Constants</button>
+  <button class="filter-btn" onclick="filterType('batch_size')">Batch Sizes</button>
+</div>
+
+<div id="files"></div>
+
+<script>
+const DATA = {"files": [{"file": "phase1_redo_orchestrator.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/phase1_redo_orchestrator.py", "limits": [{"line": 86, "code": "MAX_TOKENS = 128000", "type": "api_param", "description": "Hard API limit for claude-opus-4-6 output", "value": "128000"}, {"line": 87, "code": "THINKING_BUDGET = 32000", "type": "api_param", "description": "Extended thinking budget (within the 128K output cap)", "value": "32000"}, {"line": 116, "code": "{json.dumps(session_summary, indent=2)[:800000]}", "type": "truncation", "description": "Truncate session summary to 800K chars in prompt", "value": "800000"}, {"line": 119, "code": "{json.dumps(safe_tier4, indent=2)[:800000]}", "type": "truncation", "description": "Truncate tier4 data to 800K chars in prompt", "value": "800000"}, {"line": 122, "code": "{json.dumps(safe_condensed, indent=2)[:800000]}", "type": "truncation", "description": "Truncate condensed data to 800K chars in prompt", "value": "800000"}, {"line": 148, "code": "gaps > 30 min are significant", "type": "threshold", "description": "Temporal gap threshold for phase boundaries", "value": "30"}, {"line": 192, "code": "if m.get('t', m.get('filter_tier', 0)) >= 2:", "type": "threshold", "description": "Filter tier threshold (skip tier 1, process tier 2+)", "value": "2"}]}, {"file": "phase_0_prep/message_filter.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/phase_0_prep/message_filter.py", "limits": [{"line": 10, "code": "Tier 1 (SKIP): <50 chars", "type": "threshold", "description": "Minimum length for tier 2", "value": "50"}, {"line": 11, "code": "Tier 2 (BASIC): 50-100 chars", "type": "threshold", "description": "Tier 2 range", "value": "50-100"}, {"line": 12, "code": "Tier 3 (STANDARD): 100-500 chars", "type": "threshold", "description": "Tier 3 range or has pasted content", "value": "100-500"}, {"line": 13, "code": "Tier 4 (PRIORITY): 500+ chars", "type": "threshold", "description": "Tier 4 threshold", "value": "500"}, {"line": 177, "code": "if length >= 500:", "type": "threshold", "description": "Tier 4 boundary (500+ chars)", "value": "500"}, {"line": 179, "code": "elif length >= 200:", "type": "threshold", "description": "Score adjustment boundary", "value": "200"}, {"line": 187, "code": "if length < self.min_length and score == 0", "type": "threshold", "description": "Tier 1 classification (min_length default 50)", "value": "50"}, {"line": 199, "code": "if length >= 500 or score >= 6", "type": "threshold", "description": "Tier 4 classification", "value": "500"}, {"line": 211, "code": "if length >= 100 or score >= 3", "type": "threshold", "description": "Tier 3 classification", "value": "100"}]}, {"file": "phase_0_prep/deterministic_prep.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/phase_0_prep/deterministic_prep.py", "limits": [{"line": 231, "code": "if failure_count > 20 or frustration_count > 10", "type": "threshold", "description": "Content damage anomaly threshold", "value": "20 failures / 10 frustrations"}, {"line": 235, "code": "if failure_count >= 3 and architecture_count >= 3", "type": "threshold", "description": "Analysis content damage threshold", "value": "3"}, {"line": 440, "code": "if len(prev_claude_msgs) > 10:", "type": "threshold", "description": "Previous message history threshold", "value": "10"}, {"line": 450, "code": "content_hash[:16]", "type": "truncation", "description": "Content hash truncation", "value": "16"}, {"line": 508, "code": "if (idx + 1) % 100 == 0:", "type": "batch_size", "description": "Progress reporting interval", "value": "100"}, {"line": 537, "code": "if len(base) <= 12:", "type": "threshold", "description": "Session ID length check", "value": "12"}, {"line": 563, "code": ")[:30]", "type": "truncation", "description": "Top files list truncation", "value": "30"}]}, {"file": "phase_1_extraction/extract_threads.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/phase_1_extraction/extract_threads.py", "limits": [{"line": 48, "code": "if caps > 0.8: score += 3", "type": "threshold", "description": "High caps ratio for frustration", "value": "0.8"}, {"line": 49, "code": "elif caps > 0.4: score += 2", "type": "threshold", "description": "Medium caps ratio for frustration", "value": "0.4"}, {"line": 50, "code": "elif caps > 0.2: score += 1", "type": "threshold", "description": "Low caps ratio for frustration", "value": "0.2"}, {"line": 53, "code": "if exclamations > 5: score += 2", "type": "threshold", "description": "High exclamation count", "value": "5"}, {"line": 54, "code": "elif exclamations > 2: score += 1", "type": "threshold", "description": "Medium exclamation count", "value": "2"}, {"line": 56, "code": "if repeat_count > 3: score += 2", "type": "threshold", "description": "High repeat count", "value": "3"}, {"line": 57, "code": "elif repeat_count > 1: score += 1", "type": "threshold", "description": "Medium repeat count", "value": "1"}, {"line": 123, "code": "modified[:10]", "type": "truncation", "description": "Cap modified files list at 10", "value": "10"}, {"line": 192, "code": "completed[:5], pending[:5]", "type": "truncation", "description": "Cap completed/pending lists at 5", "value": "5"}, {"line": 239, "code": "idea[:200]", "type": "truncation", "description": "Truncate idea description to 200 chars", "value": "200"}, {"line": 304, "code": "if damage >= 3:", "type": "threshold", "description": "Damage score threshold for assertion", "value": "3"}, {"line": 306, "code": "elif damage >= 2 or (... and failure_count > 3):", "type": "threshold", "description": "Damage score threshold for skepticism", "value": "2"}, {"line": 349, "code": "if caps > 0.8 or (profanity and caps > 0.3):", "type": "threshold", "description": "Caps threshold for alarm", "value": "0.8"}, {"line": 353, "code": "elif caps > 0.3:", "type": "threshold", "description": "Caps threshold for concern", "value": "0.3"}, {"line": 399, "code": "is_pivot = pivot_score >= 3", "type": "threshold", "description": "Pivot score for transition", "value": "3"}, {"line": 404, "code": "is_failure = failure_score >= 5", "type": "threshold", "description": "Failure score for detection", "value": "5"}]}, {"file": "phase_1_extraction/tag_primitives.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/phase_1_extraction/tag_primitives.py", "limits": [{"line": 51, "code": "if len(lines) > 10 and single_char_lines / len(lines) > 0.7:", "type": "threshold", "description": "Char-per-line format detection", "value": "0.7"}, {"line": 90, "code": "if signals.get('pivot', 0) >= 3:", "type": "threshold", "description": "Pivot signal for abandon", "value": "3"}, {"line": 99, "code": "if signals.get('pivot', 0) >= 1 and 'plan' in signals:", "type": "threshold", "description": "Pivot signal for decide", "value": "1"}, {"line": 116, "code": "if signals.get('failure', 0) >= 2:", "type": "threshold", "description": "Failure signal for debug", "value": "2"}, {"line": 134, "code": "if metadata.get('code_block', False) or signals.get('code', 0) >= 10:", "type": "threshold", "description": "Code signal for create", "value": "10"}, {"line": 147, "code": "if signals.get('architecture', 0) >= 4 and signals.get('code', 0) >= 10:", "type": "threshold", "description": "Architecture+code threshold for create", "value": "4/10"}, {"line": 149, "code": "if signals.get('code', 0) >= 5:", "type": "threshold", "description": "Code signal for modify", "value": "5"}, {"line": 154, "code": "if metadata.get('questions', 0) >= 2:", "type": "threshold", "description": "Questions threshold", "value": "2"}, {"line": 159, "code": "if signals.get('architecture', 0) >= 2 or signals.get('plan', 0) >= 2:", "type": "threshold", "description": "Architecture/plan threshold", "value": "2"}, {"line": 242, "code": "if caps_ratio > 0.3:", "type": "threshold", "description": "Caps threshold for concern tenor", "value": "0.3"}, {"line": 246, "code": "if caps_ratio > 0.5:", "type": "threshold", "description": "Caps threshold for alarmed tenor", "value": "0.5"}, {"line": 250, "code": "if signals.get('frustration', 0) >= 3:", "type": "threshold", "description": "Frustration threshold for frustrated tenor", "value": "3"}, {"line": 285, "code": "if metadata.get('questions', 0) >= 3 and role == 'user':", "type": "threshold", "description": "Questions threshold for curious tenor", "value": "3"}, {"line": 298, "code": "if signals.get('architecture', 0) >= 3 and not profanity:", "type": "threshold", "description": "Architecture threshold for confident tenor", "value": "3"}]}, {"file": "phase_2_synthesis/code_similarity.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/phase_2_synthesis/code_similarity.py", "limits": [{"line": 23, "code": "dead_copy: >90% text similarity", "type": "threshold", "description": "Dead copy classification", "value": "0.90"}, {"line": 24, "code": "evolution_pair: 60-90% text similarity", "type": "threshold", "description": "Evolution pair classification range", "value": "0.60-0.90"}, {"line": 25, "code": "function_clone: >50% shared function names", "type": "threshold", "description": "Function clone classification", "value": "0.50"}, {"line": 26, "code": "partial_extraction: >80% containment", "type": "threshold", "description": "Partial extraction classification", "value": "0.80"}, {"line": 27, "code": "template_variant: <30% text similarity", "type": "threshold", "description": "Template variant classification", "value": "0.30"}, {"line": 28, "code": "import_twin: >70% shared imports, <30% function overlap", "type": "threshold", "description": "Import twin classification", "value": "0.70"}, {"line": 29, "code": "name_only: <5% any signal", "type": "threshold", "description": "Name only classification", "value": "0.05"}, {"line": 70, "code": "unique string constants >10 chars", "type": "threshold", "description": "String literal threshold", "value": "10"}, {"line": 145, "code": "if len(target.id) > 2:", "type": "threshold", "description": "Constant name length check", "value": "2"}, {"line": 149, "code": "if len(node.value) > 10:", "type": "threshold", "description": "String literal length threshold", "value": "10"}, {"line": 151, "code": "val = node.value.strip()[:100]", "type": "truncation", "description": "String literal truncation", "value": "100"}, {"line": 240, "code": "if signal_score >= text_threshold or name_overlap > 0.3:", "type": "threshold", "description": "Comparison threshold for name overlap", "value": "0.3"}, {"line": 243, "code": "src_a = fp_a.clean_source[:5000]", "type": "truncation", "description": "Source code truncation for comparison", "value": "5000"}, {"line": 278, "code": "if text > 0.90:", "type": "threshold", "description": "Dead copy threshold", "value": "0.90"}, {"line": 282, "code": "elif text > 0.60:", "type": "threshold", "description": "Evolution pair threshold", "value": "0.60"}, {"line": 286, "code": "if func > 0.50 and text < 0.90:", "type": "threshold", "description": "Function clone threshold", "value": "0.50"}, {"line": 290, "code": "if (a_in_b > 0.80 or b_in_a > 0.80) and text < 0.60:", "type": "threshold", "description": "Partial extraction threshold", "value": "0.80"}, {"line": 294, "code": "if callable_ > 0.40 and text < 0.30:", "type": "threshold", "description": "Template variant threshold", "value": "0.40"}, {"line": 298, "code": "if imports > 0.70 and func < 0.30:", "type": "threshold", "description": "Import twin threshold", "value": "0.70"}, {"line": 302, "code": "if name > 0.30 and text < 0.05 and func < 0.05:", "type": "threshold", "description": "Name only threshold", "value": "0.30"}]}, {"file": "phase_2_synthesis/file_genealogy.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/phase_2_synthesis/file_genealogy.py", "limits": [{"line": 139, "code": "evidence[:200]", "type": "truncation", "description": "Evidence text truncation", "value": "200"}, {"line": 166, "code": "if 0 < gap <= 5:", "type": "threshold", "description": "Temporal succession gap threshold (messages)", "value": "5"}]}, {"file": "phase_5_ground_truth/completeness_scanner.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/phase_5_ground_truth/completeness_scanner.py", "limits": [{"line": 71, "code": "STUB_THRESHOLD = 100", "type": "threshold", "description": "File size threshold for stub classification (bytes)", "value": "100"}, {"line": 75, "code": "emergency_contexts.json: 10", "type": "threshold", "description": "Min bytes for valid emergency contexts", "value": "10"}, {"line": 76, "code": "safe_tier4.json: 10", "type": "threshold", "description": "Min bytes for valid tier4 data", "value": "10"}]}, {"file": "batch_orchestrator.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/batch_orchestrator.py", "limits": [{"line": 45, "code": "if total < 20:", "type": "threshold", "description": "Minimum session message count", "value": "20"}, {"line": 143, "code": "if s['total'] < 100:", "type": "threshold", "description": "Small session threshold", "value": "100"}, {"line": 144, "code": "if 100 <= s['total'] < 500:", "type": "threshold", "description": "Medium session threshold range", "value": "100-500"}, {"line": 145, "code": "if s['total'] >= 500:", "type": "threshold", "description": "Large session threshold", "value": "500"}, {"line": 150, "code": "for s in group[:10]:", "type": "batch_size", "description": "Display limit for session groups", "value": "10"}]}, {"file": "batch_phase0_reprocess.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/batch_phase0_reprocess.py", "limits": [{"line": 49, "code": "stderr[:200]", "type": "truncation", "description": "Error message truncation", "value": "200"}, {"line": 57, "code": "stderr[:200]", "type": "truncation", "description": "Error message truncation", "value": "200"}, {"line": 108, "code": "if (i + 1) % 25 == 0", "type": "batch_size", "description": "Progress reporting interval", "value": "25"}, {"line": 157, "code": "for s, e in errors[:10]:", "type": "batch_size", "description": "Error reporting limit", "value": "10"}]}, {"file": "activity_monitor.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/activity_monitor.py", "limits": [{"line": 32, "code": "PORT = 8800", "type": "constant", "description": "Activity monitor server port", "value": "8800"}]}, {"file": "concierge.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/concierge.py", "limits": [{"line": 25, "code": "if size_bytes >= 1_000_000:", "type": "threshold", "description": "File size threshold for MB display", "value": "1000000"}, {"line": 27, "code": "elif size_bytes >= 1_000:", "type": "threshold", "description": "File size threshold for KB display", "value": "1000"}, {"line": 132, "code": "if len(proj['sessions']) > 3:", "type": "threshold", "description": "Session count threshold for detail display", "value": "3"}]}, {"file": "phase_4_insertion/insert_from_phase4b.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/phase_4_insertion/insert_from_phase4b.py", "limits": [{"line": 104, "code": "if lines[i].strip().count(quote) >= 2:", "type": "threshold", "description": "Quote count for string detection", "value": "2"}, {"line": 461, "code": "if stats['success'] <= 10 or stats['success'] % 50 == 0:", "type": "batch_size", "description": "Progress reporting frequency", "value": "50"}, {"line": 517, "code": "for e in stats['errors'][:20]:", "type": "batch_size", "description": "Error report limit", "value": "20"}]}, {"file": "phase_4_insertion/hyperdoc_layers.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/phase_4_insertion/hyperdoc_layers.py", "limits": [{"line": 160, "code": "context[:200]", "type": "truncation", "description": "Context truncation in markers", "value": "200"}, {"line": 212, "code": "if 'format_version' in data and data['format_version'] >= 2:", "type": "threshold", "description": "Hyperdoc format version check", "value": "2"}]}, {"file": "realtime/session_metadata_tracker.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/realtime/session_metadata_tracker.py", "limits": [{"line": 39, "code": "CHURN_THRESHOLD = 5", "type": "threshold", "description": "Edit count threshold for churn detection", "value": "5"}, {"line": 145, "code": "top_files[:10]", "type": "batch_size", "description": "Top files list truncation", "value": "10"}]}, {"file": "phase_5_ground_truth/ground_truth_verifier.py", "path": "/Users/stefanmichaelcheck/Hyperdocs/phase_5_ground_truth/ground_truth_verifier.py", "limits": [{"line": 100, "code": "if limit >= 10:", "type": "threshold", "description": "Slicing limit detection threshold", "value": "10"}, {"line": 203, "code": "if len(defs) <= 1:", "type": "threshold", "description": "Function definition count check", "value": "1"}]}]};
+
+// Count by type
+const typeCounts = {};
+let totalLimits = 0;
+DATA.files.forEach(f => {
+  f.limits.forEach(l => {
+    typeCounts[l.type] = (typeCounts[l.type] || 0) + 1;
+    totalLimits++;
+  });
+});
+
+// Summary
+const summaryEl = document.getElementById('summary');
+const summaryItems = [
+  { n: DATA.files.length, l: 'Files with limits', color: '#58a6ff' },
+  { n: totalLimits, l: 'Total limits', color: '#f0f6fc' },
+  { n: typeCounts['truncation'] || 0, l: 'Truncations', color: '#f85149' },
+  { n: typeCounts['threshold'] || 0, l: 'Thresholds', color: '#d29922' },
+  { n: typeCounts['api_param'] || 0, l: 'API params', color: '#58a6ff' },
+  { n: typeCounts['batch_size'] || 0, l: 'Batch sizes', color: '#bc8cff' },
+];
+summaryItems.forEach(s => {
+  summaryEl.innerHTML += `<div class="summary-card"><div class="n" style="color:${s.color}">${s.n}</div><div class="l">${s.l}</div></div>`;
+});
+
+// Render files
+let activeFilter = 'all';
+
+function render() {
+  const container = document.getElementById('files');
+  container.innerHTML = '';
+
+  DATA.files.forEach((file, fi) => {
+    const filtered = activeFilter === 'all'
+      ? file.limits
+      : file.limits.filter(l => l.type === activeFilter);
+
+    if (filtered.length === 0) return;
+
+    const section = document.createElement('div');
+    section.className = 'file-section';
+
+    const header = document.createElement('div');
+    header.className = 'file-header';
+    header.innerHTML = `
+      <span class="file-name">${file.file}</span>
+      <span class="file-count">${filtered.length} limit${filtered.length !== 1 ? 's' : ''}</span>
+    `;
+    header.onclick = () => {
+      const body = section.querySelector('.file-body');
+      body.classList.toggle('collapsed');
+    };
+
+    let rows = '';
+    filtered.forEach(l => {
+      rows += `<tr data-type="${l.type}">
+        <td><span class="line-num">L${l.line}</span></td>
+        <td><span class="type-tag type-${l.type}">${l.type}</span></td>
+        <td><code>${escHtml(l.code)}</code></td>
+        <td class="value">${escHtml(l.value)}</td>
+        <td class="desc">${escHtml(l.description)}</td>
+      </tr>`;
+    });
+
+    const body = document.createElement('div');
+    body.className = 'file-body';
+    body.innerHTML = `<table>
+      <thead><tr><th>Line</th><th>Type</th><th>Code</th><th>Value</th><th>Description</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+    section.appendChild(header);
+    section.appendChild(body);
+    container.appendChild(section);
+  });
+}
+
+function filterType(type) {
+  activeFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  render();
+}
+
+function escHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+render();
+</script>
+
+</body>
+</html>

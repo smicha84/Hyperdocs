@@ -122,7 +122,7 @@ def classify_gaps(filename, claims, results):
             gaps["unverified"].append({
                 "category": "UNVERIFIED",
                 "claim": f"{uw['warning_id']}: {uw.get('claim', 'UNRESOLVED')}",
-                "warning": uw.get("warning", "")[:200],
+                "warning": uw.get("warning", ""),
                 "severity": uw.get("severity", "unknown"),
                 "verification_method": "Manual code review needed",
             })

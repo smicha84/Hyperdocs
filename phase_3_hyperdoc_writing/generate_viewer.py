@@ -240,7 +240,7 @@ parts.append("</table>")
 parts.append("<h3>All Nodes</h3><div class='grid'>")
 for n in graph["nodes"][:30]:
     conf_cls = {"fragile":"warn","experimental":"info","proven":"success"}.get(n.get("confidence",""),"")
-    parts.append(f'<div class="node"><div class="name">{esc(n["name"])}</div><div>{esc(n.get("description","")[:200])}</div><div class="edge">Confidence: {n.get("confidence","")} | First: msg {n.get("first_appearance","?")}</div></div>')
+    parts.append(f'<div class="node"><div class="name">{esc(n["name"])}</div><div>{esc(n.get("description",""))}</div><div class="edge">Confidence: {n.get("confidence","")} | First: msg {n.get("first_appearance","?")}</div></div>')
 parts.append("</div></div>")
 
 # Panel 6: Synthesis
@@ -255,13 +255,13 @@ for p in synthesis.get("passes", []):
             parts.append(f"<b>{fk}</b> ({len(fv)} items)")
             for item in fv[:10]:
                 if isinstance(item, dict):
-                    parts.append(f'<div class="card info">{esc(json.dumps(item, indent=2)[:500])}</div>')
+                    parts.append(f'<div class="card info">{esc(json.dumps(item, indent=2))}</div>')
                 else:
-                    parts.append(f'<div class="card">{esc(str(item)[:500])}</div>')
+                    parts.append(f'<div class="card">{esc(str(item))}</div>')
         elif isinstance(fv, dict):
-            parts.append(f'<div class="card"><b>{fk}</b><pre>{esc(json.dumps(fv, indent=2)[:1000])}</pre></div>')
+            parts.append(f'<div class="card"><b>{fk}</b><pre>{esc(json.dumps(fv, indent=2))}</pre></div>')
         else:
-            parts.append(f'<div class="card"><b>{fk}</b>: {esc(str(fv)[:500])}</div>')
+            parts.append(f'<div class="card"><b>{fk}</b>: {esc(str(fv))}</div>')
 parts.append("</div>")
 
 # Panel 7: Grounded Markers
@@ -308,9 +308,9 @@ for gk, gv in claude_md.get("gate_analysis", {}).items():
     if isinstance(gv, dict):
         parts.append(f'<b>Impact:</b> {esc(gv.get("session_impact",""))}')
         eff = gv.get("effectiveness","")
-        parts.append(f'<br><b>Effectiveness:</b> {esc(eff[:500] if isinstance(eff,str) else str(eff)[:500])}')
+        parts.append(f'<br><b>Effectiveness:</b> {esc(eff if isinstance(eff,str) else str(eff))}')
         rec = gv.get("recommended_change","")
-        parts.append(f'<br><b>Recommended Change:</b> {esc(rec[:500] if isinstance(rec,str) else str(rec)[:500])}')
+        parts.append(f'<br><b>Recommended Change:</b> {esc(rec if isinstance(rec,str) else str(rec))}')
     parts.append("</div>")
 fa = claude_md.get("framing_analysis", {})
 for fk, fv in fa.items():
@@ -321,7 +321,7 @@ for fk, fv in fa.items():
 parts.append("<h3>Improvement Recommendations</h3>")
 for r in claude_md.get("claude_md_improvement_recommendations", []):
     pri = r.get("priority", "medium")
-    parts.append(f'<div class="card"><span class="tag tag-{pri}">{pri}</span> <b>[{r.get("id","")}] {esc(r.get("target",""))}</b><br>{esc(str(r.get("recommendation",""))[:500])}</div>')
+    parts.append(f'<div class="card"><span class="tag tag-{pri}">{pri}</span> <b>[{r.get("id","")}] {esc(r.get("target",""))}</b><br>{esc(str(r.get("recommendation","")))}</div>')
 parts.append("</div>")
 
 # Panel 10: Hyperdoc Blocks

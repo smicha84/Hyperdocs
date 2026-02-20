@@ -97,11 +97,11 @@ def generate_block(dossier, filename):
                 text = w.get("warning", "")
                 ev = w.get("evidence", "")
                 lines.append(f"#")
-                lines.append(f"# @ctx:warning=\"[{wid}] [{sev.upper()}] {text[:200]}\"")
+                lines.append(f"# @ctx:warning=\"[{wid}] [{sev.upper()}] {text}\"")
                 if ev:
                     lines.append(f"#   Evidence: {ev}")
             else:
-                lines.append(f"# @ctx:warning=\"{str(w)[:200]}\"")
+                lines.append(f"# @ctx:warning=\"{str(w)}\"")
         lines.append(f"#")
 
     # Recommendations
@@ -118,7 +118,7 @@ def generate_block(dossier, filename):
                 for line in _wrap(text, 90):
                     lines.append(f"#   {line}")
             else:
-                lines.append(f"#   {str(r)[:200]}")
+                lines.append(f"#   {str(r)}")
         lines.append(f"#")
 
     # Iron rules (applicable to all files)
