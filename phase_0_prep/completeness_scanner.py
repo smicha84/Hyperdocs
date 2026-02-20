@@ -49,7 +49,7 @@ PHASE_3_FILES = [
     "claude_md_analysis.json",
 ]
 
-PHASE_5_FILES = [
+LEGACY_FILES = [
     "ground_truth_verification.json",
     "file_genealogy.json",
 ]
@@ -65,8 +65,8 @@ for f in PHASE_2_FILES:
     PHASE_MAP[f] = "phase_2"
 for f in PHASE_3_FILES:
     PHASE_MAP[f] = "phase_3"
-for f in PHASE_5_FILES:
-    PHASE_MAP[f] = "phase_5"
+for f in LEGACY_FILES:
+    PHASE_MAP[f] = "legacy"
 
 STUB_THRESHOLD = 100  # bytes — files smaller than this are stubs
 
@@ -251,7 +251,7 @@ def scan_session(session_dir):
     }
 
     # Check each expected file
-    for filename in ALL_EXPECTED + PHASE_5_FILES:
+    for filename in ALL_EXPECTED + LEGACY_FILES:
         filepath = session_dir / filename
         if not filepath.exists():
             result["files"][filename] = "FILE_MISSING"
@@ -281,7 +281,7 @@ def scan_session(session_dir):
         ("phase_1", PHASE_1_FILES),
         ("phase_2", PHASE_2_FILES),
         ("phase_3", PHASE_3_FILES),
-        ("phase_5", PHASE_5_FILES),
+        ("legacy", LEGACY_FILES),
     ]:
         statuses = [result["files"].get(f, "FILE_MISSING") for f in phase_files]
         if all(s == "PRESENT" for s in statuses):
@@ -305,7 +305,7 @@ def scan_all(sessions_dir):
 
     # Aggregate: file-level completeness
     completeness_by_file = {}
-    for filename in ALL_EXPECTED + PHASE_5_FILES:
+    for filename in ALL_EXPECTED + LEGACY_FILES:
         present = sum(1 for r in all_results if r["files"].get(filename) == "PRESENT")
         missing = sum(1 for r in all_results if r["files"].get(filename) == "FILE_MISSING")
         stub = sum(1 for r in all_results if r["files"].get(filename) == "STUB")
@@ -317,7 +317,7 @@ def scan_all(sessions_dir):
 
     # Aggregate: phase-level completeness
     completeness_by_phase = {}
-    for phase in ["phase_0", "phase_1", "phase_2", "phase_3", "phase_5"]:
+    for phase in ["phase_0", "phase_1", "phase_2", "phase_3", "legacy"]:
         complete = sum(1 for r in all_results if r["phase_status"].get(phase) == "complete")
         partial = sum(1 for r in all_results if r["phase_status"].get(phase) == "partial")
         missing = sum(1 for r in all_results if r["phase_status"].get(phase) == "missing")

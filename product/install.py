@@ -59,7 +59,7 @@ def install_hook():
         settings["hooks"]["PostToolUse"] = []
 
     # Check if our hook is already installed
-    hook_cmd = f"python3 {HYPERDOCS_ROOT}/realtime_hook.py"
+    hook_cmd = f"python3 {HYPERDOCS_ROOT}/product/realtime_hook.py"
     already_installed = any(
         hook_cmd in str(h.get("hooks", []))
         for h in settings["hooks"]["PostToolUse"]
@@ -99,7 +99,7 @@ def set_env_hint():
 def run_discovery():
     """Run the concierge discovery."""
     print()
-    subprocess.run([sys.executable, str(HYPERDOCS_ROOT / "concierge.py"), "--discover"])
+    subprocess.run([sys.executable, str(HYPERDOCS_ROOT / "product" / "concierge.py"), "--discover"])
 
 
 def main():

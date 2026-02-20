@@ -33,13 +33,10 @@ python3 $HYPERDOCS_PATH/concierge.py --process SESSION_ID
    - File Mapper (agent def: `$HYPERDOCS_PATH/phase_3_hyperdoc_writing/file-mapper.md`)
    - Then 15 per-file Hyperdoc Writers in batches of 4 (agent def: `$HYPERDOCS_PATH/phase_3_hyperdoc_writing/hyperdoc-writer-per-file.md`)
 
-7. After Phase 3, run Phase 4-5:
+7. After Phase 3, run Phase 4 (insertion):
 ```bash
 python3 $HYPERDOCS_PATH/phase_4_insertion/insert_hyperdocs_v2.py
 python3 $HYPERDOCS_PATH/phase_4_insertion/hyperdoc_store_init.py
-python3 $HYPERDOCS_PATH/phase_5_ground_truth/claim_extractor.py
-python3 $HYPERDOCS_PATH/phase_5_ground_truth/ground_truth_verifier.py
-python3 $HYPERDOCS_PATH/phase_5_ground_truth/gap_reporter.py
 ```
 
 8. Open the dashboard:

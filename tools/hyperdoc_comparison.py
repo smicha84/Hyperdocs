@@ -262,7 +262,7 @@ def main():
         # Run on all 5 enhanced files
         targets = [
             REPO / "config.py",
-            REPO / "batch_orchestrator.py",
+            REPO / "phase_1_extraction" / "batch_orchestrator.py",
             REPO / "phase_0_prep" / "deterministic_prep.py",
             REPO / "phase_3_hyperdoc_writing" / "generate_viewer.py",
             REPO / "phase_0_prep" / "geological_reader.py",

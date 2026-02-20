@@ -319,7 +319,7 @@ def show_status():
 
 def open_dashboard():
     """Generate and open the dashboard."""
-    dashboard_script = HYPERDOCS_ROOT / "dashboard.py"
+    dashboard_script = HYPERDOCS_ROOT / "product" / "dashboard.py"
     if dashboard_script.exists():
         subprocess.run([sys.executable, str(dashboard_script)])
     else:

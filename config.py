@@ -40,7 +40,7 @@ ARCHIVE_PATH = os.getenv("HYPERDOCS_ARCHIVE_PATH", "")
 PROJECT_ID = os.getenv("HYPERDOCS_PROJECT_ID", "")
 
 # ── V5 Source Code Directory ──────────────────────────────────
-# Phase 4 (insertion) and Phase 5 (ground truth) read source files from disk.
+# Phase 4 (insertion) reads source files from disk.
 # The improved modules live directly in phase_0_prep/ (v5_compat dissolved).
 V5_SOURCE_DIR = Path(os.getenv(
     "HYPERDOCS_V5_SOURCE",

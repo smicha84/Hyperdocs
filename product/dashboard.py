@@ -67,7 +67,6 @@ def generate_dashboard(session_dir):
         ("phase_2", "Synthesis + Genealogy", "Opus"),
         ("phase_3", "Hyperdoc Writing", "Opus"),
         ("phase_4", "Smart Insertion", "$0"),
-        ("phase_5", "Ground Truth", "$0"),
     ]
 
     phase_html = ""
@@ -121,7 +120,7 @@ def generate_dashboard(session_dir):
             bar_width = max(int(score * 200), 2)
             cred_html += f'<div style="display:flex;align-items:center;gap:8px;margin:3px 0;font-size:12px"><span style="color:{color};min-width:32px;text-align:right;font-weight:700">{int(score*100)}%</span><div style="background:{color};height:8px;width:{bar_width}px;border-radius:2px"></div><span style="color:#888">{row["file"]}</span></div>'
     else:
-        cred_html = '<p style="color:#555">Run Phase 5 for credibility scores</p>'
+        cred_html = '<p style="color:#555">No credibility scores available</p>'
 
     # Key findings
     findings_html = ""

@@ -117,11 +117,10 @@ KNOWN_SESSION_FILES = {
     "claude_md_analysis.json",
     # Phase 4 outputs
     "cross_session_file_index.json",
-    # Phase 5 outputs
+    # Legacy outputs (Phase 5 dissolved)
     "ground_truth_claims.json",
     "ground_truth_results.json",
     "ground_truth_summary.json",
-    # Gap checklist
     "gap_checklist.json",
     # Dashboard / pipeline
     "pipeline_status.json",
@@ -373,10 +372,10 @@ OUTPUT_PHASE_MAP = {
     "claude_md_analysis.json": 3,
     # Phase 4 outputs
     "cross_session_file_index.json": 4,
-    # Phase 5 outputs
-    "ground_truth_claims.json": 5,
-    "ground_truth_results.json": 5,
-    "ground_truth_summary.json": 5,
+    # Legacy outputs (Phase 5 dissolved)
+    "ground_truth_claims.json": -1,
+    "ground_truth_results.json": -1,
+    "ground_truth_summary.json": -1,
     # Meta outputs (not phase-bound)
     "gap_checklist.json": -1,
     "pipeline_status.json": -1,
@@ -388,7 +387,7 @@ OUTPUT_PHASE_MAP = {
 # ── Main Analysis ─────────────────────────────────────────────────────────
 
 def discover_python_files() -> list:
-    """Find all .py files in hyperdocs_3, excluding v5_compat and output."""
+    """Find all .py files in hyperdocs_3, excluding output and non-source dirs."""
     result = []
     for root, dirs, files in os.walk(REPO):
         # Skip excluded directories
@@ -587,7 +586,6 @@ def analyze():
         2: "Phase 2 (Synthesis)",
         3: "Phase 3 (Hyperdoc Writing)",
         4: "Phase 4 (Insertion/Aggregation)",
-        5: "Phase 5 (Ground Truth)",
     }
 
     for phase_num in sorted(by_phase.keys()):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Phase 5: Insert hyperdocs from Phase 4b JSON into source code files.
+Phase 4b: Insert hyperdocs from Phase 4b JSON into source code files.
 
 Reads from: output/hyperdocs/*_hyperdoc.json
 Writes to:  output/enhanced_files/{filename}  (COPIES — originals untouched)
@@ -465,7 +465,7 @@ def process_hyperdoc(hyperdoc_path, stats):
 
 def main():
     print("=" * 70)
-    print("Phase 5: Insert Hyperdocs from Phase 4b into Source Files")
+    print("Phase 4b: Insert Hyperdocs into Source Files")
     print("=" * 70)
     print(f"Hyperdocs dir:  {HYPERDOCS_DIR}")
     print(f"Hooks dir:      {HOOKS_DIR}")
