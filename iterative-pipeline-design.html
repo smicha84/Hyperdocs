@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Iterative Pipeline — Gap-Driven Multi-Pass Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Fragment+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-body: 'Bricolage Grotesque', system-ui, sans-serif;
+    --font-mono: 'Fragment Mono', 'SF Mono', Consolas, monospace;
+    --bg: #0d0d0d; --surface: #161616; --surface2: #1e1e1e; --surface3: #282828;
+    --border: rgba(255,255,255,0.06); --border-bright: rgba(255,255,255,0.14);
+    --text: #f0f0f0; --text-dim: #777777;
+    --cyan: #22d3ee; --cyan-dim: rgba(34,211,238,0.1);
+    --green: #34d399; --green-dim: rgba(52,211,153,0.1);
+    --amber: #fbbf24; --amber-dim: rgba(251,191,36,0.1);
+    --red: #f87171; --red-dim: rgba(248,113,113,0.1);
+    --purple: #a78bfa; --purple-dim: rgba(167,139,250,0.1);
+    --blue: #60a5fa; --blue-dim: rgba(96,165,250,0.1);
+    --pass1: #22d3ee; --pass2: #a78bfa; --pass3: #34d399; --pass4: #fbbf24;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #fafafa; --surface: #ffffff; --surface2: #f5f5f5; --surface3: #ebebeb;
+      --border: rgba(0,0,0,0.06); --border-bright: rgba(0,0,0,0.14);
+      --text: #111111; --text-dim: #888888;
+      --cyan: #0891b2; --cyan-dim: rgba(8,145,178,0.08);
+      --green: #059669; --green-dim: rgba(5,150,105,0.08);
+      --amber: #d97706; --amber-dim: rgba(217,119,6,0.08);
+      --red: #dc2626; --red-dim: rgba(220,38,38,0.08);
+      --purple: #7c3aed; --purple-dim: rgba(124,58,237,0.08);
+      --blue: #2563eb; --blue-dim: rgba(37,99,235,0.08);
+      --pass1: #0891b2; --pass2: #7c3aed; --pass3: #059669; --pass4: #d97706;
+    }
+  }
+  * { margin:0; padding:0; box-sizing:border-box; min-width:0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: var(--font-body);
+    line-height: 1.7; padding: 48px 24px 96px; overflow-wrap: break-word;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* Hero */
+  h1 { font-size: 52px; font-weight: 800; letter-spacing: -2px; line-height: 1.05; margin-bottom: 12px; }
+  h1 span { color: var(--cyan); }
+  .subtitle { font-size: 20px; color: var(--text-dim); margin-bottom: 4px; font-weight: 400; }
+  .source { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); margin-bottom: 56px; opacity: 0.6; }
+
+  /* Section */
+  .sec { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-top: 72px; margin-bottom: 24px; }
+  .sec span { color: var(--cyan); font-weight: 400; }
+
+  /* Callout */
+  .callout { border-left: 3px solid var(--cyan); padding: 16px 20px; margin: 24px 0; font-size: 15px; color: var(--text); background: var(--cyan-dim); border-radius: 0 8px 8px 0; }
+  .callout.warn { border-left-color: var(--amber); background: var(--amber-dim); }
+  .callout.green { border-left-color: var(--green); background: var(--green-dim); }
+  .callout strong { color: var(--text); }
+
+  /* Flow diagram (CSS) */
+  .flow { display: flex; flex-direction: column; gap: 0; margin: 32px 0; }
+  .flow-row { display: flex; align-items: stretch; gap: 12px; }
+  .flow-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; font-size: 13px; flex: 0 0 180px; display: flex; align-items: center; }
+  .flow-input code { font-family: var(--font-mono); font-size: 11px; color: var(--cyan); }
+  .flow-arrow { display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 20px; flex: 0 0 24px; }
+  .flow-pass { flex: 1; border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; position: relative; overflow: hidden; }
+  .flow-pass::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .flow-pass.p1::before { background: var(--pass1); } .flow-pass.p2::before { background: var(--pass2); }
+  .flow-pass.p3::before { background: var(--pass3); } .flow-pass.p4::before { background: var(--pass4); }
+  .flow-pass .label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .flow-pass.p1 .label { color: var(--pass1); } .flow-pass.p2 .label { color: var(--pass2); }
+  .flow-pass.p3 .label { color: var(--pass3); } .flow-pass.p4 .label { color: var(--pass4); }
+  .flow-pass .title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .flow-pass .desc { font-size: 12px; color: var(--text-dim); }
+  .flow-outputs { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .flow-outputs .tag { font-family: var(--font-mono); font-size: 10px; padding: 2px 8px; border-radius: 4px; }
+  .flow-outputs .tag.out { background: var(--green-dim); color: var(--green); }
+  .flow-outputs .tag.gap { background: var(--amber-dim); color: var(--amber); }
+  .flow-connector { display: flex; justify-content: center; padding: 8px 0; }
+  .flow-connector svg { width: 20px; height: 20px; fill: none; stroke: var(--text-dim); stroke-width: 2; stroke-linecap: round; }
+  .flow-stop { text-align: center; padding: 16px; font-family: var(--font-mono); font-size: 13px; color: var(--green); border: 2px dashed var(--green); border-radius: 10px; margin-top: 8px; opacity: 0.8; }
+  @media (max-width: 700px) { .flow-row { flex-direction: column; } .flow-input { flex: none; } }
+
+  /* JSON schema */
+  .schema { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin: 24px 0; overflow-x: auto; }
+  .schema pre { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--text-dim); white-space: pre; }
+  .schema .key { color: var(--cyan); } .schema .str { color: var(--green); }
+  .schema .num { color: var(--amber); } .schema .comment { color: var(--text-dim); opacity: 0.5; font-style: italic; }
+
+  /* Pass cards */
+  .pass-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0; }
+  @media (max-width: 700px) { .pass-grid { grid-template-columns: 1fr; } }
+  .pass-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; position: relative; overflow: hidden; }
+  .pass-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .pass-card.p1::before { background: var(--pass1); } .pass-card.p2::before { background: var(--pass2); }
+  .pass-card.p3::before { background: var(--pass3); } .pass-card.p4::before { background: var(--pass4); }
+  .pass-card h3 { font-size: 18px; margin-bottom: 2px; }
+  .pass-card .question { font-style: italic; color: var(--text-dim); font-size: 14px; margin-bottom: 12px; }
+  .pass-card .field { font-size: 12px; margin-bottom: 6px; }
+  .pass-card .field strong { color: var(--text); font-weight: 600; }
+  .pass-card .field span { color: var(--text-dim); }
+  .pass-card .coverage { font-family: var(--font-mono); font-size: 12px; margin-top: 12px; padding: 8px 12px; border-radius: 6px; }
+  .pass-card.p1 .coverage { background: var(--cyan-dim); color: var(--pass1); }
+  .pass-card.p2 .coverage { background: var(--purple-dim); color: var(--pass2); }
+  .pass-card.p3 .coverage { background: var(--green-dim); color: var(--pass3); }
+  .pass-card.p4 .coverage { background: var(--amber-dim); color: var(--pass4); }
+
+  /* Feedback loops */
+  .loops { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 24px 0; }
+  @media (max-width: 700px) { .loops { grid-template-columns: 1fr; } }
+  .loop-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center; }
+  .loop-card .icon { font-size: 32px; margin-bottom: 8px; display: flex; justify-content: center; }
+  .loop-card .icon svg { width: 48px; height: 48px; }
+  .loop-card h3 { font-size: 15px; margin-bottom: 6px; }
+  .loop-card p { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+  .loop-card ul { list-style: none; font-size: 12px; color: var(--text-dim); text-align: left; margin-top: 8px; }
+  .loop-card li { padding: 2px 0 2px 14px; position: relative; }
+  .loop-card li::before { content: ''; position: absolute; left: 0; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--border-bright); }
+
+  /* Constraints table */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); margin: 24px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--surface2); font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border-bright); }
+  tbody td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:hover { background: var(--cyan-dim); }
+  td code { font-family: var(--font-mono); font-size: 11px; background: var(--surface2); padding: 1px 5px; border-radius: 3px; }
+
+  /* Comparison */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin: 24px 0; }
+  @media (max-width: 700px) { .compare { grid-template-columns: 1fr; } }
+  .compare-side { padding: 24px; }
+  .compare-side.old { background: var(--red-dim); }
+  .compare-side.new { background: var(--green-dim); }
+  .compare-side h3 { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .compare-side.old h3 { color: var(--red); }
+  .compare-side.new h3 { color: var(--green); }
+  .compare-side p { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; line-height: 1.6; }
+  .compare-side p strong { color: var(--text); }
+
+  .footer { text-align: center; margin-top: 72px; color: var(--text-dim); font-size: 12px; font-family: var(--font-mono); opacity: 0.5; }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- HERO -->
+<h1>The <span>Iterative</span> Pipeline</h1>
+<p class="subtitle">Gap-driven multi-pass analysis with feedback loops</p>
+<p class="source">Based on ITERX (EACL 2023, Outstanding Paper), FAIR-RAG, Self-Refine, GraphRAG, and 21 references spanning 2020-2026</p>
+
+<!-- SECTION 1: CORE MECHANISM -->
+<div class="sec"><span>01</span> The Core Mechanism</div>
+
+<div class="callout">Every pass sees the raw JSONL. Always. This prevents cumulative drift. The gap checklist IS the mechanism &mdash; Pass 1 discovers what's obvious. Pass 2 targets what's missing. Pass 3 validates.</div>
+
+<div class="flow">
+  <div class="flow-row">
+    <div class="flow-input"><code>Raw JSONL</code></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-pass p1">
+      <div class="label">Pass 1 &mdash; Cold Start</div>
+      <div class="title">"What's here?"</div>
+      <div class="desc">Broad extraction. 7 primitives, file events, idea seeds. No prior context.</div>
+      <div class="flow-outputs">
+        <span class="tag out">annotations</span>
+        <span class="tag gap">gap checklist</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-connector"><svg viewBox="0 0 20 20"><path d="M10 4 L10 16 M6 12 L10 16 L14 12"/></svg></div>
+
+  <div class="flow-row">
+    <div class="flow-input"><code>Raw JSONL</code> + Pass 1 + Gaps</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-pass p2">
+      <div class="label">Pass 2 &mdash; Enrichment</div>
+      <div class="title">"What did I miss?"</div>
+      <div class="desc">Targeted at gaps. Missing edge types, unclassified messages, ambiguous file refs.</div>
+      <div class="flow-outputs">
+        <span class="tag out">refined</span>
+        <span class="tag out">cross-session</span>
+        <span class="tag gap">updated gaps</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-connector"><svg viewBox="0 0 20 20"><path d="M10 4 L10 16 M6 12 L10 16 L14 12"/></svg></div>
+
+  <div class="flow-row">
+    <div class="flow-input"><code>Raw JSONL</code> + Pass 1-2 + Gaps</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-pass p3">
+      <div class="label">Pass 3 &mdash; Validation</div>
+      <div class="title">"Is this right?"</div>
+      <div class="desc">Consistency checking. Do primitives match the idea graph? Do dossiers align?</div>
+      <div class="flow-outputs">
+        <span class="tag out">validated</span>
+        <span class="tag out">contradictions</span>
+        <span class="tag gap">final gaps</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-connector"><svg viewBox="0 0 20 20"><path d="M10 4 L10 16 M6 12 L10 16 L14 12"/></svg></div>
+
+  <div class="flow-stop">Delta &lt; 2% new information? &rarr; STOP. Serve the steak.</div>
+</div>
+
+<!-- SECTION 2: GAP CHECKLIST SCHEMA -->
+<div class="sec"><span>02</span> The Gap Checklist</div>
+
+<div class="callout">The gaps are not just "what's missing." They include WHERE to look and WHAT to look for. This is what makes Pass 2 targeted instead of redundant.</div>
+
+<div class="schema"><pre><span class="comment">// gap_checklist.json — produced by every pass, consumed by the next</span>
+{
+  <span class="key">"pass_number"</span>: <span class="num">1</span>,
+  <span class="key">"session_id"</span>: <span class="str">"0012ebed"</span>,
+
+  <span class="key">"confirmed"</span>: [
+    {
+      <span class="key">"field"</span>: <span class="str">"action_vector"</span>,
+      <span class="key">"coverage"</span>: <span class="str">"6/8 values observed"</span>,
+      <span class="key">"confidence"</span>: <span class="num">0.92</span>,
+      <span class="key">"evidence_count"</span>: <span class="num">47</span>
+    }
+  ],
+
+  <span class="key">"gaps"</span>: [
+    {
+      <span class="key">"field"</span>: <span class="str">"action_vector"</span>,
+      <span class="key">"missing_values"</span>: [<span class="str">"abandoned"</span>, <span class="str">"reverted"</span>],
+      <span class="key">"reason"</span>: <span class="str">"No evidence of abandonment or undo in pass 1"</span>,
+      <span class="key">"priority"</span>: <span class="str">"high"</span>,
+      <span class="key">"suggested_focus"</span>: <span class="str">"Messages 200-400: topic shifts detected but not classified"</span>
+    },
+    {
+      <span class="key">"field"</span>: <span class="str">"idea_graph_edges"</span>,
+      <span class="key">"missing_types"</span>: [<span class="str">"resurrected"</span>, <span class="str">"split"</span>],
+      <span class="key">"reason"</span>: <span class="str">"12 nodes found but only evolved + concretized edges"</span>,
+      <span class="key">"priority"</span>: <span class="str">"medium"</span>,
+      <span class="key">"suggested_focus"</span>: <span class="str">"Ideas absent 50+ messages then reappearing"</span>
+    }
+  ],
+
+  <span class="key">"convergence"</span>: {
+    <span class="key">"new_entities"</span>: <span class="num">47</span>,
+    <span class="key">"refined_entities"</span>: <span class="num">0</span>,
+    <span class="key">"delta"</span>: <span class="str">null</span>,
+    <span class="key">"recommendation"</span>: <span class="str">"continue"</span>
+  }
+}</pre></div>
+
+<!-- SECTION 3: PASS DETAILS -->
+<div class="sec"><span>03</span> What Each Pass Does</div>
+
+<div class="pass-grid">
+  <div class="pass-card p1">
+    <h3>Pass 1: "What's here?"</h3>
+    <div class="question">What happened in this session?</div>
+    <div class="field"><strong>Input:</strong> <span>Raw JSONL only (zero prior context)</span></div>
+    <div class="field"><strong>Focus:</strong> <span>Broad extraction &mdash; all 7 primitives, file events, idea seeds, frustration signals</span></div>
+    <div class="field"><strong>Temperature:</strong> <span>0.3 (analytical, conservative)</span></div>
+    <div class="field"><strong>Stop:</strong> <span>Never &mdash; always runs</span></div>
+    <div class="coverage">Estimated coverage: 60-70%</div>
+  </div>
+
+  <div class="pass-card p2">
+    <h3>Pass 2: "What did I miss?"</h3>
+    <div class="question">Where are the gaps, and what fills them?</div>
+    <div class="field"><strong>Input:</strong> <span>Raw JSONL + Pass 1 outputs + Gap checklist</span></div>
+    <div class="field"><strong>Focus:</strong> <span>Targeted at gaps &mdash; missing edge types, unclassified messages, ambiguous file refs</span></div>
+    <div class="field"><strong>Temperature:</strong> <span>0.5 (interpretive, slightly creative)</span></div>
+    <div class="field"><strong>Stop:</strong> <span>If gap count reduced by &lt; 20% from Pass 1</span></div>
+    <div class="coverage">Estimated coverage: 85-90%</div>
+  </div>
+
+  <div class="pass-card p3">
+    <h3>Pass 3: "Is this right?"</h3>
+    <div class="question">Do the outputs agree with each other and the raw data?</div>
+    <div class="field"><strong>Input:</strong> <span>Raw JSONL + Pass 1-2 + Cross-session data + Gap checklist</span></div>
+    <div class="field"><strong>Focus:</strong> <span>Consistency &mdash; primitives vs idea graph, dossiers vs threads, claims vs reality</span></div>
+    <div class="field"><strong>Temperature:</strong> <span>0.3 (precise, verification mode)</span></div>
+    <div class="field"><strong>Stop:</strong> <span>If delta &lt; 5% from Pass 2</span></div>
+    <div class="coverage">Estimated coverage: 95-98%</div>
+  </div>
+
+  <div class="pass-card p4">
+    <h3>Pass 4: "Fill the rest"</h3>
+    <div class="question">What's still missing, and is it worth extracting?</div>
+    <div class="field"><strong>Input:</strong> <span>Raw JSONL + all prior outputs + Final gap list</span></div>
+    <div class="field"><strong>Focus:</strong> <span>Targeted gap-filling on remaining items only</span></div>
+    <div class="field"><strong>Temperature:</strong> <span>0.5</span></div>
+    <div class="field"><strong>Stop:</strong> <span>Always &mdash; hard cap. No Pass 5.</span></div>
+    <div class="coverage">Estimated coverage: 98-100%</div>
+  </div>
+</div>
+
+<!-- SECTION 4: FEEDBACK LOOPS -->
+<div class="sec"><span>04</span> Three Feedback Loops</div>
+
+<div class="loops">
+  <div class="loop-card">
+    <div class="icon"><svg viewBox="0 0 48 48" fill="none" stroke="var(--pass1)" stroke-width="2"><circle cx="24" cy="24" r="16"/><path d="M24 8 C32 8 36 14 36 24" stroke-dasharray="4 3"/><path d="M33 20 L36 24 L39 20" fill="var(--pass1)" stroke="none"/></svg></div>
+    <h3>Loop 1: Within-Session</h3>
+    <p>Pass N &rarr; Pass N+1</p>
+    <ul>
+      <li>Gap checklist drives next pass focus</li>
+      <li>Each pass's outputs become context for next</li>
+      <li>Terminates at convergence or hard cap (4)</li>
+      <li>Cycle time: minutes per pass</li>
+    </ul>
+  </div>
+
+  <div class="loop-card">
+    <div class="icon"><svg viewBox="0 0 48 48" fill="none" stroke="var(--pass2)" stroke-width="2"><circle cx="24" cy="24" r="20"/><circle cx="24" cy="24" r="12"/><path d="M24 4 C36 4 42 14 42 24" stroke-dasharray="4 3"/><path d="M39 20 L42 24 L45 20" fill="var(--pass2)" stroke="none"/></svg></div>
+    <h3>Loop 2: Cross-Session</h3>
+    <p>Session N &rarr; Session N+1</p>
+    <ul>
+      <li>File index accumulates knowledge</li>
+      <li>Genealogy families grow</li>
+      <li>Code similarity index expands</li>
+      <li>New sessions benefit from all prior</li>
+    </ul>
+  </div>
+
+  <div class="loop-card">
+    <div class="icon"><svg viewBox="0 0 48 48" fill="none" stroke="var(--pass3)" stroke-width="2"><circle cx="24" cy="24" r="20"/><circle cx="24" cy="24" r="14"/><circle cx="24" cy="24" r="8"/><path d="M24 4 C38 4 44 16 44 24" stroke-dasharray="4 3"/><path d="M41 20 L44 24 L47 20" fill="var(--pass3)" stroke="none"/></svg></div>
+    <h3>Loop 3: Opus &rarr; Python</h3>
+    <p>Categories discovered &rarr; codified</p>
+    <ul>
+      <li>Opus discovers categories via multi-pass</li>
+      <li>Patterns observed across sessions</li>
+      <li>Eventually codified into Python rules</li>
+      <li>Replaces the tier 1-4 system</li>
+    </ul>
+  </div>
+</div>
+
+<!-- SECTION 5: CONSTRAINTS -->
+<div class="sec"><span>05</span> Constraints &amp; Safeguards</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Constraint</th><th>Source</th><th>Mechanism</th></tr></thead>
+<tbody>
+<tr><td><strong>Max 4-5 passes</strong></td><td>RefineBench</td><td>Hard cap. Beyond this, quality degrades, not improves.</td></tr>
+<tr><td><strong>Always anchor to raw data</strong></td><td>Cumulative drift literature</td><td>Every pass reads original JSONL, not just derived outputs.</td></tr>
+<tr><td><strong>External validation</strong></td><td>Huang et al. (ICLR 2024)</td><td>Ground truth verifier (Python/AST) = the external signal. LLMs cannot self-correct without it.</td></tr>
+<tr><td><strong>Track convergence delta</strong></td><td>ITERX termination</td><td>Stop when <code>&lt; 2%</code> new information per pass.</td></tr>
+<tr><td><strong>No self-consumption</strong></td><td>Model Collapse (MAD)</td><td>Never fine-tune on pipeline outputs. Outputs inform prompts, never weights.</td></tr>
+<tr><td><strong>Confidence thresholds</strong></td><td>Semantic drift</td><td>New extractions must exceed confidence threshold to be accepted.</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- SECTION 6: COMPARISON -->
+<div class="sec"><span>06</span> What This Replaces</div>
+
+<div class="compare">
+  <div class="compare-side old">
+    <h3>Current: Single-Pass</h3>
+    <p><strong>P0</strong> &rarr; <strong>P1</strong> (4 agents, blind) &rarr; <strong>P2</strong> &rarr; <strong>P3</strong> &rarr; <strong>P4</strong> &rarr; <strong>P5</strong></p>
+    <p>6 sequential phases, no feedback</p>
+    <p>Tier 1-4 decides upfront what matters (Python guessing)</p>
+    <p>Cross-session data produced but never fed back</p>
+    <p>Each session analyzed in isolation</p>
+    <p>One shot. Whatever you miss, you miss.</p>
+  </div>
+  <div class="compare-side new">
+    <h3>New: Iterative Multi-Pass</h3>
+    <p><strong>Raw</strong> &rarr; <strong>Pass 1</strong> &rarr; Gap check &rarr; <strong>Pass 2</strong> &rarr; Gap check &rarr; <strong>Pass 3</strong> &rarr; [Pass 4] &rarr; Done</p>
+    <p>2-4 passes per session, gap-driven</p>
+    <p>Opus decides what matters (no tier system)</p>
+    <p>Cross-session data feeds into every pass after first</p>
+    <p>Each new session benefits from all prior analysis</p>
+    <p>Cook 10 seconds at a time. Stop when done.</p>
+  </div>
+</div>
+
+<div class="callout green">The 6 phases still exist as the <strong>content</strong> of each pass. Semantic primitives, idea graphs, file dossiers, ground truth &mdash; all still produced. But the passes now <strong>loop with feedback</strong>, and each loop is targeted at what the previous loop missed.</div>
+
+<div class="footer">Iterative Pipeline Design &bull; Based on 21 references, 2020-2026 &bull; Feb 20, 2026</div>
+
+</div>
+</body>
+</html>

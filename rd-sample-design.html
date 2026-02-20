@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R&D Sample Design — Reverse-Engineered from Pipeline Outputs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-body: 'Space Grotesk', system-ui, sans-serif;
+    --font-mono: 'Space Mono', 'SF Mono', Consolas, monospace;
+    --bg: #0b0d1a; --surface: #12152a; --surface2: #1a1e38; --surface3: #222748;
+    --border: rgba(139,92,246,0.1); --border-bright: rgba(139,92,246,0.25);
+    --text: #e8e6f0; --text-dim: #7a7896;
+    --accent: #8b5cf6; --accent-dim: rgba(139,92,246,0.08);
+    --green: #10b981; --green-dim: rgba(16,185,129,0.08);
+    --amber: #f59e0b; --amber-dim: rgba(245,158,11,0.08);
+    --red: #ef4444; --red-dim: rgba(239,68,68,0.08);
+    --cyan: #06b6d4; --cyan-dim: rgba(6,182,212,0.08);
+    --pink: #ec4899; --pink-dim: rgba(236,72,153,0.08);
+    --blue: #3b82f6; --blue-dim: rgba(59,130,246,0.08);
+    --p0: #38bdf8; --p1: #a78bfa; --p2: #34d399; --p3: #fbbf24; --p5: #f87171;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #faf8ff; --surface: #ffffff; --surface2: #f5f3ff; --surface3: #ede9fe;
+      --border: rgba(139,92,246,0.1); --border-bright: rgba(139,92,246,0.25);
+      --text: #1e1b3a; --text-dim: #6b6589;
+      --accent: #7c3aed; --accent-dim: rgba(124,58,237,0.06);
+      --green: #059669; --green-dim: rgba(5,150,105,0.06);
+      --amber: #d97706; --amber-dim: rgba(217,119,6,0.06);
+      --red: #dc2626; --red-dim: rgba(220,38,38,0.06);
+      --cyan: #0891b2; --cyan-dim: rgba(8,145,178,0.06);
+      --pink: #db2777; --pink-dim: rgba(219,39,119,0.06);
+      --blue: #2563eb; --blue-dim: rgba(37,99,235,0.06);
+    }
+  }
+  * { margin:0; padding:0; box-sizing:border-box; min-width:0; }
+  body {
+    background: var(--bg);
+    background-image: radial-gradient(at 10% 20%, rgba(139,92,246,0.06) 0%, transparent 50%);
+    color: var(--text); font-family: var(--font-body); line-height: 1.55; padding: 32px 20px 80px;
+    overflow-wrap: break-word;
+  }
+  .container { max-width: 1300px; margin: 0 auto; }
+
+  h1 { font-size: 36px; font-weight: 700; letter-spacing: -1.5px; margin-bottom: 6px; background: linear-gradient(135deg,var(--accent),var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .subtitle { font-size: 15px; color: var(--text-dim); margin-bottom: 32px; }
+
+  .sec-head { font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; padding: 8px 0; margin-top: 40px; margin-bottom: 16px; border-bottom: 2px solid var(--border-bright); display: flex; align-items: center; gap: 8px; }
+  .sec-head .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Dense table */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.45; }
+  thead th { background: var(--surface2); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); padding: 8px 10px; text-align: left; position: sticky; top: 0; z-index: 2; border-bottom: 1px solid var(--border-bright); white-space: nowrap; }
+  tbody td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:hover { background: var(--accent-dim); }
+  td code { font-family: var(--font-mono); font-size: 10px; background: var(--surface2); padding: 1px 4px; border-radius: 2px; }
+  td small { color: var(--text-dim); font-size: 11px; }
+  .phase-tag { font-family: var(--font-mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 3px; display: inline-block; white-space: nowrap; }
+  .phase-tag.p0 { background: rgba(56,189,248,0.15); color: var(--p0); }
+  .phase-tag.p1 { background: rgba(167,139,250,0.15); color: var(--p1); }
+  .phase-tag.p2 { background: rgba(52,211,153,0.15); color: var(--p2); }
+  .phase-tag.p3 { background: rgba(251,191,36,0.15); color: var(--p3); }
+  .phase-tag.p5 { background: rgba(248,113,113,0.15); color: var(--p5); }
+
+  /* Archetype cards */
+  .arch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .arch-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; position: relative; overflow: hidden; }
+  .arch-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .arch-card.a::before { background: var(--accent); } .arch-card.b::before { background: var(--red); }
+  .arch-card.c::before { background: var(--cyan); } .arch-card.d::before { background: var(--amber); }
+  .arch-card.e::before { background: var(--green); } .arch-card.f::before { background: var(--pink); }
+  .arch-card h3 { font-size: 15px; margin-bottom: 4px; }
+  .arch-card .meta { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); margin-bottom: 8px; }
+  .arch-card p { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; line-height: 1.5; }
+  .arch-card .exercises { font-size: 11px; }
+  .arch-card .exercises code { font-size: 10px; }
+
+  /* Coverage matrix */
+  .matrix td { text-align: center; font-size: 11px; padding: 4px 6px; }
+  .matrix td.y { color: var(--green); font-weight: 700; }
+  .matrix td.n { color: var(--text-dim); opacity: 0.4; }
+  .matrix td.p { color: var(--amber); }
+  .matrix td:first-child { text-align: left; font-size: 11px; white-space: nowrap; }
+  .matrix thead th { padding: 6px 8px; }
+
+  .callout { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; } }
+  @media (max-width:768px) { .arch-grid { grid-template-columns: 1fr; } body { padding: 16px; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>R&amp;D Sample Design</h1>
+<p class="subtitle">Reverse-engineered from outputs: what input characteristics exercise every pipeline field?</p>
+
+<!-- SECTION 1: FIELD → INPUT CONDITIONS -->
+<div class="sec-head"><div class="dot" style="background:var(--p0)"></div>Output Fields &rarr; Required Input Conditions</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Phase</th><th>Output File</th><th>Field</th><th>Non-Trivial When</th><th>Input Condition Required</th></tr></thead>
+<tbody>
+<!-- Phase 0 -->
+<tr><td><span class="phase-tag p0">P0</span></td><td><code>session_summary</code></td><td><code>frustration_peaks[]</code></td><td>caps_ratio &gt; 0.3 OR profanity OR exclamations &gt; 2</td><td>Angry user messages with CAPS, swearing, or exclamation marks</td></tr>
+<tr><td><span class="phase-tag p0">P0</span></td><td><code>session_summary</code></td><td><code>file_mention_counts</code></td><td>File appears 2+ times</td><td>Real code files mentioned repeatedly, not trivial chat</td></tr>
+<tr><td><span class="phase-tag p0">P0</span></td><td><code>session_summary</code></td><td><code>error_count &gt; 0</code></td><td>Assistant messages contain error traces</td><td>Debugging where errors actually occur</td></tr>
+<tr><td><span class="phase-tag p0">P0</span></td><td><code>session_summary</code></td><td><code>tool_failure_count &gt; 0</code></td><td>Tool calls that fail</td><td>Failed bash/edit/read operations</td></tr>
+<tr><td><span class="phase-tag p0">P0</span></td><td><code>session_summary</code></td><td><code>emergency_interventions[]</code></td><td>System-level crisis detected</td><td>Context window exhaustion or system crashes</td></tr>
+<tr><td><span class="phase-tag p0">P0</span></td><td><code>session_summary</code></td><td><code>is_subagent=true</code></td><td>Spawned by orchestrator</td><td>Need at least one subagent session in sample</td></tr>
+<tr><td><span class="phase-tag p0">P0</span></td><td><code>enriched_session</code></td><td><code>char_per_line &gt; 0</code></td><td>Encoding artifact present</td><td>Messages with char-per-line encoding (H\ne\nl\nl\no)</td></tr>
+
+<!-- Phase 1 — Threads -->
+<tr style="border-top:2px solid var(--border-bright)"><td><span class="phase-tag p1">P1</span></td><td><code>thread_extractions</code></td><td><code>threads.ideas.entries[]</code></td><td>Message introduces new concept</td><td>Architectural decisions, design proposals, concept introductions</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>thread_extractions</code></td><td><code>threads.reactions.entries[]</code></td><td>Emotional expression</td><td>User praise, frustration, correction, rage</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>thread_extractions</code></td><td><code>threads.software.entries[]</code></td><td>File CRUD operations</td><td>File creation, modification, deletion via tool calls</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>thread_extractions</code></td><td><code>threads.code.entries[]</code></td><td>Architecture/pattern discussion</td><td>Discussions about code patterns, imports, dependencies</td></tr>
+
+<!-- Phase 1 — Primitives -->
+<tr style="border-top:2px solid var(--border-bright)"><td><span class="phase-tag p1">P1</span></td><td><code>semantic_primitives</code></td><td><code>action_vector="created"</code></td><td>File generation</td><td>Moments where new files are created</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>semantic_primitives</code></td><td><code>action_vector="abandoned"</code></td><td>Idea dropped</td><td>An idea that's discussed then dropped</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>semantic_primitives</code></td><td><code>action_vector="reverted"</code></td><td>Undo operation</td><td>Reverting a change</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>semantic_primitives</code></td><td><code>confidence="fragile"</code></td><td>System instability</td><td>Code that breaks or becomes unreliable</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>semantic_primitives</code></td><td><code>confidence="proven"</code></td><td>Verified via testing</td><td>Successful test runs</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>semantic_primitives</code></td><td><code>emotional_tenor="frustrated"</code></td><td>User frustration</td><td>Frustrated user messages</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>semantic_primitives</code></td><td><code>emotional_tenor="relieved"</code></td><td>Problem resolved</td><td>Problem resolution after struggle</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>semantic_primitives</code></td><td><code>intent_marker="bugfix"</code></td><td>Fixing errors</td><td>Actual debugging activity</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>semantic_primitives</code></td><td><code>friction_log</code> populated</td><td>Something went wrong</td><td>Friction events: wrong approach, wasted effort, misunderstanding</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>semantic_primitives</code></td><td><code>decision_trace</code> populated</td><td>Explicit choice made</td><td>"I chose X over Y because Z" moments</td></tr>
+
+<!-- Phase 1 — Geological -->
+<tr style="border-top:2px solid var(--border-bright)"><td><span class="phase-tag p1">P1</span></td><td><code>geological_notes</code></td><td><code>micro[]</code> 10+ entries</td><td>Message-level events</td><td>10+ significant moments (errors, decisions, pivots, frustration)</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>geological_notes</code></td><td><code>meso[]</code> 3+ entries</td><td>Phase transitions</td><td>Multiple distinct working phases (explore &rarr; implement &rarr; debug)</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>geological_notes</code></td><td><code>macro[]</code> populated</td><td>Session-level arc exists</td><td>Long enough session to have narrative arc (200+ messages)</td></tr>
+
+<!-- Phase 1 — Explorer -->
+<tr style="border-top:2px solid var(--border-bright)"><td><span class="phase-tag p1">P1</span></td><td><code>explorer_notes</code></td><td><code>observations[]</code> 12+</td><td>Discoverable patterns</td><td>Anti-patterns, quality issues, hidden behaviors in the session</td></tr>
+<tr><td><span class="phase-tag p1">P1</span></td><td><code>explorer_notes</code></td><td><code>verification.issues[]</code></td><td>Phase 0 imperfections</td><td>False positive file detection or metadata inconsistencies</td></tr>
+
+<!-- Phase 2 — Idea Graph -->
+<tr style="border-top:2px solid var(--border-bright)"><td><span class="phase-tag p2">P2</span></td><td><code>idea_graph</code></td><td><code>nodes[]</code> 20+</td><td>Enough ideas discussed</td><td>20+ distinct concepts introduced during the session</td></tr>
+<tr><td><span class="phase-tag p2">P2</span></td><td><code>idea_graph</code></td><td>edge: <code>"evolved"</code></td><td>Idea progresses</td><td>Idea development over time</td></tr>
+<tr><td><span class="phase-tag p2">P2</span></td><td><code>idea_graph</code></td><td>edge: <code>"pivoted"</code></td><td>Direction change</td><td>At least one strategic pivot</td></tr>
+<tr><td><span class="phase-tag p2">P2</span></td><td><code>idea_graph</code></td><td>edge: <code>"abandoned"</code></td><td>Idea dropped</td><td>An idea that's never revisited</td></tr>
+<tr><td><span class="phase-tag p2">P2</span></td><td><code>idea_graph</code></td><td>edge: <code>"resurrected"</code></td><td>Idea returns</td><td>An idea dropped then picked up again later</td></tr>
+<tr><td><span class="phase-tag p2">P2</span></td><td><code>idea_graph</code></td><td>edge: <code>"split"</code></td><td>Idea forks</td><td>One concept becomes two distinct approaches</td></tr>
+<tr><td><span class="phase-tag p2">P2</span></td><td><code>idea_graph</code></td><td>edge: <code>"merged"</code></td><td>Ideas combine</td><td>Two separate ideas combine into one</td></tr>
+
+<!-- Phase 2 — Synthesis -->
+<tr style="border-top:2px solid var(--border-bright)"><td><span class="phase-tag p2">P2</span></td><td><code>synthesis</code></td><td><code>session_character.emotional_trajectory</code></td><td>Emotion changes over time</td><td>Emotional variation &mdash; not monotone (calm &rarr; frustrated &rarr; relieved)</td></tr>
+<tr><td><span class="phase-tag p2">P2</span></td><td><code>synthesis</code></td><td><code>cross_session_links[]</code></td><td>References other sessions</td><td>Session references work from prior sessions</td></tr>
+
+<!-- Phase 2 — Grounded Markers -->
+<tr style="border-top:2px solid var(--border-bright)"><td><span class="phase-tag p2">P2</span></td><td><code>grounded_markers</code></td><td><code>category="architecture"</code></td><td>Architectural decisions</td><td>System design choices present</td></tr>
+<tr><td><span class="phase-tag p2">P2</span></td><td><code>grounded_markers</code></td><td><code>category="decision"</code></td><td>Explicit choices</td><td>Tool/approach/philosophy selections</td></tr>
+<tr><td><span class="phase-tag p2">P2</span></td><td><code>grounded_markers</code></td><td><code>category="behavior"</code></td><td>Claude patterns</td><td>Observable Claude patterns (rushing, overconfidence, etc.)</td></tr>
+<tr><td><span class="phase-tag p2">P2</span></td><td><code>grounded_markers</code></td><td><code>category="risk"</code></td><td>Known dangers</td><td>Identifiable failure modes</td></tr>
+<tr><td><span class="phase-tag p2">P2</span></td><td><code>grounded_markers</code></td><td><code>category="opportunity"</code></td><td>Unexploited potential</td><td>Gaps that could be filled</td></tr>
+
+<!-- Phase 3 -->
+<tr style="border-top:2px solid var(--border-bright)"><td><span class="phase-tag p3">P3</span></td><td><code>file_dossiers</code></td><td>3+ dossier entries</td><td>Files discussed enough</td><td>At least 3 files discussed in depth (10+ mentions each)</td></tr>
+<tr><td><span class="phase-tag p3">P3</span></td><td><code>file_dossiers</code></td><td><code>story_arc</code> populated</td><td>File has history</td><td>Files that evolve during the session</td></tr>
+<tr><td><span class="phase-tag p3">P3</span></td><td><code>file_dossiers</code></td><td><code>warnings[]</code> populated</td><td>Real issues found</td><td>Files with actual problems (bugs, limitations)</td></tr>
+<tr><td><span class="phase-tag p3">P3</span></td><td><code>file_dossiers</code></td><td><code>idea_graph_nodes[]</code></td><td>File tied to ideas</td><td>Ideas about specific files, not abstract discussion</td></tr>
+
+<!-- Phase 5 -->
+<tr style="border-top:2px solid var(--border-bright)"><td><span class="phase-tag p5">P5</span></td><td><code>ground_truth</code></td><td><code>status="verified"</code></td><td>Claim checks out</td><td>Claims that Python/AST can verify</td></tr>
+<tr><td><span class="phase-tag p5">P5</span></td><td><code>ground_truth</code></td><td><code>status="failed"</code></td><td>Claim is false</td><td>Claims that Python can disprove</td></tr>
+<tr><td><span class="phase-tag p5">P5</span></td><td><code>ground_truth</code></td><td><code>bare_except</code> check</td><td>Python file with bare except</td><td>Sample must include .py files with bare except blocks</td></tr>
+<tr><td><span class="phase-tag p5">P5</span></td><td><code>ground_truth</code></td><td><code>model_string</code> check</td><td>Wrong model referenced</td><td>Code referencing specific model strings (Sonnet where Opus promised)</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- SECTION 2: ARCHETYPES -->
+<div class="sec-head"><div class="dot" style="background:var(--accent)"></div>Sample Archetypes</div>
+
+<div class="callout">No single session has all these characteristics. The R&amp;D sample needs <strong>multiple sessions</strong> that collectively cover every output field. 6 archetypes identified.</div>
+
+<div class="arch-grid">
+
+<div class="arch-card a">
+<h3>A: The Full Lifecycle</h3>
+<div class="meta">500+ messages &bull; covers almost everything</div>
+<p>File creation, modification, debugging, testing, frustration, resolution, pivots, breakthroughs. The full emotional and technical arc.</p>
+<div class="exercises"><strong>Exercises:</strong> all <code>action_vectors</code>, all <code>emotional_tenors</code>, all <code>confidence_signals</code>, micro+meso+macro geological, 20+ idea nodes, all 10 edge types, all marker categories, file dossiers with warnings</div>
+</div>
+
+<div class="arch-card b">
+<h3>B: The Frustration Session</h3>
+<div class="meta">100-300 messages &bull; emotional intensity</div>
+<p>Heavy user frustration, CAPS, profanity, emergency interventions, repeated corrections of Claude. The human-AI friction record.</p>
+<div class="exercises"><strong>Exercises:</strong> <code>frustration_peaks[]</code>, <code>emergency_interventions</code>, <code>emotional_tenor=frustrated</code>, reactions thread, Claude behavior patterns, <code>friction_log</code></div>
+</div>
+
+<div class="arch-card c">
+<h3>C: The Architecture Session</h3>
+<div class="meta">200-500 messages &bull; system design focus</div>
+<p>System design decisions, file creation, dependency mapping, pattern discussions. Calm, productive, decision-heavy.</p>
+<div class="exercises"><strong>Exercises:</strong> <code>threads.software</code>, <code>threads.code</code>, <code>action_vector=created/decided</code>, <code>grounded_markers</code> architecture+decision, <code>decision_trace</code></div>
+</div>
+
+<div class="arch-card d">
+<h3>D: The Debugging Session</h3>
+<div class="meta">50-150 messages &bull; error-focused</div>
+<p>Error traces, failed tool calls, bisecting bugs, eventual fix. The confidence arc from fragile to proven.</p>
+<div class="exercises"><strong>Exercises:</strong> <code>error_count</code>, <code>tool_failure_count</code>, <code>action_vector=debugged</code>, <code>confidence=fragile&rarr;proven</code>, <code>intent_marker=bugfix</code>, <code>emotional_tenor=uncertain&rarr;relieved</code></div>
+</div>
+
+<div class="arch-card e">
+<h3>E: The Subagent Session</h3>
+<div class="meta">20-80 messages &bull; spawned task</div>
+<p>Spawned by orchestrator, focused task, rapid completion. Narrow scope, single-file or single-purpose analysis.</p>
+<div class="exercises"><strong>Exercises:</strong> <code>is_subagent=true</code>, <code>agent_type</code>, narrow file set, focused dossier</div>
+</div>
+
+<div class="arch-card f">
+<h3>F: The Cross-Session Reference</h3>
+<div class="meta">any length &bull; continuity-focused</div>
+<p>Explicit references to prior sessions, resuming work, context recovery. "Continuing from last session" patterns.</p>
+<div class="exercises"><strong>Exercises:</strong> <code>cross_session_links[]</code>, session continuation, edges with <code>"resurrected"</code>, <code>char_per_line</code> encoding artifacts</div>
+</div>
+
+</div>
+
+<!-- SECTION 3: MINIMUM SAMPLE SET -->
+<div class="sec-head"><div class="dot" style="background:var(--green)"></div>Minimum R&amp;D Sample Set</div>
+
+<div class="callout">5 sessions. Collectively they exercise every output field in every phase. No single session covers everything.</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>#</th><th>Archetype</th><th>Session</th><th>Msgs</th><th>Why This One</th><th>Key Fields Exercised</th></tr></thead>
+<tbody>
+<tr><td><strong>1</strong></td><td style="color:var(--accent)"><strong>A</strong> Full Lifecycle</td><td><code>3b7084d5</code></td><td>4,269</td><td>The original reference session. V1&rarr;V5 evolution, frustration peaks, pivots, breakthroughs, all edge types. Already has hand-annotated ground truth.</td><td>ALL fields &mdash; primary sample</td></tr>
+<tr><td><strong>2</strong></td><td style="color:var(--red)"><strong>B</strong> Frustration</td><td><em>Select: highest frustration_peaks count</em></td><td>~200</td><td>Exercises frustration detection, emergency interventions, emotional trajectory variation</td><td><code>frustration_peaks</code>, <code>emergency</code>, <code>emotional_tenor</code></td></tr>
+<tr><td><strong>3</strong></td><td style="color:var(--cyan)"><strong>C</strong> Architecture</td><td><em>Select: session where new subsystem built</em></td><td>~300</td><td>Exercises file creation, architecture decisions, grounded markers</td><td><code>threads.software</code>, <code>action=created</code>, <code>markers.architecture</code></td></tr>
+<tr><td><strong>4</strong></td><td style="color:var(--amber)"><strong>D</strong> Debugging</td><td><em>Select: session focused on fixing Phase 0 bugs</em></td><td>~100</td><td>Exercises error detection, tool failures, confidence transitions</td><td><code>error_count</code>, <code>tool_failures</code>, <code>confidence transitions</code></td></tr>
+<tr><td><strong>5</strong></td><td style="color:var(--green)"><strong>E</strong> Subagent</td><td><em>Select: a Phase 1 thread-analyst session</em></td><td>~50</td><td>Exercises subagent detection, narrow scope analysis</td><td><code>is_subagent</code>, <code>agent_type</code>, focused dossier</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- SECTION 4: COVERAGE MATRIX -->
+<div class="sec-head"><div class="dot" style="background:var(--pink)"></div>Field Coverage Matrix</div>
+
+<div class="table-wrap">
+<table class="matrix">
+<thead><tr><th>Field / Condition</th><th style="color:var(--accent)">A: Full</th><th style="color:var(--red)">B: Frustration</th><th style="color:var(--cyan)">C: Arch</th><th style="color:var(--amber)">D: Debug</th><th style="color:var(--green)">E: Subagent</th></tr></thead>
+<tbody>
+<tr><td><code>frustration_peaks[]</code></td><td class="y">Yes</td><td class="y">Yes</td><td class="n">&mdash;</td><td class="p">Maybe</td><td class="n">&mdash;</td></tr>
+<tr><td><code>file_mention_counts</code></td><td class="y">Yes</td><td class="p">Some</td><td class="y">Yes</td><td class="y">Yes</td><td class="p">Few</td></tr>
+<tr><td><code>error_count &gt; 0</code></td><td class="y">Yes</td><td class="p">Maybe</td><td class="n">&mdash;</td><td class="y">Yes</td><td class="n">&mdash;</td></tr>
+<tr><td><code>tool_failure_count &gt; 0</code></td><td class="y">Yes</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="y">Yes</td><td class="n">&mdash;</td></tr>
+<tr><td><code>emergency_interventions</code></td><td class="y">Yes</td><td class="y">Yes</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+<tr><td><code>is_subagent=true</code></td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="y">Yes</td></tr>
+<tr><td><code>char_per_line</code> artifacts</td><td class="y">Yes</td><td class="p">Maybe</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+<tr style="border-top:2px solid var(--border-bright)"><td><code>threads.ideas</code></td><td class="y">Yes</td><td class="p">Some</td><td class="y">Yes</td><td class="p">Few</td><td class="n">&mdash;</td></tr>
+<tr><td><code>threads.reactions</code></td><td class="y">Yes</td><td class="y">Yes</td><td class="n">&mdash;</td><td class="p">Maybe</td><td class="n">&mdash;</td></tr>
+<tr><td><code>threads.software</code></td><td class="y">Yes</td><td class="p">Some</td><td class="y">Yes</td><td class="y">Yes</td><td class="p">Some</td></tr>
+<tr><td><code>threads.code</code></td><td class="y">Yes</td><td class="n">&mdash;</td><td class="y">Yes</td><td class="y">Yes</td><td class="n">&mdash;</td></tr>
+<tr style="border-top:2px solid var(--border-bright)"><td>All 8 <code>action_vectors</code></td><td class="y">Yes</td><td class="p">4-5</td><td class="p">3-4</td><td class="p">2-3</td><td class="p">1-2</td></tr>
+<tr><td>All 6 <code>confidence_signals</code></td><td class="y">Yes</td><td class="p">2-3</td><td class="p">2-3</td><td class="y">Yes</td><td class="p">1-2</td></tr>
+<tr><td>All 7 <code>emotional_tenors</code></td><td class="y">Yes</td><td class="y">Yes</td><td class="p">2-3</td><td class="p">3-4</td><td class="n">&mdash;</td></tr>
+<tr><td><code>friction_log</code> populated</td><td class="y">Yes</td><td class="y">Yes</td><td class="n">&mdash;</td><td class="y">Yes</td><td class="n">&mdash;</td></tr>
+<tr><td><code>decision_trace</code> populated</td><td class="y">Yes</td><td class="n">&mdash;</td><td class="y">Yes</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+<tr style="border-top:2px solid var(--border-bright)"><td><code>micro[]</code> 10+ entries</td><td class="y">Yes</td><td class="y">Yes</td><td class="y">Yes</td><td class="p">Maybe</td><td class="n">&mdash;</td></tr>
+<tr><td><code>meso[]</code> 3+ entries</td><td class="y">Yes</td><td class="p">Maybe</td><td class="y">Yes</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+<tr><td><code>macro[]</code> populated</td><td class="y">Yes</td><td class="n">&mdash;</td><td class="p">Maybe</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+<tr><td><code>explorer</code> 12+ observations</td><td class="y">Yes</td><td class="y">Yes</td><td class="y">Yes</td><td class="p">Maybe</td><td class="n">&mdash;</td></tr>
+<tr><td><code>verification.issues</code></td><td class="y">Yes</td><td class="p">Maybe</td><td class="p">Maybe</td><td class="p">Maybe</td><td class="n">&mdash;</td></tr>
+<tr style="border-top:2px solid var(--border-bright)"><td><code>nodes[]</code> 20+</td><td class="y">Yes</td><td class="p">10-15</td><td class="y">Yes</td><td class="p">5-10</td><td class="p">3-5</td></tr>
+<tr><td>All 10 <code>edge types</code></td><td class="y">Yes</td><td class="p">3-4</td><td class="p">4-5</td><td class="p">2-3</td><td class="p">1-2</td></tr>
+<tr><td><code>cross_session_links[]</code></td><td class="p">Maybe</td><td class="p">Maybe</td><td class="p">Maybe</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+<tr style="border-top:2px solid var(--border-bright)"><td>All 5 <code>marker categories</code></td><td class="y">Yes</td><td class="p">3-4</td><td class="y">Yes</td><td class="p">2-3</td><td class="p">1-2</td></tr>
+<tr><td><code>dossiers</code> 3+ files</td><td class="y">Yes</td><td class="p">Maybe</td><td class="y">Yes</td><td class="p">1-2</td><td class="p">1</td></tr>
+<tr><td><code>warnings[]</code> populated</td><td class="y">Yes</td><td class="p">Maybe</td><td class="y">Yes</td><td class="y">Yes</td><td class="n">&mdash;</td></tr>
+<tr style="border-top:2px solid var(--border-bright)"><td><code>ground_truth</code> verified</td><td class="y">Yes</td><td class="p">Maybe</td><td class="y">Yes</td><td class="y">Yes</td><td class="n">&mdash;</td></tr>
+<tr><td><code>ground_truth</code> failed</td><td class="y">Yes</td><td class="p">Maybe</td><td class="p">Maybe</td><td class="p">Maybe</td><td class="n">&mdash;</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="callout" style="border-left-color:var(--green)">
+<strong>Reading the matrix:</strong> <span style="color:var(--green);font-weight:700">Yes</span> = guaranteed by archetype definition. <span style="color:var(--amber)">Maybe</span> = depends on specific session selected. <span style="color:var(--text-dim);opacity:0.6">&mdash;</span> = not expected for this archetype. Session A (Full Lifecycle) covers almost everything alone. The other 4 fill the gaps: subagent detection, pure debugging arcs, and guaranteed frustration intensity.
+</div>
+
+<div style="text-align:center; margin-top:48px; color:var(--text-dim); font-size:11px; font-family:var(--font-mono);">
+R&amp;D Sample Design &bull; Reverse-engineered from actual pipeline outputs &bull; Feb 20, 2026
+</div>
+
+</div>
+</body>
+</html>
