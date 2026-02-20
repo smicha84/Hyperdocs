@@ -275,8 +275,8 @@ def analyze_session(session_dir: Path, previous_checklist: dict = None):
     else:
         file_status["explorer_notes.json"] = "MISSING"
 
-    # ── Phase 2: Idea Graph ───────────────────────────────────────────
-    idea_graph = load_json(session_dir / "idea_graph.json")
+    # ── Phase 2: Idea Graph (prefer Opus-filtered if available) ─────
+    idea_graph = load_json(session_dir / "idea_graph_opus.json") or load_json(session_dir / "idea_graph.json")
     if idea_graph:
         file_status["idea_graph.json"] = "present"
         nodes = idea_graph.get("nodes", [])
