@@ -203,6 +203,20 @@ def classify_with_opus(messages: list, api_key: str = None) -> list:
     """Send messages to Opus for classification. Returns list of classifications."""
     import anthropic
 
+    # Load API key from .env if not in environment
+    if not api_key and not os.getenv("ANTHROPIC_API_KEY"):
+        for env_path in [
+            Path(__file__).resolve().parent.parent / ".env",
+            Path(__file__).resolve().parent.parent.parent.parent.parent.parent / ".env",
+        ]:
+            if env_path.exists():
+                for line in env_path.read_text().splitlines():
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ[k.strip()] = v.strip()
+                break
+
     client = anthropic.Anthropic(api_key=api_key)
 
     formatted = format_messages_for_prompt(messages)
