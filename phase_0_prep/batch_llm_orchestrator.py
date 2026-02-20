@@ -155,7 +155,7 @@ def _run_pass_worker(session_dir, pass_num, pass1_results=None, dry_run=False):
             "messages_analyzed": result.get("messages_analyzed", 0),
         }
 
-    except Exception as e:
+    except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
         return {
             "session": session_name,
             "status": "error",
@@ -310,7 +310,7 @@ def run_batch_merge(sessions, status):
             with redirect_stdout(captured):
                 merge_session(session_dir)
             merged += 1
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
             merge_errors += 1
             _safe_print(f"    Merge error {session_dir.name}: {e}")
 

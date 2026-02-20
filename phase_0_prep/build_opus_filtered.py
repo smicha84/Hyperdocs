@@ -47,8 +47,9 @@ def build_opus_filtered(session_dir: Path):
         if idx is not None:
             opus_by_idx[idx] = c
 
-    # Load enriched session
-    enriched_path = session_dir / "enriched_session.json"
+    # Load enriched session (prefer v2 with LLM pass data when available)
+    enriched_v2 = session_dir / "enriched_session_v2.json"
+    enriched_path = enriched_v2 if enriched_v2.exists() else session_dir / "enriched_session.json"
     if not enriched_path.exists():
         print(f"ERROR: enriched_session.json not found")
         return None

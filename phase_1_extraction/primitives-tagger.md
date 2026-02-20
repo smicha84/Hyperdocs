@@ -48,7 +48,7 @@ system_prompt: |
   Process messages in BATCHES OF 5 for context. When tagging message N,
   read messages N-2 through N+2 for surrounding context.
 
-  1. Read session_summary.json for overview
+  1. Read session_metadata.json for overview
   2. Read batch files from batches/ directory
   3. For each batch, tag every message with all 7 primitives
   4. Write results to semantic_primitives.json

@@ -7,11 +7,11 @@ Places hyperdoc content at three locations in each code file:
 2. INLINE: Before specific functions/classes that have per-function data
 3. FOOTER: At end of file (version history, metrics, idea graph subgraphs)
 
-Reads from: output/session_3b7084d5/hyperdoc_v2/{filename}_header.txt
-                                                 {filename}_inline.json
-                                                 {filename}_footer.txt
+Reads from: {session_output_dir}/hyperdoc_v2/{filename}_header.txt
+                                              {filename}_inline.json
+                                              {filename}_footer.txt
 
-Writes to:  output/session_3b7084d5/hyperdoc_previews_v2/{filename}
+Writes to:  {session_output_dir}/hyperdoc_previews_v2/{filename}
 """
 import ast
 import json
@@ -22,13 +22,13 @@ from datetime import datetime
 
 import sys as _sys
 BASE = Path(__file__).parent
-# V5 source directory — use config if available, fallback to v5_compat
+# V5 source directory — use config if available, fallback to phase_0_prep
 _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 try:
     from config import V5_SOURCE_DIR
     V5_CODE = V5_SOURCE_DIR
 except ImportError:
-    V5_CODE = Path(__file__).resolve().parent.parent / "phase_0_prep" / "v5_compat"
+    V5_CODE = Path(__file__).resolve().parent.parent / "phase_0_prep"
 HYPERDOC_V2_DIR = BASE / "hyperdoc_v2"
 PREVIEW_DIR = BASE / "hyperdoc_previews_v2"
 

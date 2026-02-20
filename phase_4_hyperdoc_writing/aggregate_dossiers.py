@@ -292,7 +292,7 @@ def build_frustration_file_map(output_dir: Path) -> dict:
         for d in sorted(search_dir.iterdir()):
             if not d.is_dir() or not d.name.startswith("session_"):
                 continue
-            summary_path = d / "session_summary.json"
+            summary_path = d / "session_metadata.json"
             enriched_path = d / "enriched_session.json"
             if not summary_path.exists():
                 continue
@@ -308,7 +308,10 @@ def build_frustration_file_map(output_dir: Path) -> dict:
             if not peaks:
                 continue
 
-            # Get file mentions per message from enriched session
+            # Get file mentions per message from enriched session (prefer v2 with LLM data)
+            enriched_v2 = d / "enriched_session_v2.json"
+            if enriched_v2.exists():
+                enriched_path = enriched_v2
             msg_files = {}
             if enriched_path.exists():
                 try:

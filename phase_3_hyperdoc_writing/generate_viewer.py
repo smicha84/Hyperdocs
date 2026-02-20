@@ -21,7 +21,7 @@ def load_text(name):
     return "(not found)"
 
 # Load all data
-summary = load("session_summary.json")
+summary = load("session_metadata.json")
 threads = load("thread_extractions.json")
 geo = load("geological_notes.json")
 prims = load("semantic_primitives.json")
@@ -347,3 +347,169 @@ out = BASE / "pipeline_viewer.html"
 with open(out, "w") as f:
     f.write(html_content)
 print(f"Written: {out} ({os.path.getsize(out):,} bytes)")
+
+# ======================================================================
+# @ctx HYPERDOC — HISTORICAL (generated 2026-02-08, requires realtime update)
+# These annotations are from the Phase 4b bulk processing run across 284
+# sessions. The code below may have changed since these markers were
+# generated. Markers reflect the state of the codebase as of Feb 8, 2026.
+# ======================================================================
+
+# --- HEADER ---
+# ======================================================================
+# @ctx HYPERDOC — Phase 4b Generated
+# ======================================================================
+
+# --- FOOTER ---
+# ======================================================================
+# @ctx HYPERDOC — Phase 4b Generated
+# ======================================================================
+# # ===========================================================================
+# # HYPERDOC HEADER: generate_viewer.py
+# # @ctx:version=1 @ctx:schema=hyperdoc_v2 @ctx:source_sessions=conv_4953cc6b,conv_4c08a224,conv_750f50f9
+# # @ctx:generated=2026-02-08T18:42:00Z @ctx:generator=phase_4b_opus
+# # @ctx:file_status=DELETED @ctx:exists_on_disk=false
+# # @ctx:confidence=tentative @ctx:churn=low @ctx:mentions=4
+# # @ctx:emotion=indifference_to_dismissal
+# # @ctx:failed_approaches=1
+# # ===========================================================================
+# #
+# # --- STORY ARC ---
+# #
+# # generate_viewer.py was created as one of the 18 executable pipeline scripts
+# # in the hyperdocs_3 system, responsible for generating HTML visualizations from
+# # pipeline outputs. It appeared in 3 sessions but was never a focus of deep
+# # analysis in any of them. In session 4c08a224, during the 40-file systematic
+# # analysis, it was categorized as one of 11 files recommended for ARCHIVE --
+# # deemed non-essential to the pipeline's core mission. The file also carried a
+# # design flaw common to viewer components: it used JavaScript fetch() to load
+# # local data files, which fails when opened via file:// URLs. Session 750f50f9
+# # documented this failure and the pivot to an embedded viewer approach. The file
+# # was eventually deleted from disk, replaced by the embedded viewer pattern.
+# #
+# # --- FRICTION: WHAT WENT WRONG AND WHY ---
+# #
+# # @ctx:friction="Hardcoded session IDs in active output code required manual cleanup"
+# # @ctx:trace=conv_4953cc6b:msg1081
+# #   [F01] generate_viewer.py contained hardcoded session IDs and paths in its
+# #   active output code (not just docstrings or templates). At msg 1081, Claude
+# #   identified 6 remaining hardcoded references across multiple files, and
+# #   specifically called out generate_viewer.py and generate_dossiers.py as
+# #   having refs in active output code that needed fixing. The hardcoded paths
+# #   violated the config.py pattern established for the hyperdocs_3 system.
+# #
+# # @ctx:friction="JavaScript fetch approach fails with file:// URLs, breaking user rule"
+# # @ctx:trace=conv_750f50f9:msg0862
+# #   [F02] The viewer used JavaScript fetch() or XMLHttpRequest to load local
+# #   JSON files. When users opened the HTML via file:// URLs (double-clicking),
+# #   browsers block these requests due to CORS/security policies. This violated
+# #   the user's permanent rule: 'User NEVER starts servers.' The file had to be
+# #   rebuilt with content embedded directly in the HTML. This friction was
+# #   documented in the idea graph as the transition from idea_hyperdoc_writing_v2
+# #   to idea_embedded_viewer, and in the grounded_markers as a medium-severity
+# #   warning about the file:// constraint.
+# #
+# # @ctx:friction="File recommended for archive during systematic analysis, indicating low value"
+# # @ctx:trace=conv_4c08a224:msg0144
+# #   [F03] During the 40-file systematic analysis in session 4c08a224, generate_viewer.py
+# #   was classified in the ARCHIVE category alongside 10 other files (analyze_claude_ai_export.py,
+# #   compare_with_without_hyperdocs.py, generate_project_gantt.py, hyperdoc_live_server.py,
+# #   hyperdoc_file_scanner.py, hyperdoc_query.py, semantic_chunker.py, spawn_analysis_agents.py,
+# #   granular_edit_extractor_v3.py, and others). The analysis concluded these files were not
+# #   essential to the core pipeline. generate_viewer.py received only surface-level analysis
+# #   (status: 'Surface-level analysis only', confidence: 'tentative').
+# #
+# # --- DECISIONS: CHOSE X OVER Y BECAUSE Z ---
+# #
+# # @ctx:decision="chose embedded HTML viewer over JavaScript-fetching viewer because file:// URLs block fetch requests and user never starts servers"
+# # @ctx:trace=conv_750f50f9:msg0862
+# #   Alternatives considered: (1) JavaScript fetch viewer requiring a local server,
+# #   (2) embedded viewer with content directly in HTML, (3) data URI approach.
+# #   Why rejected: JavaScript fetch fails silently or with CORS errors when
+# #   opened via file:// URLs. The user has a permanent rule that they never
+# #   start servers manually. The embedded approach was chosen because it works
+# #   with direct file opening and requires zero infrastructure.
+# #
+# # @ctx:decision="chose to archive generate_viewer.py over keeping or enhancing it because it was non-essential to the core extraction pipeline"
+# # @ctx:trace=conv_4c08a224:msg0144
+# #   Alternatives considered: KEEP (retain as-is), ENHANCE (add features),
+# #   REPLACE (rewrite from scratch), ARCHIVE (remove from active codebase).
+# #   Why rejected: The file generated visualizations, not core extraction logic.
+# #   The pipeline's value comes from its extraction and analysis phases (thread
+# #   extraction, geological reading, dossier generation, hyperdoc writing), not
+# #   from viewer generation. Viewer functionality was handled by other files
+# #   (hyperdoc_embedded_viewer.html, gate_control_panel.html, dashboard.py).
+# #
+# # --- WARNINGS ---
+# #
+# # @ctx:warning="[W01] [medium] Static HTML viewers that fetch files via JavaScript fail with file:// URLs. This is a recurring issue that Claude forgets across sessions. Any HTML-generating task must embed content directly or use data URLs."
+# # @ctx:trace=conv_750f50f9:msg0862
+# #   Resolution: Resolved at msg 862 in session 750f50f9 by rebuilding as embedded viewer.
+# #   Evidence: Grounded marker in session 750f50f9 synthesis finding G9. Idea graph
+# #   edge idea_hyperdoc_writing_v2 -> idea_embedded_viewer (evolved, trigger_message 862).
+# #
+# # @ctx:warning="[W02] [low] File contains hardcoded session IDs in active output code, not just templates."
+# # @ctx:trace=conv_4953cc6b:msg1081
+# #   Resolution: Resolved at msg 1081 in session 4953cc6b. Claude fixed the references.
+# #   Evidence: Batch 010 message at index 1081 explicitly states the fix.
+# #
+# # --- IRON RULES ---
+# #
+# # - User NEVER starts servers. All visualizations must work from static HTML
+# #   files opened via file:// URLs. No manual python3 server.py commands.
+# # - User NEVER opens HTML files manually. Claude must auto-open with 'open' command.
+# # - HTML must embed content directly. No JavaScript fetch() or XMLHttpRequest
+# #   for local files.
+# #
+# # --- CLAUDE BEHAVIOR ON THIS FILE ---
+# #
+# # @ctx:claude_pattern="impulse_control: adequate -- Claude did not attempt to deeply analyze this file; it was mentioned in passing within larger file audits. No evidence of premature action on this specific file."
+# # @ctx:claude_pattern="authority_response: adequate -- When the 40-file analysis recommended archiving, Claude followed the systematic classification without pushback."
+# # @ctx:claude_pattern="overconfidence: mild -- In session 4953cc6b msg 503, Claude listed generate_viewer.py as one of 18 files that 'actually execute' in the pipeline, but the file was later deemed non-essential. This suggests the initial assessment overstated the file's importance."
+# # @ctx:claude_pattern="context_damage: moderate -- The file:// URL constraint is a recurring issue Claude forgets across sessions (documented in session 750f50f9 synthesis G9). Claude built a JavaScript-fetching viewer despite the user's permanent rule against server dependencies, requiring a rebuild."
+# #
+# # --- EMOTIONAL CONTEXT ---
+# #
+# # User showed no specific emotional reaction to generate_viewer.py. The file
+# # appeared in bulk listings and batch analyses, not in focused discussions.
+# # In session 4c08a224, the user's overall emotional context was focused on
+# # wanting a systematic analysis of every file ('I told you I want to meaningfully
+# # analyze every file'). generate_viewer.py received only surface-level treatment
+# # despite this demand, but the user did not specifically call it out. The file's
+# # archival status suggests it was not emotionally significant to the user.
+# # In session 750f50f9, the viewer rebuild at msg 862 was met with relief
+# # (emotional_context on idea_embedded_viewer: 'Relieved. Simple fix for a
+# # recurring issue (Claude forgetting user rules).').
+# #
+# # --- FAILED APPROACHES ---
+# #
+# # @ctx:failed_approaches=1
+# # [ABANDONED] JavaScript-fetching viewer -> Embedded HTML viewer (msg 862, session 750f50f9)
+# #   The original generate_viewer.py used JavaScript fetch() to load pipeline
+# #   output JSON files and render them as HTML. This approach failed because
+# #   browsers block fetch requests from file:// URLs for security reasons. The
+# #   user's permanent rule is that they never start servers manually, so the
+# #   server workaround was not acceptable. The approach was abandoned in favor
+# #   of embedding content directly into the HTML file.
+# #
+# # --- RECOMMENDATIONS ---
+# #
+# # [R01] (priority: low)
+# #   This file has been deleted from disk and archived. No action needed unless
+# #   the viewer generation concept is revived. If revived, the embedded HTML
+# #   pattern must be used -- not JavaScript fetch.
+# #
+# # [R02] (priority: medium)
+# #   Any future HTML visualization generator must be pre-contextualized with
+# #   the file:// URL constraint before writing any code. This is a recurring
+# #   Claude failure pattern documented in session 750f50f9 synthesis finding G9.
+# #
+# # ===========================================================================
+# ======================================================================
+
+
+
+# ======================================================================
+# @ctx HYPERDOC FOOTER
+# ======================================================================
+

@@ -32,9 +32,12 @@ except ImportError:
     SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
     OUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", "./output")) / f"session_{SESSION_ID[:8]}"
 
-INPUT = OUT_DIR / "enriched_session.json"
+# Prefer enriched_session_v2.json (has LLM pass results) over v1
+INPUT_V2 = OUT_DIR / "enriched_session_v2.json"
+INPUT_V1 = OUT_DIR / "enriched_session.json"
+INPUT = INPUT_V2 if INPUT_V2.exists() else INPUT_V1
 
-print(f"Reading {INPUT}...")
+print(f"Reading {INPUT} {'(v2 with LLM enrichment)' if 'v2' in INPUT.name else '(v1 base)'}...")
 with open(INPUT) as f:
     data = json.load(f)
 
@@ -43,10 +46,10 @@ stats = data["session_stats"]
 
 # ── 1. Session summary (no messages) ─────────────────────────────────
 summary = {k: v for k, v in data.items() if k != "messages"}
-summary_file = OUT_DIR / "session_summary.json"
+summary_file = OUT_DIR / "session_metadata.json"
 with open(summary_file, "w") as f:
     json.dump(summary, f, indent=2, default=str)
-print(f"  session_summary.json: {summary_file.stat().st_size / 1024:.0f} KB")
+print(f"  session_metadata.json: {summary_file.stat().st_size / 1024:.0f} KB")
 
 # ── 2. Tier 2+ messages — full content for deep analysis ─────────────
 tier2plus = [m for m in messages if m["filter_tier"] >= 2]
@@ -262,7 +265,7 @@ if opus_cls_path.exists():
     except ImportError:
         # build_opus_filtered.py not available — skip silently
         pass
-    except Exception as e:
+    except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
         print(f"  Warning: Opus filtering failed: {e}")
 
     print("\nIMPORTANT: Agents should read safe_opus_priority.json and "

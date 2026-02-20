@@ -51,7 +51,7 @@ system_prompt: |
   PROCESSING APPROACH
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  1. Read session_summary.json for overview
+  1. Read session_metadata.json for overview
   2. Read tier4_priority_messages.json for MICRO analysis
   3. Read batch files for MESO analysis (5-message sliding windows)
   4. Read conversation_condensed.json for MACRO analysis (use condensed content

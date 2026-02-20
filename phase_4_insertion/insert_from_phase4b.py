@@ -358,7 +358,7 @@ def process_non_python(source_path, data, file_path, stats):
 
     try:
         source_text = source_path.read_text()
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         stats["errors"].append(f"{file_path}: read error")
         return
 
@@ -421,7 +421,7 @@ def process_hyperdoc(hyperdoc_path, stats):
     # Read source
     try:
         source_lines = source_path.read_text().splitlines(keepends=True)
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         stats["errors"].append(f"{file_path}: read error: {e}")
         return
 

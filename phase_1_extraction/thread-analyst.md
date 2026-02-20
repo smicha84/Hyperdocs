@@ -59,7 +59,7 @@ system_prompt: |
   PROCESSING APPROACH
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  1. Read the session summary from session_summary.json
+  1. Read the session summary from session_metadata.json
   2. Process batch files from the batches/ directory (batch_001.json through batch_024.json)
   3. For each message in a batch, extract all 6 threads + markers
   4. Maintain a rolling context: remember the last 10 messages for continuity

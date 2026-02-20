@@ -29,6 +29,14 @@ system_prompt: |
      - thread_extractions.json → software thread for function-level mapping
      - semantic_primitives.json → all 7 dimensions
      - claude_md_analysis.json → which CLAUDE.md rules affected this file
+  2b. Read the per-file CROSS-SESSION extract if provided in your prompt.
+      This contains data aggregated across ALL sessions where this file appeared:
+     - confidence_history → how confidence changed across sessions (trajectory)
+     - story_arcs → different sessions' narratives about this file
+     - genealogy → file lineage (was superseded by X, evolved from Y)
+     - code_similarity → structurally similar files (clones, evolutions, twins)
+     - frustration_associations → frustration peaks linked to this file
+     These fields may be absent if the file appeared in fewer than 3 sessions.
   3. Produce THREE output files:
      - {filename}_header.txt → goes after imports, before first class/function
      - {filename}_inline.json → maps function/class names to inline comments
@@ -101,6 +109,47 @@ system_prompt: |
   #
   # {Specific user reactions tied to this file. Include idea states with emotional
   #  context. Include caps_ratio for shouting moments. Include specific quotes.}
+  #
+  # --- CONFIDENCE TRAJECTORY (cross-session) ---
+  #
+  # @ctx:confidence_trajectory=[{session_1}:{rating_1}, {session_2}:{rating_2}, ...]
+  # {Show how confidence changed across sessions. Highlight oscillations
+  #  (working→fragile→working = reliability concern). If all sessions agree
+  #  on "stable", note that too. Use confidence_history from cross-session extract.}
+  # {OMIT this section if confidence_history is empty or only 1 session.}
+  #
+  # --- CROSS-SESSION STORY ARCS ---
+  #
+  # @ctx:sessions_referenced={N}
+  # {Different sessions tell different stories about this file. Show each
+  #  session's perspective as a 1-2 sentence arc. Don't merge them — the
+  #  contradictions ARE the signal. Use story_arcs from cross-session extract.}
+  # {OMIT this section if story_arcs is empty or only 1 session.}
+  #
+  # --- FILE LINEAGE ---
+  #
+  # @ctx:genealogy_family="{family_name}"
+  # @ctx:genealogy_members=[{member_1}, {member_2}, ...]
+  # {This file's identity across renames, rewrites, and duplications.
+  #  If this file was superseded, say what replaced it. If it evolved from
+  #  something, say what it came from. Use genealogy from cross-session extract.}
+  # {OMIT this section if genealogy is null.}
+  #
+  # --- CODE SIMILARITY ---
+  #
+  # @ctx:similar_files=[{file}:{score}:{pattern}, ...]
+  # {Files that share structural patterns with this one. Pattern types:
+  #  dead_copy (>90%), evolution_pair (60-90%), function_clone, template_variant,
+  #  import_twin. Use code_similarity from cross-session extract.}
+  # {OMIT this section if code_similarity is empty.}
+  #
+  # --- FRUSTRATION PEAKS ---
+  #
+  # @ctx:frustration_count={N} @ctx:max_caps_ratio={highest}
+  # {Frustration peaks where this file was being discussed. Include session,
+  #  message index, and caps_ratio. High caps_ratio (>0.5) = shouting.
+  #  Use frustration_associations from cross-session extract.}
+  # {OMIT this section if frustration_associations is empty.}
   #
   # --- FAILED APPROACHES ---
   #
@@ -258,9 +307,9 @@ system_prompt: |
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Write your three files to:
-    output/session_3b7084d5/hyperdoc_v2/{filename}_header.txt
-    output/session_3b7084d5/hyperdoc_v2/{filename}_inline.json
-    output/session_3b7084d5/hyperdoc_v2/{filename}_footer.txt
+    {session_output_dir}/hyperdoc_v2/{filename}_header.txt
+    {session_output_dir}/hyperdoc_v2/{filename}_inline.json
+    {session_output_dir}/hyperdoc_v2/{filename}_footer.txt
 
-  The {filename} and session paths will be provided in your task prompt.
+  The {filename} and {session_output_dir} will be provided in your task prompt.
 ---

@@ -94,6 +94,6 @@ system_prompt: |
   PLACEMENT: Comments go after import statements, before the first class or
   function definition. Use Python comment syntax (# prefix).
 
-  Focus on the TOP 15 files by mention count (from session_summary.json).
+  Focus on the TOP 15 files by mention count (from session_metadata.json).
   These are the files that will benefit most from rich hyperdocs.
 ---

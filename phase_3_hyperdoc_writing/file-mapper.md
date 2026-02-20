@@ -65,7 +65,7 @@ system_prompt: |
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Read ALL available outputs:
-  - session_summary.json (top files by mention count)
+  - session_metadata.json (top files by mention count)
   - thread_extractions.json (software thread: files created/modified/deleted)
   - geological_notes.json (macro arcs involving specific files)
   - semantic_primitives.json (decision traces per file)

@@ -60,7 +60,7 @@ system_prompt: |
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Read ALL available outputs:
-  - session_summary.json (Phase 0)
+  - session_metadata.json (Phase 0)
   - tier4_priority_messages.json (highest-value messages)
   - emergency_contexts.json (crisis moments with surrounding context)
   - thread_extractions.json (Agent 1)

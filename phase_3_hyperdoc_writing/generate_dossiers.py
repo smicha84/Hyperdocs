@@ -4,7 +4,7 @@ Agent 7: File Mapper
 Generates file_dossiers.json and claude_md_analysis.json from session data.
 
 Reads:
-  - session_summary.json (file mention counts, top files, frustration peaks)
+  - session_metadata.json (file mention counts, top files, frustration peaks)
   - grounded_markers.json (warnings W01-W12, recommendations R01-R12, patterns B01-B08, iron rules)
   - thread_extractions.json (per-message software thread file references)
   - idea_graph.json (subgraphs mapping ideas to file-related concepts)
@@ -40,7 +40,7 @@ def save_json(filename, data):
 # 1. Load all source data
 # ---------------------------------------------------------------------------
 print("Loading source data...")
-session = load_json("session_summary.json")
+session = load_json("session_metadata.json")
 markers = load_json("grounded_markers.json")
 idea_graph = load_json("idea_graph.json")
 
@@ -582,7 +582,7 @@ claude_md_analysis = {
     "description": (
         "Analysis of how CLAUDE.md gates and framing affected Claude's behavior "
         "in session 3b7084d5 (4269 messages, ~37 hours). Based on grounded evidence "
-        "from session_summary, grounded_markers, thread_extractions, and idea_graph."
+        "from session_metadata, grounded_markers, thread_extractions, and idea_graph."
     ),
 
     "gate_analysis": {

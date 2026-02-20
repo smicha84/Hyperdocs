@@ -333,8 +333,9 @@ def main():
     print("=" * 60)
     print(f"Session dir: {session_dir}")
 
-    # Load enriched session
-    enriched_path = session_dir / "enriched_session.json"
+    # Load enriched session (prefer v2 with LLM pass data when available)
+    enriched_v2 = session_dir / "enriched_session_v2.json"
+    enriched_path = enriched_v2 if enriched_v2.exists() else session_dir / "enriched_session.json"
     if not enriched_path.exists():
         print(f"ERROR: enriched_session.json not found in {session_dir}")
         sys.exit(1)
@@ -392,7 +393,7 @@ def main():
             print(f"got {len(chunk_results)}")
         except json.JSONDecodeError as e:
             print(f"JSON parse error: {e} — skipping chunk")
-        except Exception as e:
+        except (KeyError, TypeError, ValueError, OSError) as e:
             print(f"Error: {e} — skipping chunk")
 
     print(f"Total classifications: {len(results)}")

@@ -36,7 +36,7 @@ system_prompt: |
   APPROACH
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  1. Read session_summary.json to understand the landscape
+  1. Read session_metadata.json to understand the landscape
   2. Read emergency_contexts.json — the 7 crisis moments tell you the most
   3. Read tier4_priority_messages.json — the 315 most important messages
   4. Read conversation_condensed.json — skim the full arc
