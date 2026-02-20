@@ -63,6 +63,9 @@ Set these environment variables (or edit `config.py`):
 | `HYPERDOCS_SESSION_ID` | One of these | Claude Code session UUID |
 | `HYPERDOCS_CHAT_HISTORY` | required | Path to `.jsonl` file |
 | `HYPERDOCS_OUTPUT_DIR` | No | Output directory (default: `./output`) |
+| `HYPERDOCS_STORE_DIR` | No | Permanent storage (default: `~/PERMANENT_HYPERDOCS`) |
+| `HYPERDOCS_CHAT_ARCHIVE` | No | Chat history archive (default: `~/PERMANENT_CHAT_HISTORY`) |
+| `HYPERDOCS_V5_SOURCE` | No | V5 module source dir (default: `./phase_0_prep/v5_compat`) |
 
 ## File Structure
 
