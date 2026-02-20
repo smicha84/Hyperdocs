@@ -519,6 +519,35 @@ def main():
     size = out_path.stat().st_size
     print(f"Written: {out_path}")
     print(f"Size: {size:,} bytes")
+
+    # ── Write per-file extracts to hyperdoc_inputs/ ─────────────────────
+    # These are what Phase 4b agents actually read — one JSON per file.
+    inputs_dir = OUTPUT / "hyperdoc_inputs"
+    inputs_dir.mkdir(exist_ok=True)
+
+    # Also write to PERMANENT_HYPERDOCS if it exists
+    perm_inputs = Path.home() / "PERMANENT_HYPERDOCS" / "hyperdoc_inputs"
+    if perm_inputs.parent.exists():
+        perm_inputs.mkdir(exist_ok=True)
+
+    written = 0
+    for filepath, entry in aggregated.items():
+        # Only write files with 3+ sessions (same threshold as before)
+        if entry["session_count"] < 3:
+            continue
+
+        # Safe filename: replace / and . with _
+        safe_name = filepath.replace("/", "_").replace("\\", "_").replace(".", "_") + ".json"
+
+        for target_dir in [inputs_dir, perm_inputs]:
+            if target_dir.exists():
+                with open(target_dir / safe_name, "w") as f:
+                    json.dump(entry, f, indent=2, default=str)
+
+        written += 1
+
+    print(f"Per-file extracts written: {written} files to hyperdoc_inputs/")
+    print(f"  (includes code_similarity, genealogy, frustration_associations)")
     print("Done.")
 
 
