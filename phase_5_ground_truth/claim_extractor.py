@@ -216,7 +216,7 @@ def extract_idea_confidence_claims(idea_graph):
                     "idea_name": name,
                     "confidence": confidence,
                     "first_appearance": first_appearance,
-                    "description": description,
+                    "description": description[:200],
                 })
 
     return per_file

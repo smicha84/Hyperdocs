@@ -239,8 +239,9 @@ def compare_pair(fp_a: FileFingerprint, fp_b: FileFingerprint, text_threshold: f
     text_similarity = 0.0
     if signal_score >= text_threshold or name_overlap > 0.3:
         # Use clean source (hyperdoc comments stripped)
-        src_a = fp_a.clean_source
-        src_b = fp_b.clean_source
+        # For very large files, compare first 5000 chars (representative sample)
+        src_a = fp_a.clean_source[:5000]
+        src_b = fp_b.clean_source[:5000]
         seq = difflib.SequenceMatcher(None, src_a, src_b, autojunk=True)
         text_similarity = seq.ratio()
 

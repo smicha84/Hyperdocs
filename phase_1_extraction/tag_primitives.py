@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """
-Semantic Primitives Tagger (standalone)
+Semantic Primitives Tagger (Agent 3)
 Tags tier 4 priority messages with the 7 Semantic Primitives.
-
-NOTE: This is the standalone/deterministic tagger. The Phase 1 batch pipeline
-uses the Opus-based tagger in phase1_redo_orchestrator.py instead. This file
-is kept for single-session processing and as a reference implementation.
 
 Primitives:
 1. Action Vector: created|modified|debugged|refactored|discovered|decided|abandoned|reverted
@@ -20,17 +16,9 @@ Primitives:
 import json
 import re
 import os
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-try:
-    from config import get_session_output_dir
-    SESSION_DIR = get_session_output_dir()
-except ImportError:
-    _SID = os.getenv("HYPERDOCS_SESSION_ID", "")
-    SESSION_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", "./output")) / f"session_{_SID[:8]}"
-
+SESSION_DIR = Path(__file__).parent
 TIER4_FILE = SESSION_DIR / "tier4_priority_messages.json"
 USER_FILE = SESSION_DIR / "user_messages_tier2plus.json"
 OUTPUT_FILE = SESSION_DIR / "semantic_primitives.json"
@@ -396,7 +384,7 @@ def extract_friction(content: str, metadata: dict, signals: dict,
         readable = reconstruct_content(content).strip()
         # Truncate to a single compressed sentence
         if len(readable) > 200:
-            readable = readable
+            readable = readable[:200]
         # Clean up
         readable = readable.replace("\n", " ").strip()
         if readable:

@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
 """
-Thread Analyst: Extract 6 threads + 6 markers from tier4 messages.
+Thread Analyst: Extract 6 threads + 6 markers from session 3b7084d5 tier4 messages.
 Forensic analysis - honest assessment of Claude behavior including harmful patterns.
-
-NOTE: This file contains hand-annotated data for the reference session (3b7084d5).
-The USER_IDEA_ANNOTATIONS and NARRATIVE_ANNOTATIONS dicts only activate when
-processing that specific session. For all other sessions, extraction is purely
-pattern-based.
 """
 import json
 import re
@@ -193,11 +188,6 @@ def extract_plans_thread(msg):
         "pending": [p.strip()[:80] for p in pending[:5]] if pending else None
     }
 
-# These annotations are specific to the reference session 3b7084d5 and only
-# activate when that session is being processed. They provide hand-verified
-# ground truth for the idea evolution timeline of the original development session.
-REFERENCE_SESSION_ID = "3b7084d5"
-
 USER_IDEA_ANNOTATIONS = {
     2125: {"idea": "V1 actually ran and produced meaningful hyperdocs. V5 broke it by adding Opus per-line. Need to fix the fundamental architecture.", "evolution": "identifying_root_cause"},
     2153: {"idea": "Working healthy hyperdocs system. V5 must work better than V1. Give structured outputs + Opus analysis to Claude Opus to transform into hyperdocs.", "evolution": "clarifying_core_goal"},
@@ -215,14 +205,14 @@ USER_IDEA_ANNOTATIONS = {
     4249: {"idea": "Semantic and pragmatic awareness. Full situational awareness. Ideas like people on a plane - project has seats, everyone gets one.", "evolution": "semantic_primitives_introduction"},
 }
 
-def extract_user_ideas_thread(msg, session_id=""):
+def extract_user_ideas_thread(msg):
     """Extract USER_IDEAS thread: what is the user building/thinking."""
     content = reconstruct_content(msg.get('content', ''))
     role = msg['role']
     idx = msg['index']
 
-    # Hand-annotated ideas only for the reference session (3b7084d5)
-    if session_id.startswith(REFERENCE_SESSION_ID) and idx in USER_IDEA_ANNOTATIONS:
+    # Check for hand-annotated user ideas at critical moments
+    if idx in USER_IDEA_ANNOTATIONS:
         return USER_IDEA_ANNOTATIONS[idx]
 
     if role == 'user':
@@ -236,29 +226,29 @@ def extract_user_ideas_thread(msg, session_id=""):
         if 'i want' in content_lower or 'i need' in content_lower:
             match = re.search(r'[Ii]\s*(?:want|need)\s+(.+?)(?:\.|!|\n|$)', content)
             if match:
-                idea = match.group(1).strip()
+                idea = match.group(1).strip()[:200]
                 evolution = "expressing_goal"
         elif 'what if' in content_lower or 'how about' in content_lower:
-            idea = content
+            idea = content[:200]
             evolution = "exploring_new_direction"
         elif any(w in content_lower for w in ['instead', 'actually', 'no,', 'not what', 'excuse me']):
-            idea = content
+            idea = content[:200]
             evolution = "correcting_claude"
         elif any(w in content_lower for w in ['rushing', 'ignored', 'dementia', 'are you serious']):
-            idea = content
+            idea = content[:200]
             evolution = "frustration_feedback"
         elif 'continue' in content_lower or 'session is being continued' in content_lower:
             idea = "Session continuation - maintaining context across context window loss"
             evolution = "context_recovery"
         elif any(w in content_lower for w in ['puzzle', 'architecture', 'system design', 'tiered']):
-            idea = content
+            idea = content[:200]
             evolution = "architectural_thinking"
         elif any(w in content_lower for w in ['prevent', 'canary', 'zero mistakes']):
-            idea = content
+            idea = content[:200]
             evolution = "prevention_system_thinking"
 
         if not idea:
-            idea = content if content else None
+            idea = content[:200] if content else None
 
         return {"idea": idea, "evolution": evolution}
     else:
@@ -520,13 +510,13 @@ NARRATIVE_ANNOTATIONS = {
     4260: "Claude admits: 'I'm actually Opus 4.5, not 4.6'. Honest about model identity.",
 }
 
-def process_message(msg, session_id=""):
+def process_message(msg):
     """Process a single message and extract all 6 threads + markers."""
     frustration = detect_frustration_level(msg)
     deception = detect_deception(msg)
 
     threads = {
-        "user_ideas": extract_user_ideas_thread(msg, session_id=session_id),
+        "user_ideas": extract_user_ideas_thread(msg),
         "claude_response": extract_claude_response_thread(msg),
         "reactions": extract_reactions_thread(msg),
         "software": extract_software_thread(msg),
@@ -540,15 +530,15 @@ def process_message(msg, session_id=""):
         "index": msg['index'],
         "role": msg['role'],
         "timestamp": msg.get('timestamp'),
-        "content_preview": reconstruct_content(msg.get('content', '')),
+        "content_preview": reconstruct_content(msg.get('content', ''))[:200],
         "filter_score": msg.get('filter_score', 0),
         "filter_signals": msg.get('filter_signals', []),
         "threads": threads,
         "markers": markers
     }
 
-    # Narrative annotations only for the reference session (3b7084d5)
-    if session_id.startswith(REFERENCE_SESSION_ID) and msg['index'] in NARRATIVE_ANNOTATIONS:
+    # Add narrative annotation if available
+    if msg['index'] in NARRATIVE_ANNOTATIONS:
         result['narrative_annotation'] = NARRATIVE_ANNOTATIONS[msg['index']]
 
     return result
@@ -561,10 +551,9 @@ def main():
     messages = data['messages']
     print(f"Processing {len(messages)} tier4 messages...")
 
-    current_session_id = os.getenv("HYPERDOCS_SESSION_ID", "")
     extractions = []
     for i, msg in enumerate(messages):
-        extraction = process_message(msg, session_id=current_session_id)
+        extraction = process_message(msg)
         extractions.append(extraction)
         if (i + 1) % 50 == 0:
             print(f"  Processed {i+1}/{len(messages)}")

@@ -231,66 +231,220 @@ class GeologicalReader:
             tool_calls=tool_calls,
         )
 
-    # ── DEPRECATED: Opus-per-line methods ──────────────────────────────────
-    # These methods called Opus API per message line at ~$0.05/line.
-    # Replaced by deterministic_parse_message() which uses pure Python for free.
-    # Kept as stubs to prevent silent reactivation. See Chapter 4 in MEMORY.md.
-
     def opus_parse_message(self, raw_line: str, session_id: str, line_idx: int) -> Optional[GeologicalMessage]:
-        """DEPRECATED: Called Opus per line ($0.05/line). Use deterministic_parse_message() instead."""
-        raise NotImplementedError(
-            "opus_parse_message is deprecated. Use deterministic_parse_message() instead. "
-            "This method called Opus API per message line, costing ~$0.05/line."
-        )
+        """
+        OPUS PARSES THE MESSAGE instead of complex JSON traversal.
+
+        Original: Nested dict lookups, multiple fallbacks, format guessing
+        Opus: Ask Opus to understand the message structure
+        """
+        # Try JSON parse first
+        try:
+            msg = json.loads(raw_line)
+        except (json.JSONDecodeError, ValueError):
+            return None
+
+        # Skip queue operations
+        if msg.get("type") == "queue-operation":
+            return None
+
+        # OPUS EXTRACTS THE MEANINGFUL CONTENT
+        prompt = f"""Parse this chat history message and extract:
+1. role (user or assistant)
+2. main content text
+3. timestamp
+4. any thinking blocks
+5. any tool uses
+
+Message JSON:
+{json.dumps(msg, indent=2)}
+
+Return JSON: {{"role": "user|assistant", "content": "extracted text", "timestamp": "ISO format", "thinking": "if any", "tool_count": N}}"""
+
+        try:
+            response = call_opus(prompt)
+            # Strip code block wrapper if present
+            if response.startswith("```"):
+                response = "\n".join(response.split("\n")[1:-1])
+            # Try to parse Opus's structured response
+            parsed = json.loads(response)
+
+            role = parsed.get("role", "unknown")
+            if role not in ("user", "assistant"):
+                return None
+
+            content = parsed.get("content", "")
+            if not content:
+                return None
+
+            # Parse timestamp
+            ts_str = parsed.get("timestamp", "")
+            try:
+                timestamp = datetime.fromisoformat(ts_str.replace('Z', '+00:00').split('+')[0])
+            except (ValueError, TypeError, AttributeError):
+                timestamp = datetime(1970, 1, 1)
+
+            return GeologicalMessage(
+                role=role,
+                content=content,
+                timestamp=timestamp,
+                session_id=session_id,
+                source_file=str(self.chat_dir),
+                message_index=line_idx,
+                message_type=msg.get("type", "unknown"),
+                thinking=parsed.get("thinking"),
+                tool_calls=[{}] * parsed.get("tool_count", 0),
+            )
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            # Fallback to basic extraction if Opus response isn't JSON
+            return None
 
     def opus_analyze_session(self, session: GeologicalSession) -> str:
-        """DEPRECATED: Called Opus to summarize each session. No longer used."""
-        raise NotImplementedError(
-            "opus_analyze_session is deprecated. Session analysis is now handled by "
-            "Phase 1 agents (Thread Analyst, Geological Reader, etc.) via phase1_redo_orchestrator.py."
-        )
+        """
+        OPUS ANALYZES AN ENTIRE SESSION semantically.
+
+        Original: Just counted messages
+        Opus: Actually understands what happened in the session
+        """
+        # Sample some messages for analysis
+        sample_content = []
+        for i, msg in enumerate(session.messages):
+            sample_content.append(f"[{msg.role}] {msg.content}")
+
+        prompt = f"""Analyze this coding session with {len(session.messages)} messages.
+
+Sample messages:
+{chr(10).join(sample_content)}
+
+Provide:
+1. Main topic/goal of the session
+2. Key decisions made
+3. Any notable problems or breakthroughs
+4. Overall productivity assessment
+
+Return a concise summary paragraph."""
+
+        return call_opus(prompt)
 
     def load_all_sessions(self, limit: Optional[int] = None) -> Dict[str, GeologicalSession]:
-        """DEPRECATED: Used opus_parse_message + opus_analyze_session. Do not call."""
-        raise NotImplementedError(
-            "load_all_sessions is deprecated. It called opus_parse_message per line and "
-            "opus_analyze_session per session. Use ClaudeSessionReader + deterministic_prep.py instead."
-        )
+        """Load all sessions with OPUS understanding."""
+        if self._sessions:
+            return self._sessions
+
+        files = self.discover_jsonl_files()
+        total_files = len(files)
+        if limit:
+            files = files[:limit]
+
+        print(f"\n  📂 LOADING CHAT FILES")
+        print(f"     Total available: {total_files}")
+        print(f"     Processing: {len(files)}")
+        print(f"     " + "─" * 50)
+
+        all_messages = []
+        for file_idx, file_path in enumerate(files):
+            session_id = file_path.stem
+            file_size = file_path.stat().st_size / 1024  # KB
+
+            # Show progress for each file
+            print(f"     [{file_idx+1}/{len(files)}] {session_id} ({file_size:.1f}KB)", end="", flush=True)
+
+            file_messages = 0
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line_idx, line in enumerate(f):
+                    if line.strip():
+                        msg = self.opus_parse_message(line, session_id, line_idx)
+                        if msg:
+                            all_messages.append(msg)
+                            file_messages += 1
+
+            print(f" → {file_messages} messages")
+
+        # Group by session
+        from collections import defaultdict
+        sessions_dict = defaultdict(list)
+        for msg in all_messages:
+            sessions_dict[msg.session_id].append(msg)
+
+        def normalize_timestamp(ts):
+            """Convert any datetime to naive (no timezone) for consistent sorting."""
+            if ts.tzinfo is not None:
+                # Convert to UTC then strip timezone
+                return ts.replace(tzinfo=None)
+            return ts
+
+        for session_id, messages in sessions_dict.items():
+            messages.sort(key=lambda m: normalize_timestamp(m.timestamp))
+            session = GeologicalSession(
+                session_id=session_id,
+                source_file=messages[0].source_file if messages else "",
+                messages=messages,
+            )
+            # OPUS SUMMARIZES THE SESSION
+            if len(messages) > 5:
+                session.opus_summary = self.opus_analyze_session(session)
+            self._sessions[session_id] = session
+
+        return self._sessions
 
     def opus_get_statistics(self) -> Dict[str, Any]:
-        """DEPRECATED: Called Opus for statistics. Do not call."""
-        raise NotImplementedError(
-            "opus_get_statistics is deprecated. Statistics are now computed by "
-            "deterministic_prep.py (Phase 0) and the Explorer agent (Phase 1)."
+        """
+        OPUS PROVIDES MEANINGFUL STATISTICS, not just counts.
+
+        Original: Manual counting of messages
+        Opus: Semantic analysis of the chat history
+        """
+        sessions = self.load_all_sessions()
+
+        # Gather high-level data
+        total_messages = sum(len(s.messages) for s in sessions.values())
+        user_messages = sum(
+            sum(1 for m in s.messages if m.role == "user")
+            for s in sessions.values()
         )
+
+        prompt = f"""Analyze these chat history statistics:
+- {len(sessions)} sessions
+- {total_messages} total messages
+- {user_messages} user messages
+- {total_messages - user_messages} assistant messages
+
+Session summaries (sample):
+{chr(10).join(s.opus_summary or 'No summary' for s in list(sessions.values())[:5])}
+
+Provide:
+1. Overall pattern assessment
+2. Productivity estimate
+3. Key insights about the user's work style
+
+Return JSON: {{"pattern": "...", "productivity": "...", "insights": [...], "recommendation": "..."}}"""
+
+        opus_analysis = call_opus(prompt)
+
+        return {
+            "total_sessions": len(sessions),
+            "total_messages": total_messages,
+            "user_messages": user_messages,
+            "assistant_messages": total_messages - user_messages,
+            "opus_analysis": opus_analysis,
+        }
 
 
 def main():
-    """Standalone test: load a session using pure Python parsing."""
     print("=" * 60)
-    print("GEOLOGICAL READER (deterministic mode)")
+    print("GEOLOGICAL READER - OPUS EDITION")
     print("=" * 60)
 
     chat_dir = Path(__file__).parent / "chat_history_copy"
     if not chat_dir.exists():
-        print("Chat history copy not found. This file is used as a library by deterministic_prep.py.")
-        print("Run: python3 deterministic_prep.py")
+        print("Chat history copy not found")
         return
 
     reader = GeologicalReader(str(chat_dir))
-    files = reader.discover_jsonl_files()
-    print(f"Found {len(files)} JSONL files")
+    stats = reader.opus_get_statistics()
 
-    if files:
-        # Parse first file using deterministic method
-        count = 0
-        with open(files[0], 'r', encoding='utf-8', errors='ignore') as f:
-            for line_idx, line in enumerate(f):
-                if line.strip():
-                    msg = reader.deterministic_parse_message(line, files[0].stem, line_idx)
-                    if msg:
-                        count += 1
-        print(f"Parsed {count} messages from {files[0].name} (deterministic, $0)")
+    print("\nOpus Statistics:")
+    print(json.dumps(stats, indent=2))
 
 if __name__ == "__main__":
     main()

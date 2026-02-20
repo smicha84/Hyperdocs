@@ -136,7 +136,7 @@ def detect_idea_graph_lineage(idea_graph, idea_files):
                         "to_file": tf,
                         "transition": transition,
                         "trigger_msg": trigger,
-                        "evidence": evidence if evidence else "",
+                        "evidence": evidence[:200] if evidence else "",
                         "source": "idea_graph",
                     })
 
