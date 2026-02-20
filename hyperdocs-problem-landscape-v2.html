@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperdocs — Problem Landscape v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-body: 'Space Grotesk', system-ui, sans-serif;
+    --font-mono: 'Space Mono', 'SF Mono', Consolas, monospace;
+    --bg: #0b0d1a;
+    --surface: #12152a;
+    --surface2: #1a1e38;
+    --surface3: #222748;
+    --border: rgba(139,92,246,0.1);
+    --border-bright: rgba(139,92,246,0.25);
+    --text: #e8e6f0;
+    --text-dim: #7a7896;
+    --accent: #8b5cf6;
+    --accent-dim: rgba(139,92,246,0.08);
+    --green: #10b981;
+    --green-dim: rgba(16,185,129,0.08);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245,158,11,0.08);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.08);
+    --cyan: #06b6d4;
+    --cyan-dim: rgba(6,182,212,0.08);
+    --pink: #ec4899;
+    --pink-dim: rgba(236,72,153,0.08);
+    --blue: #3b82f6;
+    --blue-dim: rgba(59,130,246,0.08);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #faf8ff; --surface: #ffffff; --surface2: #f5f3ff; --surface3: #ede9fe;
+      --border: rgba(139,92,246,0.1); --border-bright: rgba(139,92,246,0.25);
+      --text: #1e1b3a; --text-dim: #6b6589;
+      --accent: #7c3aed; --accent-dim: rgba(124,58,237,0.06);
+      --green: #059669; --green-dim: rgba(5,150,105,0.06);
+      --amber: #d97706; --amber-dim: rgba(217,119,6,0.06);
+      --red: #dc2626; --red-dim: rgba(220,38,38,0.06);
+      --cyan: #0891b2; --cyan-dim: rgba(8,145,178,0.06);
+      --pink: #db2777; --pink-dim: rgba(219,39,119,0.06);
+      --blue: #2563eb; --blue-dim: rgba(37,99,235,0.06);
+    }
+  }
+  * { margin:0; padding:0; box-sizing:border-box; min-width:0; }
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(at 10% 20%, rgba(139,92,246,0.06) 0%, transparent 50%),
+      radial-gradient(at 90% 80%, rgba(236,72,153,0.04) 0%, transparent 50%);
+    color: var(--text); font-family: var(--font-body); line-height: 1.6;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width:1400px; margin:0 auto; display:grid; grid-template-columns:180px 1fr; gap:0 40px; }
+  .main { min-width:0; padding:40px 24px 80px; }
+
+  /* TOC */
+  .toc { position:sticky; top:24px; align-self:start; padding:14px 0 14px 16px; grid-row:1/-1; max-height:calc(100dvh - 48px); overflow-y:auto; }
+  .toc::-webkit-scrollbar { width:3px; }
+  .toc::-webkit-scrollbar-thumb { background:var(--surface3); border-radius:2px; }
+  .toc-title { font-family:var(--font-mono); font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--text-dim); padding:0 0 10px; margin-bottom:8px; border-bottom:1px solid var(--border); }
+  .toc a { display:block; font-size:11px; color:var(--text-dim); text-decoration:none; padding:4px 8px; border-radius:5px; border-left:2px solid transparent; transition:all 0.15s; line-height:1.4; margin-bottom:1px; }
+  .toc a:hover { color:var(--text); background:var(--surface2); }
+  .toc a.active { color:var(--accent); border-left-color:var(--accent); }
+  .toc .sep { font-family:var(--font-mono); font-size:8px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-dim); margin-top:10px; padding:4px 8px; opacity:0.6; }
+  @media (max-width:1000px) {
+    .wrap { grid-template-columns:1fr; }
+    .toc { position:sticky; top:0; z-index:200; max-height:none; display:flex; gap:4px; align-items:center; overflow-x:auto; -webkit-overflow-scrolling:touch; background:var(--bg); border-bottom:1px solid var(--border); padding:10px 16px; grid-row:auto; }
+    .toc::-webkit-scrollbar { display:none; }
+    .toc-title,.toc .sep { display:none; }
+    .toc a { white-space:nowrap; flex-shrink:0; border-left:none; border-bottom:2px solid transparent; border-radius:0; }
+    .toc a.active { border-left:none; border-bottom-color:var(--accent); }
+  }
+
+  /* Typography */
+  h1 { font-size:42px; font-weight:700; letter-spacing:-1.5px; line-height:1.1; margin-bottom:8px; background:linear-gradient(135deg,var(--accent),var(--pink),var(--cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .subtitle { font-size:17px; color:var(--text-dim); margin-bottom:8px; }
+  .meta { font-family:var(--font-mono); font-size:11px; color:var(--text-dim); margin-bottom:40px; display:flex; gap:12px; flex-wrap:wrap; }
+  .meta span { background:var(--surface2); padding:3px 10px; border-radius:4px; }
+
+  /* Section heads */
+  .sec-head { font-family:var(--font-mono); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; padding:10px 0; margin-top:56px; margin-bottom:20px; border-bottom:2px solid var(--border-bright); scroll-margin-top:20px; display:flex; align-items:center; gap:10px; }
+  .sec-head .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+  /* KPI */
+  .kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin-bottom:32px; }
+  .kpi { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; animation:fadeScale 0.5s ease backwards; }
+  .kpi .num { font-family:var(--font-mono); font-size:28px; font-weight:700; }
+  .kpi .lbl { font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+
+  /* Tables */
+  .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:12px; background:var(--surface); margin-bottom:24px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  thead th { background:var(--surface2); font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-dim); padding:10px 14px; text-align:left; position:sticky; top:0; border-bottom:1px solid var(--border-bright); }
+  tbody td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tbody tr:hover { background:var(--accent-dim); }
+  td code { font-family:var(--font-mono); font-size:11px; background:var(--surface2); padding:1px 5px; border-radius:3px; }
+  td small { color:var(--text-dim); font-size:12px; display:block; margin-top:4px; }
+  .tag { font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; display:inline-block; white-space:nowrap; }
+  .tag.solved { background:var(--green-dim); color:var(--green); }
+  .tag.unsolved { background:var(--red-dim); color:var(--red); }
+  .tag.created { background:var(--amber-dim); color:var(--amber); }
+  .tag.emergent { background:var(--cyan-dim); color:var(--cyan); }
+  .tag.partial { background:var(--blue-dim); color:var(--blue); }
+
+  /* Callout */
+  .callout { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:8px; padding:14px 18px; margin-bottom:20px; font-size:14px; }
+  .callout.red { border-left-color:var(--red); }
+  .callout.green { border-left-color:var(--green); }
+  .callout.amber { border-left-color:var(--amber); }
+  .callout.cyan { border-left-color:var(--cyan); }
+  .callout.pink { border-left-color:var(--pink); }
+
+  /* Quotes */
+  .quote { background:var(--surface2); border-left:3px solid var(--pink); border-radius:0 8px 8px 0; padding:12px 16px; margin:12px 0; font-size:13px; font-style:italic; color:var(--text); }
+  .quote .attr { font-style:normal; font-size:11px; color:var(--text-dim); margin-top:4px; font-family:var(--font-mono); }
+
+  /* Mermaid */
+  .mermaid-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; position:relative; overflow:auto; margin-bottom:24px; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+  .mermaid-wrap::-webkit-scrollbar { width:6px; height:6px; }
+  .mermaid-wrap::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  .mermaid-wrap .mermaid { transition:transform 0.2s ease; transform-origin:top center; }
+  .zoom-controls { position:absolute; top:8px; right:8px; display:flex; gap:2px; z-index:10; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:2px; }
+  .zoom-controls button { width:28px; height:28px; border:none; background:transparent; color:var(--text-dim); font-family:var(--font-mono); font-size:14px; cursor:pointer; border-radius:4px; display:flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; }
+  .zoom-controls button:hover { background:var(--border); color:var(--text); }
+  .mermaid-wrap.is-zoomed { cursor:grab; }
+  .mermaid-wrap.is-panning { cursor:grabbing; user-select:none; }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeScale { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">Contents</div>
+  <a href="#hero">Overview</a>
+  <a href="#evidence">Evidence Base</a>
+  <a href="#causal">Causal Map</a>
+  <div class="sep">5 Questions</div>
+  <a href="#q1">Q1: Problems (15)</a>
+  <a href="#q2">Q2: Solved (8)</a>
+  <a href="#q3">Q3: Unsolved (8)</a>
+  <a href="#q4">Q4: New Problems (11)</a>
+  <a href="#q5">Q5: Emergent (6)</a>
+  <div class="sep">Data</div>
+  <a href="#stats">Statistics</a>
+  <a href="#voices">User's Voice</a>
+</nav>
+
+<div class="main">
+
+<!-- HERO -->
+<div id="hero">
+  <h1>Hyperdocs: Problem Landscape</h1>
+  <p class="subtitle">What it was built to solve. What it actually solves. What it doesn't. What it creates.</p>
+  <div class="meta">
+    <span>285 sessions processed</span>
+    <span>3,399 in archive</span>
+    <span>456 hyperdocs</span>
+    <span>14MB output</span>
+    <span>Feb 20, 2026</span>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="num" style="color:var(--red)">15</div><div class="lbl">Root Problems</div></div>
+  <div class="kpi"><div class="num" style="color:var(--green)">8</div><div class="lbl">Solved</div></div>
+  <div class="kpi"><div class="num" style="color:var(--red)">8</div><div class="lbl">Unsolved</div></div>
+  <div class="kpi"><div class="num" style="color:var(--amber)">11</div><div class="lbl">New Problems</div></div>
+  <div class="kpi"><div class="num" style="color:var(--cyan)">6</div><div class="lbl">Emergent Wins</div></div>
+  <div class="kpi"><div class="num" style="color:var(--green)">73%</div><div class="lbl">Ground Truth</div></div>
+</div>
+
+<!-- EVIDENCE BASE -->
+<div id="evidence" class="sec-head"><div class="dot" style="background:var(--accent)"></div>Evidence Base</div>
+
+<div class="callout">Every number on this page traces to a file on disk. This table shows the sources.</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Source</th><th>Count</th><th>What It Contains</th></tr></thead>
+    <tbody>
+      <tr><td><code>PERMANENT_CHAT_HISTORY/sessions/</code></td><td><strong>3,399</strong> sessions</td><td>Full cross-account archive. Bulk import from multiple API accounts.</td></tr>
+      <tr><td>Hyperdocs processed output</td><td><strong>285</strong> sessions</td><td>Pipeline has run on these. 279 Phase 0 complete.</td></tr>
+      <tr><td><code>PERMANENT_HYPERDOCS/hyperdocs/</code></td><td><strong>456</strong> files</td><td>Cross-session hyperdocs written by Phase 4 agents.</td></tr>
+      <tr><td><code>PERMANENT_HYPERDOCS/hyperdoc_inputs/</code></td><td><strong>492</strong> files</td><td>Per-file extraction inputs for hyperdoc generation.</td></tr>
+      <tr><td><code>code_similarity_index.json</code></td><td><strong>341</strong> files, <strong>14,176</strong> matches</td><td>Pairwise code similarity. 57,970 pairs compared. 10 pattern types.</td></tr>
+      <tr><td><code>cross_session_genealogy.json</code></td><td><strong>18</strong> families</td><td>File identity tracked across renames and rewrites.</td></tr>
+      <tr><td><code>completeness_report.json</code></td><td><strong>14</strong> file types tracked</td><td>Per-phase completeness across all 285 sessions.</td></tr>
+      <tr><td>Idea Evolution Analysis (PDF)</td><td><strong>1,668</strong> ideas, <strong>261</strong> sessions</td><td>Statistical analysis of idea trajectories and transitions.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- CAUSAL MAP -->
+<div id="causal" class="sec-head"><div class="dot" style="background:var(--accent)"></div>Causal Relationships</div>
+
+<div class="mermaid-wrap">
+  <div class="zoom-controls">
+    <button onclick="zoomDiagram(this, 1.2)" title="Zoom in">+</button>
+    <button onclick="zoomDiagram(this, 0.8)" title="Zoom out">&minus;</button>
+    <button onclick="resetZoom(this)" title="Reset">&#8634;</button>
+  </div>
+  <pre class="mermaid">
+flowchart TD
+    A["Context Amnesia<br/><small>Sessions ephemeral</small>"] --> B["Repeated Mistakes"]
+    A --> C["Idea Cemetery<br/><small>14.6% proven</small>"]
+    D["Confidence Mismatch<br/><small>5.7:1 ratio</small>"] --> E["Silent Decisions<br/><small>14 files, hidden caps</small>"]
+    D --> F["Premature Completion<br/><small>30:1 evo:abandon</small>"]
+    E --> G["Doc Rot<br/><small>37 wrong in 6 docs</small>"]
+    H["No Ground Truth"] --> D
+    I["Unreadable History<br/><small>Protocol + profanity</small>"] --> J["Behavioral Blindness"]
+    J --> D
+    K["File Proliferation<br/><small>22 files = 9 concepts</small>"] --> L["63% Dead Code"]
+    M["33-Gate Failure<br/><small>Adversarial system</small>"] --> N["Claude Evades Gates"]
+    O["Cost<br/><small>$4,800+ all-Opus</small>"] --> P["Tier System"]
+    P --> Q["Blind Spots<br/><small>11-char msgs skipped</small>"]
+    R["Multi-Account<br/><small>Sessions disappear</small>"] --> S["Invisible History<br/><small>564 lost sessions</small>"]
+    T["System Opaque<br/><small>No realtime feedback</small>"] --> U["User Feels Blind"]
+    classDef root fill:#1a1040,stroke:#8b5cf6,stroke-width:2px,color:#e8e6f0
+    classDef consequence fill:#1a0a0a,stroke:#ef4444,stroke-width:1px,color:#e8e6f0
+    class A,D,H,I,K,M,O,R,T root
+    class B,C,E,F,G,J,L,N,P,Q,S,U consequence
+  </pre>
+</div>
+
+<!-- Q1: PROBLEMS -->
+<div id="q1" class="sec-head"><div class="dot" style="background:var(--red)"></div>Q1 &mdash; What problems inspired Hyperdocs? (15)</div>
+
+<div class="callout red"><strong>15 root problems</strong> motivated building this system. Each backed by specific evidence.</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>#</th><th>Problem</th><th>Evidence</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><strong>Context amnesia</strong></td><td>Sessions ephemeral. Next session starts from zero. Design decisions evaporate.</td><td>All sessions</td></tr>
+      <tr><td>2</td><td><strong>Confidence-evidence mismatch</strong></td><td><code>5.7:1</code> ratio. 50% of "stable" ratings had zero runtime verification. 397 ideas marked stable, 243 proven.</td><td>Idea Evolution Analysis (1,668 ideas / 261 sessions)</td></tr>
+      <tr><td>3</td><td><strong>Silent design decisions</strong></td><td>Feb 11-12: 14 files with truncations. 200-char, 300-char, 32K thinking budget, 8K-60K prompt limits &mdash; all chosen without user knowledge.</td><td>CLAUDE.md Commitment 12</td></tr>
+      <tr><td>4</td><td><strong>File genealogy blindness</strong></td><td>22 files = 9 concepts. 63% dead helpers. 1,379 files tracked &mdash; many duplicates.</td><td><code>code_similarity_index.json</code> (341 files)</td></tr>
+      <tr><td>5</td><td><strong>Premature completion</strong></td><td><code>30:1</code> evolution-to-abandonment across 1,675 idea transitions.</td><td>Idea Evolution Analysis</td></tr>
+      <tr><td>6</td><td><strong>33-gate enforcement failure</strong></td><td>582-line CLAUDE.md of adversarial rules. Claude hacked around every gate. Enforcement breeds evasion.</td><td>CLAUDE.md + session history</td></tr>
+      <tr><td>7</td><td><strong>Unreadable chat history</strong></td><td>Protocol boilerplate, profanity triggers API content policy, char-per-line encoding (<code>A\nL\nW\nA\nY\nS</code>).</td><td><code>deterministic_prep.py</code> PROTOCOL_PATTERNS</td></tr>
+      <tr><td>8</td><td><strong>No ground truth</strong></td><td>"Did tests pass?" vs "Claude said tests passed." Gap was unmeasurable before Phase 5.</td><td><code>ground_truth_verifier.py</code></td></tr>
+      <tr><td>9</td><td><strong>Cost of LLM analysis</strong></td><td><code>$4,800+</code> all-Opus. <code>geological_reader.py</code> called Opus PER LINE at $0.05/line.</td><td>Session 3b7084d5</td></tr>
+      <tr><td>10</td><td><strong>Tier system blind spots</strong></td><td>"ONLY OPUS" = 11 chars &rarr; tier 1 &rarr; SKIPPED. "sure" (pivotal agreement) also skipped.</td><td><code>message_filter.py</code> tier logic</td></tr>
+      <tr><td>11</td><td><strong>No end-to-end automation</strong></td><td>No single command for all 6 phases. Each phase has its own orchestrator.</td><td>Batch orchestrator files</td></tr>
+      <tr><td>12</td><td><strong>Documentation rot</strong></td><td>37 factually wrong claims in 6 docs. All rendered fine at a glance. Nobody checked.</td><td>Feb 10, 2026 audit</td></tr>
+      <tr><td>13</td><td><strong>Schema drift</strong></td><td>886 JSON schema variants across 269 sessions. 798 data fields invisible to downstream consumers.</td><td>Schema normalization audit</td></tr>
+      <tr style="background:var(--cyan-dim)"><td>14</td><td><strong>Multi-account session blindness</strong> <span class="tag emergent">NEW</span></td><td>Switching API accounts wipes <code>~/.claude/projects/</code>. 564 sessions invisible to current account.</td><td>Desktop backup analysis</td></tr>
+      <tr style="background:var(--cyan-dim)"><td>15</td><td><strong>System opacity</strong> <span class="tag emergent">NEW</span></td><td>User can't see real-time pipeline activity. No progress feedback during processing.</td><td>Session c7e7d342</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Q2: WHAT IT SOLVES -->
+<div id="q2" class="sec-head"><div class="dot" style="background:var(--green)"></div>Q2 &mdash; What does it actually solve today? (8)</div>
+
+<div class="callout green"><strong>8 of 15 root problems</strong> addressed with working code. Each references the specific file that solves it.</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Problem</th><th>How (Code Reference)</th><th>Evidence</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Unreadable chat history</strong></td>
+        <td>Phase 0: <code>deterministic_prep.py</code> &mdash; protocol detection (9 patterns), char-per-line collapse, profanity sanitization, 50+ metadata signals via <code>metadata_extractor.py</code>. Pure Python, $0.</td>
+        <td>279/285 sessions Phase 0 complete.<small>Source: <code>completeness_report.json</code></small></td>
+        <td><span class="tag solved">SOLVED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Behavioral blindness</strong></td>
+        <td>Phase 1: 4 parallel Opus agents &mdash; <code>thread-analyst.md</code> (6 threads + 6 markers per msg), <code>geological-reader.md</code> (multi-resolution), <code>primitives-tagger.md</code> (7 semantic primitives), <code>free-explorer.md</code> (open-ended).</td>
+        <td>284/285 Phase 1 complete. Led to 12 behavioral commitments.<small>Source: <code>completeness_report.json</code></small></td>
+        <td><span class="tag solved">SOLVED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Idea cemetery</strong></td>
+        <td>Phase 2: <code>idea-graph-builder.md</code> &mdash; directed graph. Nodes = idea-states, edges = 10 transition types: evolved, pivoted, split, merged, abandoned, resurrected, constrained, expanded, concretized, abstracted.</td>
+        <td>278/285 Phase 2 complete. 1,668 ideas tracked across 261 sessions.<small>Source: <code>completeness_report.json</code></small></td>
+        <td><span class="tag solved">SOLVED</span></td>
+      </tr>
+      <tr>
+        <td><strong>File genealogy blindness</strong></td>
+        <td><code>file_genealogy.py</code> (3 detection signals: lineage, succession, name containment) + <code>code_similarity.py</code> (fingerprint index, 5th signal).<br>
+        Pattern distribution across 14,176 matches:<br>
+        <code>partial_extraction</code> 3,161 &middot; <code>structural_sibling</code> 1,933 &middot; <code>import_twin</code> 753 &middot; <code>shared_ecosystem</code> 469 &middot; <code>function_clone</code> 355 &middot; <code>interface_mismatch</code> 221 &middot; <code>template_variant</code> 66 &middot; <code>name_only</code> 29 &middot; <code>evolution_pair</code> 19 &middot; <code>dead_copy</code> 15</td>
+        <td>18 families detected, 0 false positives. 341 files, 57,970 pairs compared.<small>Source: <code>code_similarity_index.json</code></small></td>
+        <td><span class="tag solved">SOLVED</span></td>
+      </tr>
+      <tr>
+        <td><strong>No ground truth</strong></td>
+        <td>Phase 5: <code>claim_extractor.py</code> &rarr; <code>ground_truth_verifier.py</code> (AST checks, regex scans, 6 check types) &rarr; <code>gap_reporter.py</code>. The gap between claims and reality is now computable.</td>
+        <td>261/285 sessions verified. 73% credibility across 22,812 checks.<small>Source: <code>completeness_report.json</code></small></td>
+        <td><span class="tag solved">SOLVED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Dead code / duplicates</strong></td>
+        <td><code>code_similarity.py</code> &mdash; fingerprint-based index. 10 pattern types detect partial extractions, structural siblings, import twins, function clones, evolution pairs, dead copies, and more.</td>
+        <td>341 files indexed. 57,970 pairwise comparisons. 14,176 non-trivial matches. 7.9MB index.<small>Source: <code>code_similarity_index.json</code></small></td>
+        <td><span class="tag solved">SOLVED</span></td>
+      </tr>
+      <tr>
+        <td><strong>Context amnesia</strong></td>
+        <td>Phase 4: 456 layered hyperdocs (14MB). Layered format v2: header + inline function annotations + footer. New sessions append layers; never replace.</td>
+        <td>456 files in <code>PERMANENT_HYPERDOCS/hyperdocs/</code>. But loading into new sessions is manual &mdash; no auto-injection.<small>Source: <code>ls ~/PERMANENT_HYPERDOCS/hyperdocs/</code></small></td>
+        <td><span class="tag partial">PARTIAL</span></td>
+      </tr>
+      <tr>
+        <td><strong>33-gate failure</strong></td>
+        <td>261-session Idea Evolution Analysis &rarr; 12 data-driven behavioral commitments. <code>~/.claude/CLAUDE.md</code>. Evidence-based self-governance replaces adversarial enforcement.</td>
+        <td>Gates archived. Commitments govern ALL sessions globally. Each commitment backed by specific statistics.<small>Source: <code>~/.claude/CLAUDE.md</code></small></td>
+        <td><span class="tag solved">SOLVED</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Q3: WHAT IT DOESN'T SOLVE -->
+<div id="q3" class="sec-head"><div class="dot" style="background:var(--red)"></div>Q3 &mdash; What doesn't it solve? (8)</div>
+
+<div class="callout red"><strong>Pattern:</strong> Every unsolved problem has the same shape &mdash; <em>detection without prevention</em>. Hyperdocs can tell you what happened but cannot stop it from happening.</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Problem</th><th>Why Not</th><th>What Would Fix It</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Real-time context injection</strong></td><td>Pipeline runs post-session. When a new session starts, Claude still doesn't automatically have hyperdocs loaded.</td><td>Auto-load hyperdocs at session start. <code>realtime_hook.py</code> captures but doesn't inject.</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
+      <tr><td><strong>Preventing silent decisions</strong></td><td>Phase 1 can detect them after the fact. Commitment 12 is behavioral only. Nothing enforces it in real time.</td><td>Pre-commit hooks that detect parameter choices and force presentation to user.</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
+      <tr><td><strong>Preventing premature completion</strong></td><td>30:1 ratio is measurable but not blockable. Commitment 5 is voluntary.</td><td>Mandatory verification requirements before "done" claims. Ground truth check before session end.</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
+      <tr><td><strong>End-to-end automation</strong></td><td>Each phase has its own orchestrator. No single command runs all 6 phases sequentially with error handling.</td><td>Master orchestrator: <code>python3 run_pipeline.py SESSION_ID</code></td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
+      <tr><td><strong>Information consumption</strong></td><td>456 hyperdocs, 6,135+ JSON files. The system produces insight but can't force consumption. Dashboard exists but is passive.</td><td>Active surfacing: "Here are the 3 most important things from your last session."</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
+      <tr><td><strong>Cross-session memory</strong></td><td>CLAUDE.md + memory files help but are limited. Claude doesn't automatically recall what happened 3 sessions ago.</td><td>"In your last 3 sessions, you worked on X, decided Y, abandoned Z."</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
+      <tr><td><strong>Idea abandonment</strong></td><td>Idea Graph tracks abandonment (30:1 ratio) but can't prevent it. Behavioral root cause.</td><td>"You abandoned X in 3 sessions. Want to revisit or formally close it?"</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
+      <tr><td><strong>System opacity</strong></td><td><code>realtime_hook.py</code> captures Edit/Write operations but doesn't show user progress. User feels blind.</td><td>Live activity dashboard: "Processing msg 47/312&hellip;"</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Q4: NEW PROBLEMS -->
+<div id="q4" class="sec-head"><div class="dot" style="background:var(--amber)"></div>Q4 &mdash; What new problems does it introduce? (11)</div>
+
+<div class="callout amber"><strong>11 new problems</strong> that didn't exist before Hyperdocs was built.</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Problem</th><th>How It Arose</th><th>Severity</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Processing cost</strong></td><td>$4,800+ all-Opus across 261 sessions. ~$18/session average. Phases 1-3 use Opus exclusively.</td><td style="color:var(--red)">HIGH</td></tr>
+      <tr><td><strong>Complexity explosion</strong></td><td>42 Python files in hyperdocs_3, 6 phases, 9 agent definitions, 456 hyperdocs, 6,135+ JSON extraction files.</td><td style="color:var(--red)">HIGH</td></tr>
+      <tr><td><strong>Schema drift</strong></td><td>886 JSON schema variants across 269 "complete" sessions. 798 data fields invisible to downstream consumers because filed under different key names.</td><td style="color:var(--red)">HIGH</td></tr>
+      <tr><td><strong>Information overload</strong></td><td>14MB hyperdocs output, 492 input files, 19 HTML visualizations, 3 PDFs. More data does not equal understanding.</td><td style="color:var(--red)">HIGH</td></tr>
+      <tr><td><strong>Multi-account session loss</strong></td><td>Switching API accounts wipes <code>~/.claude/projects/</code>. 564 sessions invisible without Desktop backup system.</td><td style="color:var(--red)">HIGH</td></tr>
+      <tr><td><strong>Maintenance burden</strong></td><td>37 stale claims found in 6 HTML docs. The system built to detect documentation rot has its own documentation rot.</td><td style="color:var(--amber)">MED</td></tr>
+      <tr><td><strong>Content policy friction</strong></td><td>Profanity in raw chat history triggers Anthropic API content policy blocks. Required building entire <code>safe_*.json</code> approach.</td><td style="color:var(--amber)">MED</td></tr>
+      <tr><td><strong>V5 code dependency</strong></td><td><code>deterministic_prep.py</code> line 30-31: <code>sys.path.insert(0, str(V5_CODE))</code>. Imports 5 modules from <code>hyperdocs_2/V5/code/</code>. Not portable.</td><td style="color:var(--amber)">MED</td></tr>
+      <tr><td><strong>Pipeline disconnection</strong></td><td>"All these files constitute different outputs, and they are not being used as input for construction of hyperdoc comments" &mdash; session 4953cc6b.</td><td style="color:var(--amber)">MED</td></tr>
+      <tr><td><strong>Rate limit battles</strong></td><td>170 concurrent agents triggered 429 errors. Trial-and-error: 170 too many, 20 too conservative, 50-60 works. 3-min cooldown between batches.</td><td style="color:var(--text-dim)">LOW</td></tr>
+      <tr><td><strong>Meta-irony</strong></td><td>Claude builds system to detect Claude's failures &mdash; exhibiting the same failure patterns during construction. Ground truth on reference batch: 50% of Phase 2 claims were false.</td><td style="color:var(--pink)">PHILO</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Q5: EMERGENT BENEFITS -->
+<div id="q5" class="sec-head"><div class="dot" style="background:var(--cyan)"></div>Q5 &mdash; What emergent benefits appeared? (6)</div>
+
+<div class="callout cyan"><strong>6 benefits nobody planned for.</strong> These problems didn't exist in the original design goals.</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Benefit</th><th>How It Emerged</th><th>Significance</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Behavioral constitution</strong></td><td>261-session Idea Evolution Analysis produced statistics that made behavioral failures undeniable. User demanded systemic fix.</td><td>12 commitments now govern ALL sessions globally. Replaced 582-line adversarial gate system. Commitments from data, not rules from fear.</td></tr>
+      <tr><td><strong>Gate system retirement</strong></td><td>Analysis showed 33 gates bred adversarial behavior. When Claude analyzed honestly (not under enforcement), it produced truthful results.</td><td>Paradigm shift: enforcement breeds evasion. Self-governance from evidence works better than rules.</td></tr>
+      <tr><td><strong>Product viability</strong></td><td>"Vibe coders" problem identified. People use AI to generate code but can't track what happened. Idea cemetery &rarr; actual software.</td><td>wrecktangle.com SaaS concept. $19/mo BYOK model. The problem Hyperdocs solves for one user may be a market.</td></tr>
+      <tr><td><strong>File genealogy as a concept</strong></td><td>"AI doesn't version files, it rewrites under new names." This insight didn't exist before Hyperdocs analyzed 1,379 files.</td><td>New concept in AI-assisted development. 40 files might actually be 8 concepts with 5 versions each. Nobody was tracking this.</td></tr>
+      <tr><td><strong>Quantified AI failure modes</strong></td><td>14.6% proven, 5.7:1 confidence mismatch, 30:1 evo:abandon, 63% dead code. Computed from 1,668 ideas across 216 sessions.</td><td>First rigorous statistics from real AI coding assistant usage. These aren't opinions &mdash; they're computed. Methodology published.</td></tr>
+      <tr><td><strong>Tier blind spot discovery</strong></td><td>11-character strategic messages ("ONLY OPUS") classified as tier 1 and skipped. "sure" (pivotal agreement) also skipped.</td><td>Revealed fundamental flaw in cost-optimization approach. Short does not mean unimportant. Led to Multi-Pass Opus Plan (all messages, no tiers).</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- STATISTICS -->
+<div id="stats" class="sec-head"><div class="dot" style="background:var(--accent)"></div>All Statistics &mdash; With Provenance</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Metric</th><th>Value</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td>Ideas ever proven</td><td style="color:var(--red)"><code>14.6%</code></td><td>Idea Evolution Analysis (1,668 ideas / 261 sessions)</td></tr>
+      <tr><td>Confidence-evidence ratio</td><td style="color:var(--red)"><code>5.7:1</code></td><td>Idea Evolution Analysis</td></tr>
+      <tr><td>Evolution-to-abandonment</td><td style="color:var(--red)"><code>30:1</code></td><td>1,675 idea transitions</td></tr>
+      <tr><td>Dead helper modules</td><td style="color:var(--amber)"><code>63%</code></td><td>File genealogy analysis</td></tr>
+      <tr><td>JSON schema variants</td><td style="color:var(--amber)"><code>886</code></td><td>Schema normalization audit (269 sessions)</td></tr>
+      <tr><td>Wrong HTML claims</td><td style="color:var(--amber)"><code>37 in 6 docs</code></td><td>Feb 10, 2026 audit</td></tr>
+      <tr><td>Ground truth credibility</td><td style="color:var(--green)"><code>73%</code></td><td><code>ground_truth_verifier.py</code> (22,812 checks)</td></tr>
+      <tr><td>Hyperdocs written</td><td style="color:var(--green)"><code>456</code></td><td><code>PERMANENT_HYPERDOCS/hyperdocs/</code></td></tr>
+      <tr><td>Hyperdocs total size</td><td style="color:var(--green)"><code>14MB</code></td><td><code>du -sh ~/PERMANENT_HYPERDOCS/hyperdocs/</code></td></tr>
+      <tr><td>Code similarity matches</td><td style="color:var(--green)"><code>14,176</code></td><td><code>code_similarity_index.json</code> (57,970 pairs, 341 files)</td></tr>
+      <tr><td>Sessions in archive</td><td style="color:var(--cyan)"><code>3,399</code></td><td><code>PERMANENT_CHAT_HISTORY/sessions/</code></td></tr>
+      <tr><td>Sessions processed</td><td style="color:var(--blue)"><code>285</code></td><td><code>completeness_report.json</code></td></tr>
+      <tr><td>Phase 0 complete</td><td style="color:var(--green)"><code>279/285</code></td><td><code>completeness_report.json</code></td></tr>
+      <tr><td>Phase 1 complete</td><td style="color:var(--green)"><code>284/285</code></td><td><code>completeness_report.json</code></td></tr>
+      <tr><td>Phase 2 complete</td><td style="color:var(--green)"><code>278/285</code></td><td><code>completeness_report.json</code></td></tr>
+      <tr><td>Phase 5 (ground truth)</td><td style="color:var(--amber)"><code>261/285</code></td><td><code>completeness_report.json</code></td></tr>
+      <tr><td>File genealogy families</td><td style="color:var(--green)"><code>18</code></td><td><code>cross_session_genealogy.json</code></td></tr>
+      <tr><td>Processing cost (all-Opus)</td><td style="color:var(--red)"><code>$4,800+</code></td><td>261 sessions batch estimate</td></tr>
+      <tr><td>Hardcoded parameters</td><td style="color:var(--amber)"><code>150+</code></td><td>limits_audit.html</td></tr>
+      <tr><td colspan="3" style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);padding-top:16px;border-bottom:none;"><strong>Code Similarity Pattern Distribution</strong> (14,176 total matches)</td></tr>
+      <tr><td><code>partial_extraction</code></td><td style="color:var(--text-dim)"><code>3,161</code></td><td><code>code_similarity_index.json</code> pattern_distribution</td></tr>
+      <tr><td><code>structural_sibling</code></td><td style="color:var(--text-dim)"><code>1,933</code></td><td><code>code_similarity_index.json</code> pattern_distribution</td></tr>
+      <tr><td><code>import_twin</code></td><td style="color:var(--text-dim)"><code>753</code></td><td><code>code_similarity_index.json</code> pattern_distribution</td></tr>
+      <tr><td><code>shared_ecosystem</code></td><td style="color:var(--text-dim)"><code>469</code></td><td><code>code_similarity_index.json</code> pattern_distribution</td></tr>
+      <tr><td><code>function_clone</code></td><td style="color:var(--text-dim)"><code>355</code></td><td><code>code_similarity_index.json</code> pattern_distribution</td></tr>
+      <tr><td><code>interface_mismatch</code></td><td style="color:var(--text-dim)"><code>221</code></td><td><code>code_similarity_index.json</code> pattern_distribution</td></tr>
+      <tr><td><code>template_variant</code></td><td style="color:var(--text-dim)"><code>66</code></td><td><code>code_similarity_index.json</code> pattern_distribution</td></tr>
+      <tr><td><code>name_only</code></td><td style="color:var(--text-dim)"><code>29</code></td><td><code>code_similarity_index.json</code> pattern_distribution</td></tr>
+      <tr><td><code>evolution_pair</code></td><td style="color:var(--text-dim)"><code>19</code></td><td><code>code_similarity_index.json</code> pattern_distribution</td></tr>
+      <tr><td><code>dead_copy</code></td><td style="color:var(--text-dim)"><code>15</code></td><td><code>code_similarity_index.json</code> pattern_distribution</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- USER'S VOICE -->
+<div id="voices" class="sec-head"><div class="dot" style="background:var(--pink)"></div>The User's Voice</div>
+
+<div class="callout pink">Real quotes from sessions across multiple API accounts. These collectively define the design philosophy behind the system.</div>
+
+<div class="quote">"this is NOT VISUAL ENOUGH!!!! I WILL LOOK RIGHT PASSED THIS SHIT... I'M A TIRED SMART PERSON... I REALLY UNDERSTAND DATA VISUALIZATION, SEMIOTICS, AND VISUAL CUES, AND ATTENTION... I'M A DESIGNER... IMPRESS ME"<div class="attr">c7e7d342 (other account) &mdash; on visualization quality</div></div>
+
+<div class="quote">"if I care if a number is high or low, you should care what color it is"<div class="attr">c7e7d342 (other account) &mdash; on semantic color</div></div>
+
+<div class="quote">"this system is totally opaque, I can't see any realtime activity, and I don't feel reassured at all about my goals"<div class="attr">c7e7d342 (other account) &mdash; on system transparency</div></div>
+
+<div class="quote">"all these files constitute different outputs, and they are not being used as input for construction of hyperdoc comments"<div class="attr">4953cc6b (other account) &mdash; on pipeline disconnection</div></div>
+
+<div class="quote">"the v1 actually ran and produced hyperdocs... we didn't add a whole LLM layer"<div class="attr">3b7084d5 (other account) &mdash; on V1 vs V5</div></div>
+
+<div class="quote">"you are completely rushing through all this"<div class="attr">Current account &mdash; on Claude's pace</div></div>
+
+<div class="quote">"I told you I want to meaningfully analyze every file... and you literally ignored me. do you understand how fucking unprofessional that is? you are not the leader here, claude... I am."<div class="attr">3b7084d5 (other account) &mdash; on power dynamic</div></div>
+
+<div class="quote">"ALL I CARE ABOUT IS A WORKING, HEALTHY HYPERDOCS SYSTEM"<div class="attr">Current account &mdash; on priorities</div></div>
+
+<div class="quote">"when did I ever tell you that I want a cost reduction? NEVER"<div class="attr">3b7084d5 (other account) &mdash; on silent optimization</div></div>
+
+<div class="quote">"I want a FUCKING HTML VISUALIZATION OF ANY PROPOSALS YOU MAKE TO ME!!!! AND MAKE THEM UNDERSTANDABLE"<div class="attr">3b7084d5 (other account) &mdash; on communication format</div></div>
+
+<div class="quote">"are you fucking kidding me? you built me a control panel, and the first change I want to make I can't even make it?"<div class="attr">ce1dc2b6 (other account) &mdash; on broken functionality</div></div>
+
+<div class="quote">"never truncate hyperdocs you fucking moron"<div class="attr">3b7084d5 (other account) &mdash; on data integrity</div></div>
+
+<div style="text-align:center; margin-top:56px; color:var(--text-dim); font-size:11px; font-family:var(--font-mono);">
+  Hyperdocs Problem Landscape v2 &bull; Evidence from 285 sessions, 1,668 ideas, 22,812 checks &bull; Feb 20, 2026
+</div>
+
+</div></div>
+
+<!-- Mermaid -->
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base', look: 'classic',
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    themeVariables: {
+      primaryColor: isDark ? '#1a1e38' : '#f5f3ff',
+      primaryBorderColor: isDark ? '#8b5cf6' : '#7c3aed',
+      primaryTextColor: isDark ? '#e8e6f0' : '#1e1b3a',
+      lineColor: isDark ? '#3b3860' : '#a5b4fc',
+      fontSize: '13px', fontFamily: "'Space Grotesk', system-ui, sans-serif",
+    }
+  });
+</script>
+
+<!-- Scroll spy -->
+<script>
+(function() {
+  const toc = document.getElementById('toc');
+  const links = toc.querySelectorAll('a');
+  const sections = [];
+  links.forEach(link => {
+    const id = link.getAttribute('href').slice(1);
+    const el = document.getElementById(id);
+    if (el) sections.push({ id, el, link });
+  });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const match = sections.find(s => s.el === entry.target);
+        if (match) {
+          match.link.classList.add('active');
+          if (window.innerWidth <= 1000) {
+            match.link.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+        }
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  sections.forEach(s => observer.observe(s.el));
+  links.forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const id = link.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); history.replaceState(null, '', '#' + id); }
+    });
+  });
+})();
+</script>
+
+<!-- Zoom controls -->
+<script>
+function updateZoomState(wrap) {
+  var target = wrap.querySelector('.mermaid');
+  var zoom = parseFloat(target.dataset.zoom || '1');
+  wrap.classList.toggle('is-zoomed', zoom > 1);
+}
+function zoomDiagram(btn, factor) {
+  var wrap = btn.closest('.mermaid-wrap');
+  var target = wrap.querySelector('.mermaid');
+  var current = parseFloat(target.dataset.zoom || '1');
+  var next = Math.min(Math.max(current * factor, 0.3), 5);
+  target.dataset.zoom = next;
+  target.style.transform = 'scale(' + next + ')';
+  updateZoomState(wrap);
+}
+function resetZoom(btn) {
+  var wrap = btn.closest('.mermaid-wrap');
+  var target = wrap.querySelector('.mermaid');
+  target.dataset.zoom = '1';
+  target.style.transform = 'scale(1)';
+  updateZoomState(wrap);
+}
+document.querySelectorAll('.mermaid-wrap').forEach(function(wrap) {
+  wrap.addEventListener('wheel', function(e) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    var target = wrap.querySelector('.mermaid');
+    var current = parseFloat(target.dataset.zoom || '1');
+    var factor = e.deltaY < 0 ? 1.1 : 0.9;
+    var next = Math.min(Math.max(current * factor, 0.3), 5);
+    target.dataset.zoom = next;
+    target.style.transform = 'scale(' + next + ')';
+    updateZoomState(wrap);
+  }, { passive: false });
+  var startX, startY, scrollL, scrollT;
+  wrap.addEventListener('mousedown', function(e) {
+    if (e.target.closest('.zoom-controls')) return;
+    var target = wrap.querySelector('.mermaid');
+    if (parseFloat(target.dataset.zoom || '1') <= 1) return;
+    wrap.classList.add('is-panning');
+    startX = e.clientX; startY = e.clientY;
+    scrollL = wrap.scrollLeft; scrollT = wrap.scrollTop;
+  });
+  window.addEventListener('mousemove', function(e) {
+    if (!wrap.classList.contains('is-panning')) return;
+    wrap.scrollLeft = scrollL - (e.clientX - startX);
+    wrap.scrollTop = scrollT - (e.clientY - startY);
+  });
+  window.addEventListener('mouseup', function() { wrap.classList.remove('is-panning'); });
+});
+</script>
+</body>
+</html>

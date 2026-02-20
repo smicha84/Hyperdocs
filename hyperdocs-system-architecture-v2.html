@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperdocs — System Architecture v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-body: 'Outfit', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --surface3: #1e293b;
+    --border: rgba(56,189,248,0.08);
+    --border-bright: rgba(56,189,248,0.2);
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --accent: #38bdf8;
+    --accent-dim: rgba(56,189,248,0.1);
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.1);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.1);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.1);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167,139,250,0.1);
+    --cyan: #22d3ee;
+    --cyan-dim: rgba(34,211,238,0.1);
+    --orange: #fb923c;
+    --orange-dim: rgba(251,146,60,0.1);
+    --p0: #38bdf8; --p1: #a78bfa; --p2: #34d399; --p3: #fbbf24; --p4: #fb923c; --p5: #f87171;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f1f5f9; --surface: #ffffff; --surface2: #f8fafc; --surface3: #f1f5f9;
+      --border: rgba(15,23,42,0.08); --border-bright: rgba(15,23,42,0.2);
+      --text: #0f172a; --text-dim: #64748b;
+      --accent: #0284c7; --accent-dim: rgba(2,132,199,0.08);
+      --green: #059669; --green-dim: rgba(5,150,105,0.08);
+      --amber: #d97706; --amber-dim: rgba(217,119,6,0.08);
+      --red: #dc2626; --red-dim: rgba(220,38,38,0.08);
+      --purple: #7c3aed; --purple-dim: rgba(124,58,237,0.08);
+      --cyan: #0891b2; --cyan-dim: rgba(8,145,178,0.08);
+      --orange: #ea580c; --orange-dim: rgba(234,88,12,0.08);
+      --p0: #0284c7; --p1: #7c3aed; --p2: #059669; --p3: #d97706; --p4: #ea580c; --p5: #dc2626;
+    }
+  }
+  * { margin:0; padding:0; box-sizing:border-box; min-width:0; }
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(at 15% 10%, var(--accent-dim) 0%, transparent 45%),
+      radial-gradient(at 85% 70%, var(--purple-dim) 0%, transparent 45%);
+    color: var(--text); font-family: var(--font-body); line-height: 1.6;
+    padding: 40px 24px 80px; overflow-wrap: break-word;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  /* Nav */
+  .nav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:40px; position:sticky; top:0; z-index:100; background:var(--bg); padding:12px 0; border-bottom:1px solid var(--border); }
+  .nav a { font-family:var(--font-mono); font-size:12px; color:var(--text-dim); text-decoration:none; padding:4px 12px; border:1px solid var(--border); border-radius:6px; transition:all 0.2s; }
+  .nav a:hover { color:var(--accent); border-color:var(--accent); background:var(--accent-dim); }
+
+  /* Hero */
+  .hero { text-align:center; margin-bottom:48px; }
+  .hero h1 { font-size:42px; font-weight:800; letter-spacing:-1.5px; margin-bottom:8px; background:linear-gradient(135deg,var(--accent),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .hero .subtitle { font-size:18px; color:var(--text-dim); }
+  .hero .date { font-family:var(--font-mono); font-size:13px; color:var(--text-dim); margin-top:8px; }
+
+  /* KPI */
+  .kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:48px; }
+  .kpi { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; text-align:center; animation:fadeScale 0.5s ease backwards; }
+  .kpi .number { font-size:32px; font-weight:800; font-family:var(--font-mono); }
+  .kpi .label { font-size:12px; color:var(--text-dim); margin-top:4px; text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* Section */
+  section { margin-bottom:56px; }
+  .section-title { font-size:24px; font-weight:700; margin-bottom:20px; display:flex; align-items:center; gap:12px; scroll-margin-top:60px; }
+  .section-title .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+  /* Mermaid */
+  .mermaid-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; position:relative; overflow:auto; margin-bottom:24px; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+  .mermaid-wrap::-webkit-scrollbar { width:6px; height:6px; }
+  .mermaid-wrap::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  .mermaid-wrap .mermaid { transition:transform 0.2s ease; transform-origin:top center; }
+  .zoom-controls { position:absolute; top:12px; right:12px; display:flex; gap:2px; z-index:10; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:2px; }
+  .zoom-controls button { width:28px; height:28px; border:none; background:transparent; color:var(--text-dim); font-family:var(--font-mono); font-size:14px; cursor:pointer; border-radius:4px; display:flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; }
+  .zoom-controls button:hover { background:var(--border); color:var(--text); }
+  .mermaid-wrap.is-zoomed { cursor:grab; }
+  .mermaid-wrap.is-panning { cursor:grabbing; user-select:none; }
+
+  /* Phase cards */
+  .phase-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:20px; }
+  .phase-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; position:relative; overflow:hidden; }
+  .phase-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+  .phase-card.p0::before { background:var(--p0); } .phase-card.p1::before { background:var(--p1); }
+  .phase-card.p2::before { background:var(--p2); } .phase-card.p3::before { background:var(--p3); }
+  .phase-card.p4::before { background:var(--p4); } .phase-card.p5::before { background:var(--p5); }
+  .phase-card h3 { font-size:16px; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .phase-card h3 .badge { font-family:var(--font-mono); font-size:11px; padding:2px 8px; border-radius:4px; font-weight:600; }
+  .phase-card.p0 h3 .badge { background:rgba(56,189,248,0.15); color:var(--p0); }
+  .phase-card.p1 h3 .badge { background:rgba(167,139,250,0.15); color:var(--p1); }
+  .phase-card.p2 h3 .badge { background:rgba(52,211,153,0.15); color:var(--p2); }
+  .phase-card.p3 h3 .badge { background:rgba(251,191,36,0.15); color:var(--p3); }
+  .phase-card.p4 h3 .badge { background:rgba(251,146,60,0.15); color:var(--p4); }
+  .phase-card.p5 h3 .badge { background:rgba(248,113,113,0.15); color:var(--p5); }
+  .phase-card p { font-size:14px; color:var(--text-dim); margin-bottom:12px; }
+  .phase-card .files { font-family:var(--font-mono); font-size:12px; color:var(--text-dim); margin-bottom:8px; }
+  .phase-card .files code { color:var(--text); background:var(--surface2); padding:1px 6px; border-radius:3px; font-size:11px; }
+  .phase-card .io { font-size:12px; color:var(--text-dim); margin-bottom:8px; }
+  .phase-card .io strong { color:var(--text); font-weight:600; }
+  .phase-card .status { margin-top:12px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:4px; display:inline-block; }
+  .status.working { background:var(--green-dim); color:var(--green); }
+  .status.partial { background:var(--amber-dim); color:var(--amber); }
+
+  /* Tables */
+  .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:12px; background:var(--surface); margin-bottom:24px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  thead th { background:var(--surface2); font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-dim); padding:12px 16px; text-align:left; position:sticky; top:0; z-index:2; border-bottom:1px solid var(--border-bright); }
+  tbody td { padding:10px 16px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tbody tr:hover { background:var(--accent-dim); }
+  td code { font-family:var(--font-mono); font-size:11px; background:var(--surface2); padding:2px 6px; border-radius:3px; }
+  td small { color:var(--text-dim); font-size:12px; display:block; margin-top:4px; }
+  .tag { font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; display:inline-block; white-space:nowrap; }
+  .tag.port { background:var(--cyan-dim); color:var(--cyan); }
+  .tag.missing { background:var(--red-dim); color:var(--red); }
+  .tag.stub { background:var(--amber-dim); color:var(--amber); }
+  .tag.drift { background:var(--purple-dim); color:var(--purple); }
+  .tag.data { background:var(--orange-dim); color:var(--orange); }
+
+  /* Callout */
+  .callout { background:var(--surface); border:1px solid var(--border-bright); border-left:3px solid var(--accent); border-radius:8px; padding:16px 20px; margin-bottom:24px; font-size:14px; }
+  .callout.warn { border-left-color:var(--amber); }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeScale { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; } }
+  @media (max-width:768px) { body { padding:16px; } .phase-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <nav class="nav">
+    <a href="#overview">Overview</a>
+    <a href="#flow">Pipeline Flow</a>
+    <a href="#phases">Phase Details</a>
+    <a href="#agents">Agent Inventory</a>
+    <a href="#data">Data Flow</a>
+    <a href="#infra">Infrastructure</a>
+    <a href="#gaps">Gaps</a>
+  </nav>
+
+  <div class="hero">
+    <h1>Hyperdocs System Architecture</h1>
+    <p class="subtitle">Complete pipeline audit &mdash; what exists, what works, what's missing</p>
+    <p class="date">Feb 20, 2026</p>
+  </div>
+
+  <div class="kpi-row" id="overview">
+    <div class="kpi"><div class="number" style="color:var(--accent)">6</div><div class="label">Pipeline Phases</div></div>
+    <div class="kpi"><div class="number" style="color:var(--green)">42</div><div class="label">Python Files</div></div>
+    <div class="kpi"><div class="number" style="color:var(--purple)">7</div><div class="label">Agent Prompts</div></div>
+    <div class="kpi"><div class="number" style="color:var(--green)">285</div><div class="label">Sessions Processed</div></div>
+    <div class="kpi"><div class="number" style="color:var(--green)">456</div><div class="label">Hyperdocs Written</div></div>
+    <div class="kpi"><div class="number" style="color:var(--green)">73%</div><div class="label">Credibility</div></div>
+  </div>
+
+  <!-- PIPELINE FLOW -->
+  <section id="flow">
+    <div class="section-title"><div class="dot" style="background:var(--accent)"></div>Pipeline Flow</div>
+    <div class="mermaid-wrap">
+      <div class="zoom-controls">
+        <button onclick="zoomDiagram(this, 1.2)" title="Zoom in">+</button>
+        <button onclick="zoomDiagram(this, 0.8)" title="Zoom out">&minus;</button>
+        <button onclick="resetZoom(this)" title="Reset">&#8634;</button>
+      </div>
+      <pre class="mermaid">
+flowchart TD
+    subgraph INPUT["INPUT: Raw Chat History"]
+        A["JSONL session files<br/>~/.claude/projects/"]
+    end
+    subgraph P0["PHASE 0: Deterministic Prep — $0"]
+        B["deterministic_prep.py<br/>Protocol detect + metadata"] --> C["prepare_agent_data.py<br/>Tier files + safe_*.json"]
+    end
+    subgraph P1["PHASE 1: Extraction — 4 Opus Agents"]
+        D["Thread Analyst<br/>6 threads + 6 markers"]
+        E["Geological Reader<br/>Micro / meso / macro"]
+        F["Primitives Tagger<br/>7 semantic primitives"]
+        G["Free Explorer<br/>Open-ended discovery"]
+    end
+    subgraph P2["PHASE 2: Synthesis — Opus + Python"]
+        H["Idea Graph Builder<br/>Nodes + 10 transitions"]
+        I["Synthesizer<br/>6-pass temp ramp"]
+        J["File Genealogy<br/>Family detection"]
+        K["Code Similarity<br/>Fingerprint index"]
+    end
+    subgraph P3["PHASE 3: File Mapping — Opus"]
+        L["File Mapper<br/>Per-file dossiers"] --> M["Hyperdoc Writer<br/>Per-file agents"]
+    end
+    subgraph P4["PHASE 4: Insertion — Python, $0"]
+        N["insert_hyperdocs_v2.py"] --> O["hyperdoc_layers.py<br/>Accumulate, never replace"]
+    end
+    subgraph P5["PHASE 5: Ground Truth — Python, $0"]
+        P["claim_extractor.py"] --> Q["ground_truth_verifier.py"] --> R["gap_reporter.py"]
+    end
+    A --> B
+    C --> D & E & F & G
+    D & E & F & G --> H & I
+    J & K -.-> H
+    H & I --> L
+    M --> N
+    O --> P
+
+    classDef input fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#e2e8f0
+    classDef ph0 fill:#0c2d48,stroke:#38bdf8,stroke-width:1px,color:#e2e8f0
+    classDef ph1 fill:#1a1040,stroke:#a78bfa,stroke-width:1px,color:#e2e8f0
+    classDef ph2 fill:#0a2e1f,stroke:#34d399,stroke-width:1px,color:#e2e8f0
+    classDef ph3 fill:#2e2408,stroke:#fbbf24,stroke-width:1px,color:#e2e8f0
+    classDef ph4 fill:#2e1a08,stroke:#fb923c,stroke-width:1px,color:#e2e8f0
+    classDef ph5 fill:#2e0808,stroke:#f87171,stroke-width:1px,color:#e2e8f0
+    class A input
+    class B,C ph0
+    class D,E,F,G ph1
+    class H,I,J,K ph2
+    class L,M ph3
+    class N,O ph4
+    class P,Q,R ph5
+      </pre>
+    </div>
+  </section>
+
+  <!-- PHASE DETAILS -->
+  <section id="phases">
+    <div class="section-title"><div class="dot" style="background:var(--green)"></div>Phase Details</div>
+    <div class="phase-grid">
+
+      <div class="phase-card p0">
+        <h3><span class="badge">P0</span> Deterministic Prep</h3>
+        <p>Pure Python, $0 cost. Loads JSONL, extracts 50+ metadata signals per message, classifies into 4 tiers, detects protocol messages (9 patterns), collapses char-per-line encoding, sanitizes profanity.</p>
+        <div class="files"><code>deterministic_prep.py</code> <code>prepare_agent_data.py</code> <code>message_filter.py</code> <code>metadata_extractor.py</code> <code>claude_behavior_analyzer.py</code> <code>claude_session_reader.py</code></div>
+        <div class="io"><strong>Input:</strong> Raw JSONL chat history</div>
+        <div class="io"><strong>Output:</strong> enriched_session.json, session_summary.json, safe_tier4.json, tier4_priority_messages.json, tier2plus_messages.json</div>
+        <div class="status working">Working &mdash; 279/285 sessions</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: $0/session</div>
+      </div>
+
+      <div class="phase-card p1">
+        <h3><span class="badge">P1</span> Agent Extraction</h3>
+        <p>4 parallel Opus agents analyze each session. Thread Analyst extracts 6 threads + 6 markers per message. Geological Reader does multi-resolution analysis. Primitives Tagger applies 7 semantic primitives. Free Explorer does open-ended discovery.</p>
+        <div class="files"><code>thread-analyst.md</code> <code>geological-reader.md</code> <code>primitives-tagger.md</code> <code>free-explorer.md</code> <code>phase1_redo_orchestrator.py</code></div>
+        <div class="io"><strong>Input:</strong> Phase 0 tier files + session_summary.json</div>
+        <div class="io"><strong>Output:</strong> thread_extractions.json, geological_notes.json, semantic_primitives.json, explorer_notes.json</div>
+        <div class="status working">Working &mdash; 284/285 sessions</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: ~$5-10/session (4 Opus agents)</div>
+      </div>
+
+      <div class="phase-card p2">
+        <h3><span class="badge">P2</span> Synthesis</h3>
+        <p>Builds the Idea Evolution Graph (directed graph: nodes = idea-states, edges = 10 transition types). Runs 6-pass synthesis with temperature ramp (0.3 &rarr; 1.0 + grounding at 0). Detects file genealogy families. Indexes code similarity.</p>
+        <div class="files"><code>idea-graph-builder.md</code> <code>synthesizer.md</code> <code>file_genealogy.py</code> <code>code_similarity.py</code></div>
+        <div class="io"><strong>Input:</strong> All Phase 1 outputs</div>
+        <div class="io"><strong>Output:</strong> idea_graph.json, synthesis.json, grounded_markers.json, file_genealogy.json</div>
+        <div class="status working">Working &mdash; 278/285 sessions</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: ~$5-10/session (2 agents + Python)</div>
+      </div>
+
+      <div class="phase-card p3">
+        <h3><span class="badge">P3</span> File Mapping &amp; Hyperdoc Writing</h3>
+        <p>File Mapper creates per-file dossiers (20+ fields) aggregated across sessions. Hyperdoc Writer launches per-file Opus agents to produce header + inline annotations + footer.</p>
+        <div class="files"><code>file-mapper.md</code> <code>hyperdoc-writer-per-file.md</code> <code>generate_dossiers.py</code> <code>generate_viewer.py</code></div>
+        <div class="io"><strong>Input:</strong> Phase 2 outputs + cross-session data</div>
+        <div class="io"><strong>Output:</strong> file_dossiers.json, claude_md_analysis.json, per-file hyperdoc blocks</div>
+        <div class="status working">Working &mdash; 261/285 sessions + 456 hyperdocs</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: ~$20-30/session (per-file Opus agents)</div>
+      </div>
+
+      <div class="phase-card p4">
+        <h3><span class="badge">P4</span> Smart Insertion</h3>
+        <p>Inserts hyperdocs into Python files using layered format v2. New analysis passes append layers; existing content never replaced. 106 inline function annotations across reference batch.</p>
+        <div class="files"><code>insert_hyperdocs_v2.py</code> <code>hyperdoc_layers.py</code> <code>insert_from_phase4b.py</code></div>
+        <div class="io"><strong>Input:</strong> Hyperdoc blocks from Phase 3</div>
+        <div class="io"><strong>Output:</strong> Enhanced Python files, layered JSON. 341 enhanced files, 456 hyperdocs (14MB).</div>
+        <div class="status working">Working &mdash; 456 hyperdocs written</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: $0 (pure Python)</div>
+      </div>
+
+      <div class="phase-card p5">
+        <h3><span class="badge">P5</span> Ground Truth Verification</h3>
+        <p>Extracts verifiable claims from Phase 2 synthesis, checks against filesystem reality (AST checks, regex scans, 6 check types), reports credibility gaps. The gap = the lie.</p>
+        <div class="files"><code>claim_extractor.py</code> <code>ground_truth_verifier.py</code> <code>gap_reporter.py</code></div>
+        <div class="io"><strong>Input:</strong> Phase 2 synthesis + filesystem reality</div>
+        <div class="io"><strong>Output:</strong> ground_truth_verification.json per session</div>
+        <div class="status working">Working &mdash; 261/285 sessions, 73% credibility</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: $0 (pure Python, AST checks)</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- AGENT INVENTORY -->
+  <section id="agents">
+    <div class="section-title"><div class="dot" style="background:var(--purple)"></div>Agent Inventory</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Agent</th><th>Prompt File</th><th>Reads</th><th>Writes</th><th>Model</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Thread Analyst</strong></td><td><code>thread-analyst.md</code></td><td>tier4_priority_messages.json + session_summary.json</td><td>thread_extractions.json<small>6 threads + 6 markers per message</small></td><td>Opus 4.6</td></tr>
+          <tr><td><strong>Geological Reader</strong></td><td><code>geological-reader.md</code></td><td>safe_tier4.json + session_summary.json</td><td>geological_notes.json<small>Micro / meso / macro analysis</small></td><td>Opus 4.6</td></tr>
+          <tr><td><strong>Primitives Tagger</strong></td><td><code>primitives-tagger.md</code></td><td>safe_tier4.json + session_summary.json</td><td>semantic_primitives.json<small>7 semantic primitives per message</small></td><td>Opus 4.6</td></tr>
+          <tr><td><strong>Free Explorer</strong></td><td><code>free-explorer.md</code></td><td>safe_tier4.json + session_summary.json</td><td>explorer_notes.json<small>Open-ended pattern discovery</small></td><td>Opus 4.6</td></tr>
+          <tr><td><strong>Idea Graph Builder</strong></td><td><code>idea-graph-builder.md</code></td><td>All Phase 1 outputs</td><td>idea_graph.json<small>Nodes + 10 transition types</small></td><td>Opus 4.6</td></tr>
+          <tr><td><strong>Synthesizer</strong></td><td><code>synthesizer.md</code></td><td>All Phase 1 outputs</td><td>synthesis.json + grounded_markers.json<small>6-pass temperature ramp</small></td><td>Opus 4.6</td></tr>
+          <tr><td><strong>File Mapper</strong></td><td><code>file-mapper.md</code></td><td>Phase 2 outputs</td><td>file_dossiers.json<small>Per-file, 20+ fields each</small></td><td>Opus 4.6</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- DATA FLOW -->
+  <section id="data">
+    <div class="section-title"><div class="dot" style="background:var(--cyan)"></div>Data Flow Per Session</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Phase</th><th>Files Created</th><th>Count</th></tr></thead>
+        <tbody>
+          <tr><td style="color:var(--p0)"><strong>P0</strong></td><td><code>enriched_session.json</code> <code>session_summary.json</code> <code>safe_tier4.json</code> <code>tier4_priority_messages.json</code> <code>tier2plus_messages.json</code></td><td>5</td></tr>
+          <tr><td style="color:var(--p1)"><strong>P1</strong></td><td><code>thread_extractions.json</code> <code>geological_notes.json</code> <code>semantic_primitives.json</code> <code>explorer_notes.json</code></td><td>4</td></tr>
+          <tr><td style="color:var(--p2)"><strong>P2</strong></td><td><code>idea_graph.json</code> <code>synthesis.json</code> <code>grounded_markers.json</code></td><td>3</td></tr>
+          <tr><td style="color:var(--p3)"><strong>P3</strong></td><td><code>file_dossiers.json</code> <code>claude_md_analysis.json</code></td><td>2</td></tr>
+          <tr><td style="color:var(--p5)"><strong>P5</strong></td><td><code>ground_truth_verification.json</code></td><td>1</td></tr>
+          <tr style="background:var(--surface2)"><td><strong>Total</strong></td><td>Up to 15 structured JSON files per session</td><td><strong>15</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- INFRASTRUCTURE -->
+  <section id="infra">
+    <div class="section-title"><div class="dot" style="background:var(--amber)"></div>Infrastructure</div>
+
+    <div class="callout" style="margin-bottom:16px">
+      <strong>config.py:</strong> Central configuration. Env var overrides for <code>ANTHROPIC_API_KEY</code>, <code>HYPERDOCS_SESSION_DIR</code>, <code>HYPERDOCS_STORE_DIR</code>. All paths use <code>Path.home()</code> defaults.
+    </div>
+
+    <div class="callout" style="margin-bottom:16px">
+      <strong>Batch orchestrator:</strong> <code>batch_orchestrator.py</code> tracks progress, queues sessions, manages state. Optimal throughput: 30-60 concurrent agents. 170 triggers 429 errors. 3-minute cooldown between batches.
+    </div>
+
+    <div class="callout" style="margin-bottom:16px">
+      <strong>Cron sync:</strong> 3 hourly cron jobs. Chat history at :00, hyperdocs outputs at :05, GitHub source at :30. Continuous since Feb 9, 2026.
+    </div>
+
+    <div class="callout warn">
+      <strong>Rate limits:</strong> "Credit balance too low" errors are transient rate limits, not actual credit issues ($3,392 was available). 170 concurrent agents = 429 errors. Sweet spot: 50-60 agents. 3-min cooldown between batches.
+    </div>
+  </section>
+
+  <!-- GAPS -->
+  <section id="gaps">
+    <div class="section-title"><div class="dot" style="background:var(--red)"></div>Current Gaps</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Issue</th><th>Impact</th><th>What Needs to Happen</th><th>Type</th></tr></thead>
+        <tbody>
+          <tr><td><strong>V5 code dependency</strong><small><code>deterministic_prep.py</code> line 30-31</small></td><td><code>sys.path.insert(0, str(V5_CODE))</code> imports 5 modules from <code>hyperdocs_2/V5/code/</code>. Other users can't run Phase 0.</td><td>Bundle 5 V5 modules into <code>phase_0_prep/v5_compat/</code></td><td><span class="tag port">PORTABILITY</span></td></tr>
+          <tr><td><strong>Stub files</strong></td><td><code>extract_threads.py</code>, <code>tag_primitives.py</code> listed in <code>phase_1_extraction/</code> but not functional. Confusing for new users.</td><td>Implement as wrappers or document that agent .md files are the real entry point.</td><td><span class="tag stub">STUB</span></td></tr>
+          <tr><td><strong>Missing requirements.txt</strong></td><td>No dependency manifest in source. Users don't know what to install.</td><td>Create: <code>anthropic</code>, <code>tiktoken</code>, <code>python-dotenv</code></td><td><span class="tag missing">MISSING</span></td></tr>
+          <tr><td><strong>PERMANENT_* paths</strong></td><td>9 files hardcode <code>Path.home() / "PERMANENT_*"</code> directly instead of using config.py.</td><td>Route all 9 files through <code>config.py</code> imports.</td><td><span class="tag port">PORTABILITY</span></td></tr>
+          <tr><td><strong>GitHub repo drift</strong></td><td>22 files changed in source, not pushed. 1,633 insertions / 654 deletions behind.</td><td>Run <code>sync_from_dev.sh</code>, commit, push.</td><td><span class="tag drift">DRIFT</span></td></tr>
+          <tr><td><strong>No master orchestrator</strong></td><td>No single command runs all 6 phases. Each phase has its own entry point.</td><td>Build <code>run_pipeline.py SESSION_ID</code></td><td><span class="tag missing">MISSING</span></td></tr>
+          <tr><td><strong>7 sessions fail Phase 0</strong></td><td>Malformed JSONL or missing files. 279/285 = 6 failures.</td><td>Investigate root cause or document as known failures.</td><td><span class="tag data">DATA</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div style="text-align:center; margin-top:56px; color:var(--text-dim); font-size:12px; font-family:var(--font-mono);">
+    Hyperdocs System Architecture v2 &bull; 6 phases, 42 files, 7 agents &bull; Feb 20, 2026
+  </div>
+
+</div>
+
+<!-- Mermaid -->
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base', look: 'classic',
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    themeVariables: {
+      primaryColor: isDark ? '#1e293b' : '#f1f5f9',
+      primaryBorderColor: isDark ? '#38bdf8' : '#0284c7',
+      primaryTextColor: isDark ? '#e2e8f0' : '#0f172a',
+      lineColor: isDark ? '#475569' : '#94a3b8',
+      secondaryColor: isDark ? '#1a1040' : '#ede9fe',
+      tertiaryColor: isDark ? '#0a2e1f' : '#d1fae5',
+      fontSize: '14px', fontFamily: "'Outfit', system-ui, sans-serif",
+    }
+  });
+</script>
+
+<!-- Zoom controls -->
+<script>
+function updateZoomState(wrap) {
+  var target = wrap.querySelector('.mermaid');
+  var zoom = parseFloat(target.dataset.zoom || '1');
+  wrap.classList.toggle('is-zoomed', zoom > 1);
+}
+function zoomDiagram(btn, factor) {
+  var wrap = btn.closest('.mermaid-wrap');
+  var target = wrap.querySelector('.mermaid');
+  var current = parseFloat(target.dataset.zoom || '1');
+  var next = Math.min(Math.max(current * factor, 0.3), 5);
+  target.dataset.zoom = next;
+  target.style.transform = 'scale(' + next + ')';
+  updateZoomState(wrap);
+}
+function resetZoom(btn) {
+  var wrap = btn.closest('.mermaid-wrap');
+  var target = wrap.querySelector('.mermaid');
+  target.dataset.zoom = '1';
+  target.style.transform = 'scale(1)';
+  updateZoomState(wrap);
+}
+document.querySelectorAll('.mermaid-wrap').forEach(function(wrap) {
+  wrap.addEventListener('wheel', function(e) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    var target = wrap.querySelector('.mermaid');
+    var current = parseFloat(target.dataset.zoom || '1');
+    var factor = e.deltaY < 0 ? 1.1 : 0.9;
+    var next = Math.min(Math.max(current * factor, 0.3), 5);
+    target.dataset.zoom = next;
+    target.style.transform = 'scale(' + next + ')';
+    updateZoomState(wrap);
+  }, { passive: false });
+  var startX, startY, scrollL, scrollT;
+  wrap.addEventListener('mousedown', function(e) {
+    if (e.target.closest('.zoom-controls')) return;
+    var target = wrap.querySelector('.mermaid');
+    if (parseFloat(target.dataset.zoom || '1') <= 1) return;
+    wrap.classList.add('is-panning');
+    startX = e.clientX; startY = e.clientY;
+    scrollL = wrap.scrollLeft; scrollT = wrap.scrollTop;
+  });
+  window.addEventListener('mousemove', function(e) {
+    if (!wrap.classList.contains('is-panning')) return;
+    wrap.scrollLeft = scrollL - (e.clientX - startX);
+    wrap.scrollTop = scrollT - (e.clientY - startY);
+  });
+  window.addEventListener('mouseup', function() { wrap.classList.remove('is-panning'); });
+});
+</script>
+</body>
+</html>
