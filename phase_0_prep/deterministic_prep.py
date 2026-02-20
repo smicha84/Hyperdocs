@@ -27,11 +27,19 @@ from datetime import datetime
 from collections import defaultdict
 
 # Import V5 modules from bundled v5_compat package
-from phase_0_prep.v5_compat import (
-    ClaudeSessionReader, ClaudeMessage, ClaudeSession,
-    GeologicalMessage, MetadataExtractor, MessageFilter,
-    ClaudeBehaviorAnalyzer,
-)
+# Works both as `python3 phase_0_prep/deterministic_prep.py` and when imported as module
+try:
+    from phase_0_prep.v5_compat import (
+        ClaudeSessionReader, ClaudeMessage, ClaudeSession,
+        GeologicalMessage, MetadataExtractor, MessageFilter,
+        ClaudeBehaviorAnalyzer,
+    )
+except ImportError:
+    from v5_compat import (
+        ClaudeSessionReader, ClaudeMessage, ClaudeSession,
+        GeologicalMessage, MetadataExtractor, MessageFilter,
+        ClaudeBehaviorAnalyzer,
+    )
 
 # ── Configuration ──────────────────────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
