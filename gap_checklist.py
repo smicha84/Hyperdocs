@@ -305,20 +305,47 @@ def analyze_session(session_dir: Path, previous_checklist: dict = None):
         })
 
     # ── Phase 2: Grounded Markers ─────────────────────────────────────
-    markers = load_json(session_dir / "grounded_markers.json")
+    markers = load_json(session_dir / "grounded_markers_opus.json") or load_json(session_dir / "grounded_markers.json")
     if markers:
         file_status["grounded_markers.json"] = "present"
+
+        # Handle two schemas:
+        # Old: {"markers": [{category, claim, ...}]}
+        # New: {"warnings": [...], "patterns": [...], "recommendations": [...], "metrics": [...]}
         marker_list = markers.get("markers", [])
+        if not marker_list:
+            # New schema — count all items across the 4 categories
+            for key in ["warnings", "patterns", "recommendations", "metrics"]:
+                marker_list.extend(markers.get(key, []))
 
         c, g = check_count_threshold(len(marker_list), MIN_GROUNDED_MARKERS, "grounded_markers", "markers")
         confirmed.append(c)
         if g: gaps.append(g)
 
-        # Check category coverage (handle schema variants: category, _source_type, severity)
-        categories_found = [
-            m.get("category", m.get("_source_type", m.get("severity", "")))
-            for m in marker_list
-        ]
+        # Check category coverage
+        # Old schema: category field per marker
+        # New schema: the key itself IS the category (warnings=risk, patterns=behavior, etc.)
+        categories_found = []
+        if markers.get("markers"):
+            categories_found = [
+                m.get("category", m.get("_source_type", m.get("severity", "")))
+                for m in markers["markers"]
+            ]
+        else:
+            # Map new schema keys to standard categories
+            schema_to_category = {
+                "warnings": "risk",
+                "patterns": "behavior",
+                "recommendations": "decision",
+                "metrics": "architecture",
+            }
+            for key, category in schema_to_category.items():
+                if markers.get(key):
+                    categories_found.extend([category] * len(markers[key]))
+            # Also add "opportunity" if recommendations exist (they suggest improvements)
+            if markers.get("recommendations"):
+                categories_found.append("opportunity")
+
         c, g = check_enum_coverage(categories_found, MARKER_CATEGORIES, "grounded_markers.categories")
         confirmed.append(c)
         if g: gaps.append(g)
