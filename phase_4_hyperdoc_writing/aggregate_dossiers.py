@@ -195,9 +195,165 @@ def aggregate_file_entries(entries: list[dict]) -> dict:
     }
 
 
+def load_code_similarity(output_dir: Path) -> dict:
+    """Load code similarity index and build per-file lookup.
+    Returns {filepath: [{similar_to, score, pattern_type}, ...]}"""
+    sim_path = output_dir / "code_similarity_index.json"
+    # Also check PERMANENT_HYPERDOCS/indexes/
+    if not sim_path.exists():
+        alt = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "code_similarity_index.json"
+        if alt.exists():
+            sim_path = alt
+    if not sim_path.exists():
+        return {}
+
+    try:
+        data = json.loads(sim_path.read_text())
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+
+    matches = data.get("matches", data.get("pairs", []))
+    by_file = defaultdict(list)
+    for m in matches:
+        if isinstance(m, dict):
+            f1 = m.get("file_a", m.get("file1", ""))
+            f2 = m.get("file_b", m.get("file2", ""))
+            signals = m.get("signals", {})
+            # Score from signals (text_similarity or func_overlap) or top-level
+            score = m.get("score", signals.get("text_similarity", signals.get("func_overlap", 0)))
+            ptype = m.get("pattern_type", m.get("type", "unknown"))
+            if f1 and f2 and score > 0.3:
+                by_file[f1].append({"similar_to": f2, "score": round(score, 3), "pattern": ptype})
+                by_file[f2].append({"similar_to": f1, "score": round(score, 3), "pattern": ptype})
+
+    # Sort by score descending, keep top 5 per file
+    for fp in by_file:
+        by_file[fp] = sorted(by_file[fp], key=lambda x: -x["score"])[:5]
+
+    return dict(by_file)
+
+
+def load_genealogy_families(output_dir: Path) -> dict:
+    """Load per-session genealogy data and build per-file lookup.
+    Returns {filepath: {family_name, family_members, role}}
+    Searches both output_dir/session_* and output_dir/sessions/session_*."""
+    by_file = {}
+
+    # Find session directories — could be at output_dir/session_* or output_dir/sessions/session_*
+    search_dirs = [output_dir]
+    sessions_subdir = output_dir / "sessions"
+    if sessions_subdir.exists():
+        search_dirs.append(sessions_subdir)
+
+    for search_dir in search_dirs:
+        for d in sorted(search_dir.iterdir()):
+            if not d.is_dir() or not d.name.startswith("session_"):
+                continue
+            gen_path = d / "file_genealogy.json"
+            if not gen_path.exists():
+                continue
+            try:
+                data = json.loads(gen_path.read_text())
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                continue
+
+            families = data.get("file_families", data.get("families", data.get("genealogy_families", [])))
+            for fam in families:
+                name = fam.get("concept", fam.get("name", fam.get("family_name", "unnamed")))
+                versions = fam.get("versions", fam.get("members", fam.get("files", [])))
+                member_files = []
+                for v in versions:
+                    fp = v if isinstance(v, str) else v.get("file", "")
+                    if fp:
+                        member_files.append(fp)
+                for fp in member_files:
+                    if fp not in by_file:
+                        by_file[fp] = {
+                            "family_name": name,
+                            "family_members": member_files,
+                            "session_source": d.name.replace("session_", ""),
+                        }
+
+    return by_file
+
+
+def build_frustration_file_map(output_dir: Path) -> dict:
+    """Join frustration peaks with file mentions to build per-file frustration associations.
+    Returns {filepath: [{session, message_index, caps_ratio, profanity}, ...]}
+    Searches both output_dir/session_* and output_dir/sessions/session_*."""
+    by_file = defaultdict(list)
+
+    search_dirs = [output_dir]
+    sessions_subdir = output_dir / "sessions"
+    if sessions_subdir.exists():
+        search_dirs.append(sessions_subdir)
+
+    for search_dir in search_dirs:
+        for d in sorted(search_dir.iterdir()):
+            if not d.is_dir() or not d.name.startswith("session_"):
+                continue
+            summary_path = d / "session_summary.json"
+            enriched_path = d / "enriched_session.json"
+            if not summary_path.exists():
+                continue
+
+            session_id = d.name.replace("session_", "")
+            try:
+                summary = json.loads(summary_path.read_text())
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                continue
+
+            stats = summary.get("session_stats", summary)
+            peaks = stats.get("frustration_peaks", [])
+            if not peaks:
+                continue
+
+            # Get file mentions per message from enriched session
+            msg_files = {}
+            if enriched_path.exists():
+                try:
+                    enriched = json.loads(enriched_path.read_text())
+                    for msg in enriched.get("messages", []):
+                        idx = msg.get("index", -1)
+                        # File mentions live in metadata.files, metadata.files_edit, etc.
+                        meta = msg.get("metadata", {})
+                        files = meta.get("files", [])
+                        files += meta.get("files_create", [])
+                        files += meta.get("files_edit", [])
+                        # Also check top-level for alternative schemas
+                        files += msg.get("files_mentioned", [])
+                        if files:
+                            msg_files[idx] = list(set(files))
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    pass
+
+            # For each frustration peak, find files mentioned in nearby messages (within 5 msg window)
+            for peak in peaks:
+                peak_idx = peak.get("index", -1)
+                if peak_idx < 0:
+                    continue
+
+                # Look at messages within ±5 of the frustration peak
+                associated_files = set()
+                for offset in range(-5, 6):
+                    check_idx = peak_idx + offset
+                    if check_idx in msg_files:
+                        associated_files.update(msg_files[check_idx])
+
+                for fp in associated_files:
+                    by_file[fp].append({
+                        "session": session_id,
+                        "message_index": peak_idx,
+                        "caps_ratio": peak.get("caps_ratio", 0),
+                        "profanity": peak.get("profanity", False),
+                    })
+
+    return dict(by_file)
+
+
 def main():
     print("=" * 60)
-    print("Phase 4a: Cross-Session Dossier Aggregation")
+    print("Phase 4a: Cross-Session Dossier Aggregation (v2 — with genealogy, similarity, frustration)")
     print("=" * 60)
     print(f"Output dir: {OUTPUT}")
     print(f"Project root: {PROJECT_ROOT}")
@@ -273,18 +429,75 @@ def main():
     print(f"  Exist on disk: {exists_count}")
     print()
 
+    # ── Enrich with cross-session signals ─────────────────────────────
+    print("Loading cross-session enrichment data...")
+
+    # Also check PERMANENT_HYPERDOCS for session data
+    PERM_SESSIONS = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+
+    # Code similarity
+    sim_data = load_code_similarity(OUTPUT)
+    if not sim_data:
+        sim_data = load_code_similarity(Path.home() / "PERMANENT_HYPERDOCS" / "indexes")
+    sim_hits = 0
+    for fp, entry in aggregated.items():
+        basename = Path(fp).name
+        matches = sim_data.get(fp, sim_data.get(basename, []))
+        if matches:
+            entry["code_similarity"] = matches
+            sim_hits += 1
+        else:
+            entry["code_similarity"] = []
+    print(f"  Code similarity: {sim_hits} files have matches (from {len(sim_data)} indexed)")
+
+    # Genealogy families — check both output/ and PERMANENT_HYPERDOCS/
+    gen_data = load_genealogy_families(OUTPUT)
+    if not gen_data and PERM_SESSIONS.exists():
+        gen_data = load_genealogy_families(PERM_SESSIONS.parent)
+    if not gen_data:
+        gen_data = load_genealogy_families(Path.home() / "PERMANENT_HYPERDOCS")
+    gen_hits = 0
+    for fp, entry in aggregated.items():
+        basename = Path(fp).name
+        family = gen_data.get(fp, gen_data.get(basename, None))
+        if family:
+            entry["genealogy"] = family
+            gen_hits += 1
+        else:
+            entry["genealogy"] = None
+    print(f"  Genealogy: {gen_hits} files in families (from {len(gen_data)} mapped)")
+
+    # Frustration-file associations — check both output/ and PERMANENT_HYPERDOCS/
+    frust_data = build_frustration_file_map(OUTPUT)
+    if not frust_data and PERM_SESSIONS.exists():
+        frust_data = build_frustration_file_map(Path.home() / "PERMANENT_HYPERDOCS")
+    frust_hits = 0
+    for fp, entry in aggregated.items():
+        basename = Path(fp).name
+        associations = frust_data.get(fp, frust_data.get(basename, []))
+        if associations:
+            entry["frustration_associations"] = associations
+            frust_hits += 1
+        else:
+            entry["frustration_associations"] = []
+    print(f"  Frustration attribution: {frust_hits} files associated with frustration peaks")
+    print()
+
     # Top 20
     top = sorted(aggregated.values(), key=lambda x: x["session_count"], reverse=True)[:20]
     print("Top 20 files by session count:")
     for t in top:
         disk = "DISK" if t["exists_on_disk"] else "    "
-        print(f"  {t['session_count']:>3}x [{disk}] {t['file_path']}")
+        sim = f" sim:{len(t.get('code_similarity', []))}" if t.get('code_similarity') else ""
+        gen = " GEN" if t.get('genealogy') else ""
+        frust = f" frust:{len(t.get('frustration_associations', []))}" if t.get('frustration_associations') else ""
+        print(f"  {t['session_count']:>3}x [{disk}]{gen}{sim}{frust} {t['file_path']}")
     print()
 
     # Build output
     output_data = {
         "generated_at": datetime.utcnow().isoformat() + "Z",
-        "generator": "Phase 4a - Cross-Session Dossier Aggregation",
+        "generator": "Phase 4a - Cross-Session Dossier Aggregation v2 (with genealogy, similarity, frustration)",
         "stats": {
             "sessions_read": sessions_read,
             "dict_format": dict_format,
