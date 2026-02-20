@@ -239,9 +239,8 @@ def compare_pair(fp_a: FileFingerprint, fp_b: FileFingerprint, text_threshold: f
     text_similarity = 0.0
     if signal_score >= text_threshold or name_overlap > 0.3:
         # Use clean source (hyperdoc comments stripped)
-        # For very large files, compare first 5000 chars (representative sample)
-        src_a = fp_a.clean_source[:5000]
-        src_b = fp_b.clean_source[:5000]
+        src_a = fp_a.clean_source
+        src_b = fp_b.clean_source
         seq = difflib.SequenceMatcher(None, src_a, src_b, autojunk=True)
         text_similarity = seq.ratio()
 
@@ -452,7 +451,12 @@ def main():
     if args.output:
         output_path = Path(args.output)
     else:
-        output_path = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "code_similarity_index.json"
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+            from config import INDEXES_DIR
+            output_path = INDEXES_DIR / "code_similarity_index.json"
+        except ImportError:
+            output_path = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "code_similarity_index.json"
 
     print("=" * 60)
     print("CODE SIMILARITY ENGINE — Full Scan")

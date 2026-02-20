@@ -21,8 +21,62 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 REPO = Path(__file__).resolve().parent
-CHAT_DIR = Path.home() / "PERMANENT_CHAT_HISTORY" / "sessions"
-OUTPUT_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+try:
+    from config import CHAT_ARCHIVE_DIR, SESSIONS_STORE_DIR
+    CHAT_DIR = CHAT_ARCHIVE_DIR / "sessions"
+    OUTPUT_DIR = SESSIONS_STORE_DIR
+except ImportError:
+    CHAT_DIR = Path.home() / "PERMANENT_CHAT_HISTORY" / "sessions"
+    OUTPUT_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+
+def _build_duplicate_set():
+    """Identify duplicate session directories that process the same conversation.
+
+    The chat history archive often has two JSONL files for the same conversation:
+      - ce1dc2b6-ac7a-4d7e-95b7-69a63213b440.jsonl  (UUID only)
+      - 59d386aa_ce1dc2b6-ac7a-4d7e-95b7-69a63213b440.jsonl  (prefix_UUID)
+
+    Both contain the same conversation. Phase 0 processes both because they have
+    different first-8-char IDs (ce1dc2b6 vs 59d386aa), creating two session
+    directories for the same data.
+
+    We keep the session directory whose short ID matches the UUID (the canonical one)
+    and skip the one whose short ID is just the prefix.
+
+    Returns a set of short IDs (first 8 chars of session dir name) to skip.
+    """
+    # Map UUID -> list of JSONL files that contain it
+    uuid_files = {}
+    for f in CHAT_DIR.iterdir():
+        if f.suffix != ".jsonl":
+            continue
+        stem = f.stem
+        if '_' in stem and not stem.startswith('agent-'):
+            prefix, uuid_part = stem.split('_', 1)
+        else:
+            prefix = None
+            uuid_part = stem
+
+        if uuid_part not in uuid_files:
+            uuid_files[uuid_part] = []
+        uuid_files[uuid_part].append({'prefix': prefix, 'short': f.stem[:8], 'file': f.name})
+
+    # For UUIDs with 2+ files, skip the prefixed version
+    # (keep the one whose short ID matches the UUID start)
+    skip_ids = set()
+    for uuid_part, files in uuid_files.items():
+        if len(files) < 2:
+            continue
+        uuid_short = uuid_part[:8]
+        for fi in files:
+            if fi['prefix'] is not None and fi['short'] != uuid_short:
+                # This is the prefixed copy — skip it
+                skip_ids.add(fi['short'])
+
+    return skip_ids
+
+DUPLICATE_SKIP_IDS = _build_duplicate_set()
+
 
 def find_jsonl_for_session(session_dir_name):
     """Find the source JSONL file for a session directory."""
@@ -84,16 +138,19 @@ def main():
         session_name = sd.name
         short_id = session_name.replace("session_", "")
 
+        # Skip duplicate sessions (same conversation stored under two filenames)
+        if short_id in DUPLICATE_SKIP_IDS:
+            skipped += 1
+            continue
+
         # Find source JSONL
         jsonl = find_jsonl_for_session(session_name)
         if not jsonl:
             skipped += 1
             continue
 
-        session_id = jsonl.stem  # Full session ID from filename
-
         try:
-            ok, msg = run_phase0(session_id, jsonl, sd)
+            ok, msg = run_phase0(short_id, jsonl, sd)
             if ok:
                 success += 1
             else:
@@ -140,7 +197,11 @@ def main():
         "sessions_skipped": skipped,
         "errors": [{"session": s, "error": e} for s, e in errors],
     }
-    log_path = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "phase0_reprocess_log.json"
+    try:
+        from config import INDEXES_DIR as _IDX
+        log_path = _IDX / "phase0_reprocess_log.json"
+    except ImportError:
+        log_path = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "phase0_reprocess_log.json"
     with open(log_path, "w") as f:
         json.dump(log, f, indent=2)
 

@@ -20,8 +20,15 @@ import re
 from pathlib import Path
 from datetime import datetime
 
+import sys as _sys
 BASE = Path(__file__).parent
-V5_CODE = BASE.parent.parent / ".claude" / "hooks" / "hyperdoc" / "hyperdocs_2" / "V5" / "code"
+# V5 source directory — use config if available, fallback to v5_compat
+_sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from config import V5_SOURCE_DIR
+    V5_CODE = V5_SOURCE_DIR
+except ImportError:
+    V5_CODE = Path(__file__).resolve().parent.parent / "phase_0_prep" / "v5_compat"
 HYPERDOC_V2_DIR = BASE / "hyperdoc_v2"
 PREVIEW_DIR = BASE / "hyperdoc_previews_v2"
 

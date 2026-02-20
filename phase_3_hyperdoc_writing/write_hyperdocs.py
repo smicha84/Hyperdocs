@@ -447,7 +447,7 @@ def _build_friction(
     for w in warnings:
         if w.get("severity") in ("critical", "high"):
             friction.append({
-                "summary": w.get("warning", "")[:200],
+                "summary": w.get("warning", ""),
                 "msg_ref": str(w.get("first_discovered", "?")),
                 "detail": f"[{w['id']}] Full warning: {w.get('warning', '')} Evidence: {w.get('evidence', 'N/A')}",
             })

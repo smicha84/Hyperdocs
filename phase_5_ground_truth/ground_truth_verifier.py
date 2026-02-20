@@ -16,10 +16,17 @@ from pathlib import Path
 from datetime import datetime
 
 BASE = Path(__file__).parent.parent  # output/session_3b7084d5/
-V5_CODE = BASE.parent.parent / ".claude" / "hooks" / "hyperdoc" / "hyperdocs_2" / "V5" / "code"
-HOOKS_DIR = BASE.parent.parent / ".claude" / "hooks" / "hyperdoc"
 PROJECT_ROOT = BASE.parent.parent
+HOOKS_DIR = PROJECT_ROOT / ".claude" / "hooks" / "hyperdoc"
 import os; SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
+
+# V5 source directory — use config if available, fallback to v5_compat
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from config import V5_SOURCE_DIR
+    V5_CODE = V5_SOURCE_DIR
+except ImportError:
+    V5_CODE = Path(__file__).resolve().parent.parent / "phase_0_prep" / "v5_compat"
 
 # Some files live outside V5/code
 ALTERNATE_PATHS = {

@@ -11,8 +11,15 @@ import re
 import os
 from pathlib import Path
 
+import sys
 BASE = Path(__file__).parent
-V5_CODE = Path(__file__).parent.parent.parent / ".claude" / "hooks" / "hyperdoc" / "hyperdocs_2" / "V5" / "code"
+# V5 source directory — use config if available, fallback to v5_compat
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from config import V5_SOURCE_DIR
+    V5_CODE = V5_SOURCE_DIR
+except ImportError:
+    V5_CODE = Path(__file__).resolve().parent.parent / "phase_0_prep" / "v5_compat"
 BLOCKS_DIR = BASE / "hyperdoc_blocks"
 PREVIEW_DIR = BASE / "hyperdoc_previews"
 PREVIEW_DIR.mkdir(exist_ok=True)

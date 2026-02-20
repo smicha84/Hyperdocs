@@ -34,7 +34,13 @@ from datetime import datetime
 from copy import deepcopy
 
 
-HYPERDOCS_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "hyperdocs"
+try:
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from config import HYPERDOCS_STORE_DIR
+    HYPERDOCS_DIR = HYPERDOCS_STORE_DIR
+except ImportError:
+    HYPERDOCS_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "hyperdocs"
 
 
 class HyperdocLayerManager:
@@ -157,7 +163,7 @@ class HyperdocLayerManager:
             "alternatives_considered": alternatives or [],
             "related_files": related_files or [],
             "header": f"@ctx:type=seed @ctx:created={datetime.now().strftime('%Y-%m-%d')} @ctx:state=new\n"
-                      f"@ctx:context=\"{context[:200]}\"\n"
+                      f"@ctx:context=\"{context}\"\n"
                       f"This file was created with documented provenance. The conversation that led to\n"
                       f"its creation has been captured before any code was written.",
             "inline_annotations": [],

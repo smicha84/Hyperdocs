@@ -39,6 +39,21 @@ ARCHIVE_PATH = os.getenv("HYPERDOCS_ARCHIVE_PATH", "")
 # Claude Code project identifier (for session file lookup)
 PROJECT_ID = os.getenv("HYPERDOCS_PROJECT_ID", "")
 
+# ── V5 Source Code Directory ──────────────────────────────────
+# Phase 4 (insertion) and Phase 5 (ground truth) read source files from disk.
+# These modules are bundled in phase_0_prep/v5_compat/ for portability.
+V5_SOURCE_DIR = Path(os.getenv(
+    "HYPERDOCS_V5_SOURCE",
+    str(REPO_ROOT / "phase_0_prep" / "v5_compat")
+))
+
+# ── Permanent Storage ─────────────────────────────────────────
+STORE_DIR = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS")))
+SESSIONS_STORE_DIR = STORE_DIR / "sessions"
+INDEXES_DIR = STORE_DIR / "indexes"
+HYPERDOCS_STORE_DIR = STORE_DIR / "hyperdocs"
+CHAT_ARCHIVE_DIR = Path(os.getenv("HYPERDOCS_CHAT_ARCHIVE", str(Path.home() / "PERMANENT_CHAT_HISTORY")))
+
 # ── Helpers ────────────────────────────────────────────────────
 
 def get_session_output_dir():

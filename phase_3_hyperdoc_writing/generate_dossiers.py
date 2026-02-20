@@ -120,7 +120,7 @@ for w in markers.get("warnings", []):
             file_warnings[f].append({
                 "id": w["id"],
                 "severity": w["severity"],
-                "warning": w["warning"][:200],
+                "warning": w["warning"],
                 "first_discovered": w.get("first_discovered"),
                 "resolution_index": w.get("resolution_index"),
             })
@@ -132,7 +132,7 @@ for r in markers.get("recommendations", []):
             file_recommendations[f].append({
                 "id": r["id"],
                 "priority": r["priority"],
-                "recommendation": r["recommendation"][:200],
+                "recommendation": r["recommendation"],
             })
 
 # ---------------------------------------------------------------------------
@@ -545,7 +545,7 @@ for filename in TARGET_FILES:
             subgraph_details.append({
                 "name": sg["name"],
                 "node_count": len(sg.get("node_ids", [])),
-                "summary": sg["summary"][:300],
+                "summary": sg["summary"],
             })
 
     dossier = {
