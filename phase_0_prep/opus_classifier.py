@@ -376,10 +376,26 @@ def main():
         print(f"Estimated cost: ~${len(batch) * 0.003:.2f} (batch of {len(batch)} messages)")
         return
 
-    # Call Opus
-    print("Calling Opus for classification...")
-    results = classify_with_opus(batch)
-    print(f"Got {len(results)} classifications")
+    # Call Opus — batch into chunks of 50 to avoid output truncation
+    CHUNK_SIZE = 50
+    results = []
+    total_chunks = (len(batch) + CHUNK_SIZE - 1) // CHUNK_SIZE
+    print(f"Calling Opus for classification ({total_chunks} chunks of {CHUNK_SIZE})...")
+
+    for i in range(0, len(batch), CHUNK_SIZE):
+        chunk = batch[i:i + CHUNK_SIZE]
+        chunk_num = i // CHUNK_SIZE + 1
+        print(f"  Chunk {chunk_num}/{total_chunks}: {len(chunk)} messages...", end=" ", flush=True)
+        try:
+            chunk_results = classify_with_opus(chunk)
+            results.extend(chunk_results)
+            print(f"got {len(chunk_results)}")
+        except json.JSONDecodeError as e:
+            print(f"JSON parse error: {e} — skipping chunk")
+        except Exception as e:
+            print(f"Error: {e} — skipping chunk")
+
+    print(f"Total classifications: {len(results)}")
 
     # Save results
     output = {
