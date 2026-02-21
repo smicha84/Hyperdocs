@@ -46,11 +46,20 @@ def load_json(path):
 def build_file_timelines(thread_data):
     """Build activity timelines from thread extractions.
 
+    Supports two formats:
+    - Old format: thread_data["extractions"] is a list; each entry has
+      entry["threads"]["software"]["created"] and ["modified"] as filename lists.
+    - Canonical format: thread_data["threads"] is a dict with category keys;
+      thread_data["threads"]["software"]["entries"] is a list of
+      {"msg_index": N, "content": "...", "significance": "..."} dicts.
+      Filenames are extracted from the free-text "content" field.
+
     Returns: {filename: [{msg: N, action: created|modified}, ...]}
     """
     timelines = defaultdict(list)
-    extractions = thread_data.get("extractions", [])
 
+    # --- Old format ---
+    extractions = thread_data.get("extractions", [])
     for ext in extractions:
         idx = ext.get("index", 0)
         sw = ext.get("threads", {}).get("software", {})
@@ -63,6 +72,29 @@ def build_file_timelines(thread_data):
         for f in sw.get("modified", []):
             if f.endswith(".py"):
                 timelines[f].append({"msg": idx, "action": "modified"})
+
+    # --- Canonical format ---
+    # thread_data["threads"] is a dict; "software" key holds file activity entries.
+    threads_dict = thread_data.get("threads", {})
+    if isinstance(threads_dict, dict):
+        sw_category = threads_dict.get("software", {})
+        if isinstance(sw_category, dict):
+            for entry in sw_category.get("entries", []):
+                idx = entry.get("msg_index", 0)
+                content = entry.get("content", "")
+                # Heuristic: treat "created" vs "modified" by keywords in content.
+                # Words like "created", "wrote", "new file" → created action.
+                # Words like "modified", "updated", "edited", "changed" → modified action.
+                content_lower = content.lower()
+                if any(w in content_lower for w in ("creat", "wrote", "new file", "added")):
+                    action = "created"
+                elif any(w in content_lower for w in ("modif", "updat", "edit", "chang", "fix")):
+                    action = "modified"
+                else:
+                    action = "modified"  # default for ambiguous software entries
+
+                for f in extract_files_from_text(content):
+                    timelines[f].append({"msg": idx, "action": action})
 
     # Sort each timeline by message index
     for f in timelines:
@@ -113,8 +145,9 @@ def detect_idea_graph_lineage(idea_graph, idea_files):
     edges = idea_graph.get("edges", [])
 
     for edge in edges:
-        src_id = edge.get("from_id", "")
-        tgt_id = edge.get("to_id", "")
+        # Old format uses "from_id"/"to_id"; canonical format uses "from"/"to".
+        src_id = edge.get("from_id") or edge.get("from", "")
+        tgt_id = edge.get("to_id") or edge.get("to", "")
         transition = edge.get("transition_type", "")
         trigger = edge.get("trigger_message", 0)
         evidence = edge.get("evidence", "")

@@ -45,13 +45,33 @@ def load_json_safe(path):
         return {}
 
 
+def _normalize_markers(m):
+    """Convert flat markers list to structured format if needed."""
+    if "warnings" in m or "patterns" in m:
+        return m
+    flat = m.get("markers", [])
+    if not flat:
+        return m
+    structured = {"warnings": [], "patterns": [], "recommendations": [], "metrics": [], "iron_rules_registry": []}
+    for item in flat:
+        cat = item.get("category", "behavior")
+        entry = {"id": item.get("marker_id", ""), "severity": "medium", "target": item.get("target_file", ""),
+                 "warning": item.get("claim", ""), "description": item.get("claim", ""),
+                 "value": "", "confidence": item.get("confidence", 0.5)}
+        if cat == "risk": structured["warnings"].append(entry)
+        elif cat == "decision": structured["recommendations"].append(entry)
+        elif cat == "architecture": structured["metrics"].append(entry)
+        else: structured["patterns"].append(entry)
+    return {**m, **structured}
+
+
 def generate_dashboard(session_dir):
     """Generate the dashboard HTML."""
     status = load_json_safe(session_dir / "pipeline_status.json")
     summary = load_json_safe(session_dir / "session_metadata.json")
     genealogy = load_json_safe(session_dir / "file_genealogy.json")
     gt_summary = load_json_safe(session_dir / "ground_truth_summary.json")
-    grounded = load_json_safe(session_dir / "grounded_markers.json")
+    grounded = _normalize_markers(load_json_safe(session_dir / "grounded_markers.json"))
     discovery = load_json_safe(OUTPUT_BASE / "discovery.json")
 
     session_id = status.get("session_id", session_dir.name.replace("session_", ""))

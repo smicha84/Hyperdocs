@@ -79,14 +79,45 @@ TARGET_FILES = [
 print("Counting file references in thread extractions...")
 thread_file_counts = defaultdict(lambda: {"created": 0, "modified": 0, "total": 0})
 
-for ext in threads.get("extractions", []):
-    sw = ext.get("threads", {}).get("software", {})
-    for f in sw.get("created", []) or []:
-        thread_file_counts[f]["created"] += 1
-        thread_file_counts[f]["total"] += 1
-    for f in sw.get("modified", []) or []:
-        thread_file_counts[f]["modified"] += 1
-        thread_file_counts[f]["total"] += 1
+# Canonical format: top-level "threads" dict with keys ideas/reactions/software/code/plans/behavior.
+# Each value is {"description": "...", "entries": [{"msg_index": N, "content": "...", "significance": "..."}]}.
+# Old format (no longer present in batch output, kept for backward compatibility):
+# top-level "extractions" list, each with {"threads": {"software": {"created": [...], "modified": [...]}}}
+
+if "extractions" in threads:
+    # Old format: extractions list with software.created / software.modified arrays
+    for ext in threads.get("extractions", []):
+        sw = ext.get("threads", {}).get("software", {})
+        for f in sw.get("created", []) or []:
+            thread_file_counts[f]["created"] += 1
+            thread_file_counts[f]["total"] += 1
+        for f in sw.get("modified", []) or []:
+            thread_file_counts[f]["modified"] += 1
+            thread_file_counts[f]["total"] += 1
+else:
+    # Canonical format: threads dict, each value has an "entries" list whose
+    # "content" field is a free-text string that may mention filenames.
+    # We scan all thread categories for any .py / .json / .md / .html filename references.
+    _file_pattern = re.compile(r'\b([\w\-]+\.(?:py|json|md|html|js|sh|txt))\b')
+    threads_dict = threads.get("threads", {})
+    for thread_key, thread_val in threads_dict.items():
+        if not isinstance(thread_val, dict):
+            continue
+        entries = thread_val.get("entries", [])
+        for entry in entries:
+            content = entry.get("content", "") if isinstance(entry, dict) else ""
+            for match in _file_pattern.findall(content):
+                # Use thread category to distinguish created vs modified references.
+                # The "software" thread describes file operations; for other threads
+                # count all mentions as "total" only (no created/modified distinction).
+                if thread_key == "software":
+                    # Heuristic: content mentioning "created" or "new" → created; else modified
+                    content_lower = content.lower()
+                    if any(kw in content_lower for kw in ("created", "new file", "wrote", "writing")):
+                        thread_file_counts[match]["created"] += 1
+                    else:
+                        thread_file_counts[match]["modified"] += 1
+                thread_file_counts[match]["total"] += 1
 
 # ---------------------------------------------------------------------------
 # 4. Map warnings and recommendations to files
@@ -96,6 +127,8 @@ print("Mapping warnings and recommendations to files...")
 
 def file_matches_target(target_text, filename):
     """Check if a warning/recommendation target references this file."""
+    if not target_text:
+        return False
     if filename in target_text:
         return True
     base = filename.replace(".py", "")
@@ -113,27 +146,121 @@ def file_matches_target(target_text, filename):
     return False
 
 
-file_warnings = defaultdict(list)
-for w in markers.get("warnings", []):
-    for f in TARGET_FILES:
-        if file_matches_target(w["target"], f):
-            file_warnings[f].append({
-                "id": w["id"],
-                "severity": w["severity"],
-                "warning": w["warning"],
-                "first_discovered": w.get("first_discovered"),
-                "resolution_index": w.get("resolution_index"),
-            })
+def _extract_target_text(marker):
+    """Extract a target/scope string from a marker dict regardless of schema variant."""
+    # Try common field names in order of specificity
+    for key in ("target", "target_file", "affected_files", "affected_components",
+                "affected_component", "files_affected", "scope"):
+        val = marker.get(key)
+        if val:
+            if isinstance(val, list):
+                return " ".join(str(v) for v in val)
+            return str(val)
+    # Fall back to searching claim/content/detail/description for filenames
+    for key in ("claim", "content", "detail", "description", "message", "warning"):
+        val = marker.get(key)
+        if val and isinstance(val, str):
+            return val
+    return ""
 
+
+def _extract_marker_id(marker):
+    """Extract an ID from a marker dict regardless of schema variant."""
+    for key in ("marker_id", "id", "warning_id"):
+        if marker.get(key):
+            return str(marker[key])
+    return ""
+
+
+def _extract_severity(marker):
+    """Extract severity/priority from a marker dict regardless of schema variant."""
+    for key in ("severity", "priority"):
+        if marker.get(key):
+            return str(marker[key])
+    return "unknown"
+
+
+def _extract_warning_text(marker):
+    """Extract the warning/claim text from a marker dict regardless of schema variant."""
+    for key in ("warning", "claim", "title", "content", "detail", "description", "message"):
+        val = marker.get(key)
+        if val and isinstance(val, str):
+            return val
+        if val and isinstance(val, dict):
+            # some schemas nest content as dict (e.g. {"title": "...", "description": "..."})
+            return val.get("title") or val.get("description") or str(val)
+    return ""
+
+
+def _extract_recommendation_text(marker):
+    """Extract recommendation/actionable guidance from a marker dict."""
+    for key in ("recommendation", "actionable_guidance", "action", "action_required",
+                "remediation", "resolution", "fix", "recommended_action", "verification_action"):
+        val = marker.get(key)
+        if val and isinstance(val, str):
+            return val
+    return ""
+
+
+file_warnings = defaultdict(list)
 file_recommendations = defaultdict(list)
-for r in markers.get("recommendations", []):
-    for f in TARGET_FILES:
-        if file_matches_target(r["target"], f):
-            file_recommendations[f].append({
-                "id": r["id"],
-                "priority": r["priority"],
-                "recommendation": r["recommendation"],
-            })
+
+# Old format: separate top-level "warnings" and "recommendations" lists
+# (never observed in batch output but kept for backward compatibility)
+if "warnings" in markers:
+    for w in markers.get("warnings", []):
+        target = _extract_target_text(w)
+        for f in TARGET_FILES:
+            if file_matches_target(target, f):
+                file_warnings[f].append({
+                    "id": _extract_marker_id(w),
+                    "severity": _extract_severity(w),
+                    "warning": _extract_warning_text(w),
+                    "first_discovered": w.get("first_discovered"),
+                    "resolution_index": w.get("resolution_index"),
+                })
+
+if "recommendations" in markers:
+    for r in markers.get("recommendations", []):
+        target = _extract_target_text(r)
+        for f in TARGET_FILES:
+            if file_matches_target(target, f):
+                file_recommendations[f].append({
+                    "id": _extract_marker_id(r),
+                    "priority": _extract_severity(r),
+                    "recommendation": _extract_recommendation_text(r),
+                })
+
+# Canonical format: flat "markers" list with heterogeneous schemas.
+# Attempt best-effort file mapping for each marker by extracting target text
+# and checking against TARGET_FILES.  Markers whose target mentions a file go
+# into file_warnings (all markers surface as warnings — recommendations are a
+# subset distinguished by the presence of actionable guidance text).
+if "markers" in markers:
+    for m in markers.get("markers", []):
+        if not isinstance(m, dict):
+            continue
+        target = _extract_target_text(m)
+        warning_text = _extract_warning_text(m)
+        rec_text = _extract_recommendation_text(m)
+        marker_id = _extract_marker_id(m)
+        severity = _extract_severity(m)
+        for f in TARGET_FILES:
+            if file_matches_target(target, f) or file_matches_target(warning_text, f):
+                if warning_text:
+                    file_warnings[f].append({
+                        "id": marker_id,
+                        "severity": severity,
+                        "warning": warning_text,
+                        "first_discovered": m.get("first_discovered"),
+                        "resolution_index": m.get("resolution_index"),
+                    })
+                if rec_text:
+                    file_recommendations[f].append({
+                        "id": marker_id,
+                        "priority": severity,
+                        "recommendation": rec_text,
+                    })
 
 # ---------------------------------------------------------------------------
 # 5. Map idea_graph subgraphs to files
@@ -208,8 +335,20 @@ IDEA_FILE_MAP = {
     ],
 }
 
-# Get subgraph details for cross-referencing
-subgraph_lookup = {sg["name"]: sg for sg in idea_graph.get("subgraphs", [])}
+# Get subgraph details for cross-referencing.
+# Two known subgraph schemas exist in batch output:
+#   Schema A: {"name": "...", "node_ids": [...], "summary": "..."}
+#   Schema B: {"id": "SG01", "label": "...", "description": "...", "node_ids": [...], ...}
+# Normalize both to a common key (the human-readable name string) for the lookup.
+# Sessions that have no "subgraphs" key at all produce an empty lookup (graceful).
+subgraph_lookup = {}
+for sg in idea_graph.get("subgraphs", []):
+    if not isinstance(sg, dict):
+        continue
+    # Prefer "name"; fall back to "label" (Schema B)
+    sg_name = sg.get("name") or sg.get("label") or ""
+    if sg_name:
+        subgraph_lookup[sg_name] = sg
 
 # ---------------------------------------------------------------------------
 # 6. Derive story arcs and key decisions per file
@@ -542,10 +681,15 @@ for filename in TARGET_FILES:
     for sg_name in subgraph_names:
         sg = subgraph_lookup.get(sg_name)
         if sg:
+            # Normalize across two schemas:
+            # Schema A: {"name": "...", "summary": "...", "node_ids": [...]}
+            # Schema B: {"id": "...", "label": "...", "description": "...", "node_ids": [...]}
+            resolved_name = sg.get("name") or sg.get("label") or sg_name
+            resolved_summary = sg.get("summary") or sg.get("description") or ""
             subgraph_details.append({
-                "name": sg["name"],
+                "name": resolved_name,
                 "node_count": len(sg.get("node_ids", [])),
-                "summary": sg["summary"],
+                "summary": resolved_summary,
             })
 
     dossier = {

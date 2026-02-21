@@ -35,6 +35,44 @@ def load_json(path: Path) -> dict:
         return json.load(f)
 
 
+def normalize_markers(markers: dict) -> dict:
+    """Convert flat markers list to structured format if needed.
+
+    Canonical batch output has: {"markers": [{marker_id, category, claim, confidence}]}
+    Old reference format has: {"warnings": [...], "patterns": [...], "recommendations": [...], "metrics": [...], "iron_rules_registry": [...]}
+
+    This bridges the gap so downstream functions don't need to change.
+    """
+    if "warnings" in markers or "patterns" in markers:
+        return markers  # Already structured
+    flat = markers.get("markers", [])
+    if not flat:
+        return markers
+    structured = {"warnings": [], "patterns": [], "recommendations": [], "metrics": [], "iron_rules_registry": []}
+    for m in flat:
+        cat = m.get("category", "behavior")
+        entry = {
+            "id": m.get("marker_id", ""),
+            "severity": "medium",
+            "target": m.get("target_file", ""),
+            "warning": m.get("claim", ""),
+            "description": m.get("claim", ""),
+            "claim": m.get("claim", ""),
+            "confidence": m.get("confidence", 0.5),
+        }
+        if cat == "risk":
+            structured["warnings"].append(entry)
+        elif cat == "behavior":
+            structured["patterns"].append(entry)
+        elif cat == "decision":
+            structured["recommendations"].append(entry)
+        elif cat == "architecture":
+            structured["metrics"].append(entry)
+        else:
+            structured["patterns"].append(entry)
+    return {**markers, **structured}
+
+
 def get_dossier(dossiers: dict, filename: str) -> dict | None:
     for file_entry in dossiers.get("files", []):
         if file_entry.get("filename") == filename:
@@ -537,7 +575,7 @@ def main():
     print(f"[write_hyperdocs] Loading input files...")
 
     dossiers = load_json(DOSSIERS_PATH)
-    markers = load_json(MARKERS_PATH)
+    markers = normalize_markers(load_json(MARKERS_PATH))
     idea_graph = load_json(IDEA_GRAPH_PATH)
     claude_md = load_json(CLAUDE_MD_PATH)
 

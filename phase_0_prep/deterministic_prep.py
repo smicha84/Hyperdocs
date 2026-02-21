@@ -273,7 +273,6 @@ def claude_to_geological(msg: ClaudeMessage, idx: int, source: str) -> Geologica
         message_type=msg.role,
         thinking=msg.thinking or "",
         tool_calls=[],
-        opus_analysis=None,
     )
 
 
@@ -887,7 +886,6 @@ def claude_to_geological(msg: ClaudeMessage, idx: int, source: str) -> Geologica
         message_type=msg.role,
         thinking=msg.thinking or "",
         tool_calls=[],
-        opus_analysis=None,
     )
 
 

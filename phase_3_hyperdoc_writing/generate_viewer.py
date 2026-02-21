@@ -8,7 +8,10 @@ from pathlib import Path
 BASE = Path(__file__).parent
 
 def load(name):
-    with open(BASE / name) as f:
+    p = BASE / name
+    if not p.exists():
+        return {}
+    with open(p) as f:
         return json.load(f)
 
 def esc(s):
@@ -22,17 +25,151 @@ def load_text(name):
 
 # Load all data
 summary = load("session_metadata.json")
-threads = load("thread_extractions.json")
+threads_raw = load("thread_extractions.json")
 geo = load("geological_notes.json")
 prims = load("semantic_primitives.json")
 explorer = load("explorer_notes.json")
 graph = load("idea_graph.json")
 synthesis = load("synthesis.json")
-markers = load("grounded_markers.json")
+markers_raw = load("grounded_markers.json")
 dossiers = load("file_dossiers.json")
 claude_md = load("claude_md_analysis.json")
 
-stats = summary["session_stats"]
+stats = summary.get("session_stats", {})
+
+# ---------------------------------------------------------------------------
+# Normalize thread_extractions.json
+# Canonical: {"threads": {category: {"description": ..., "entries": [...]}}}
+# Old reference: {"total_analyzed": N, "narrative_arc": {...}, "extractions": [...], ...}
+# ---------------------------------------------------------------------------
+threads_dict = threads_raw.get("threads", {})
+if isinstance(threads_dict, dict):
+    # Canonical format — threads is a dict of categories
+    # Compute total_analyzed from entry counts
+    threads_total_analyzed = sum(
+        len(cat_data.get("entries", []))
+        for cat_data in threads_dict.values()
+        if isinstance(cat_data, dict)
+    )
+    # Collect all entries across categories for marker counting
+    threads_all_entries = []
+    for cat_data in threads_dict.values():
+        if isinstance(cat_data, dict):
+            threads_all_entries.extend(cat_data.get("entries", []))
+else:
+    # Unknown structure — fall back to empty
+    threads_total_analyzed = 0
+    threads_all_entries = []
+
+# Old-format fields (may exist in reference sessions, absent in canonical)
+threads_narrative_arc = threads_raw.get("narrative_arc", {})
+threads_behavior_patterns = threads_raw.get("claude_behavior_patterns", [])
+threads_crisis_moments = threads_raw.get("key_crisis_moments", [])
+threads_extractions = threads_raw.get("extractions", [])
+# Use total_analyzed from old format if present, otherwise computed value
+threads_total_analyzed = threads_raw.get("total_analyzed", threads_total_analyzed)
+
+# ---------------------------------------------------------------------------
+# Normalize geological_notes.json
+# Canonical meso: {"observation": ..., "message_range": ..., "pattern": ...}
+# Old reference meso: {"window": [...], "description": ..., "pattern": ...}
+# Canonical macro: {"observation": ..., "scope": ..., "significance": ...}
+# Old reference macro: {"arc_name": ..., "window": [...], "goal": ..., "outcome": ..., "fault_lines": [...]}
+# ---------------------------------------------------------------------------
+geo_micro = geo.get("micro", [])
+geo_meso = geo.get("meso", [])
+geo_macro = geo.get("macro", [])
+geo_recurring = geo.get("recurring_patterns", {})
+
+# ---------------------------------------------------------------------------
+# Normalize semantic_primitives.json
+# Canonical: {"tagged_messages": [...], "distributions": {...}}
+# Old reference: {"total_tagged": N, "distributions": {...}}
+# ---------------------------------------------------------------------------
+prims_tagged = prims.get("tagged_messages", [])
+prims_total_tagged = prims.get("total_tagged", len(prims_tagged))
+prims_distributions = prims.get("distributions", {})
+
+# ---------------------------------------------------------------------------
+# Normalize explorer_notes.json
+# Canonical: {"observations": [...], "verification": {...}, "explorer_summary": "..."}
+# Old reference: {"what_matters_most": ..., "observations": [...], "warnings": [...],
+#   "patterns": [...], "abandoned_ideas": [...], "emotional_dynamics": [...],
+#   "surprises": [...], "free_notes": "..."}
+# ---------------------------------------------------------------------------
+explorer_observations = explorer.get("observations", [])
+explorer_verification = explorer.get("verification", {})
+explorer_summary_text = explorer.get("explorer_summary", "")
+# Old format fields — absent in canonical, empty fallbacks
+explorer_what_matters = explorer.get("what_matters_most", "")
+explorer_warnings = explorer.get("warnings", [])
+explorer_patterns = explorer.get("patterns", [])
+explorer_abandoned = explorer.get("abandoned_ideas", [])
+explorer_emotional = explorer.get("emotional_dynamics", [])
+explorer_surprises = explorer.get("surprises", [])
+explorer_free_notes = explorer.get("free_notes", "")
+
+# ---------------------------------------------------------------------------
+# Normalize idea_graph.json
+# Canonical: {"nodes": [...], "edges": [...], "metadata": {...}}
+#   node: {id, label, description, message_index, confidence, maturity, source}
+# Old reference: {"nodes": [...], "edges": [...], "statistics": {...}, "subgraphs": [...]}
+#   node: {name, description, confidence, first_appearance, ...}
+# ---------------------------------------------------------------------------
+graph_nodes = graph.get("nodes", [])
+graph_edges = graph.get("edges", [])
+# "metadata" is canonical, "statistics" is old reference
+graph_meta = graph.get("metadata", graph.get("statistics", {}))
+graph_subgraphs = graph.get("subgraphs", [])
+
+# ---------------------------------------------------------------------------
+# Normalize synthesis.json
+# Canonical: {"passes": {"pass_1_analytical": {"temperature": ..., "label": ..., "content": ...}, ...}}
+# Old reference: {"passes": [{"pass_number": N, "focus": ..., "temperature": ..., "findings": {...}}, ...]}
+# ---------------------------------------------------------------------------
+synthesis_passes_raw = synthesis.get("passes", {})
+synthesis_passes_list = []  # Normalized to a list for rendering
+if isinstance(synthesis_passes_raw, dict):
+    # Canonical dict format — convert to ordered list
+    for pass_key in sorted(synthesis_passes_raw.keys()):
+        pass_data = synthesis_passes_raw[pass_key]
+        if isinstance(pass_data, dict):
+            synthesis_passes_list.append({
+                "pass_key": pass_key,
+                "label": pass_data.get("label", pass_key),
+                "temperature": pass_data.get("temperature", "?"),
+                "content": pass_data.get("content", ""),
+                # Old fields (may be absent)
+                "findings": pass_data.get("findings", {}),
+            })
+elif isinstance(synthesis_passes_raw, list):
+    # Old reference list format
+    for p in synthesis_passes_raw:
+        if isinstance(p, dict):
+            synthesis_passes_list.append({
+                "pass_key": f"pass_{p.get('pass_number', '?')}",
+                "label": p.get("focus", f"Pass {p.get('pass_number', '?')}"),
+                "temperature": p.get("temperature", "?"),
+                "content": p.get("content", ""),
+                "findings": p.get("findings", {}),
+            })
+synthesis_key_findings = synthesis.get("key_findings", [])
+synthesis_session_char = synthesis.get("session_character", "")
+
+# ---------------------------------------------------------------------------
+# Normalize grounded_markers.json
+# Canonical: {"markers": [{"marker_id": ..., "category": ..., "claim": ...,
+#   "evidence": ..., "confidence": ..., "actionable_guidance": ...}]}
+# Old reference: {"iron_rules_registry": [...], "warnings": [...], "patterns": [...],
+#   "recommendations": [...], "metrics": [...]}
+# ---------------------------------------------------------------------------
+markers_flat = markers_raw.get("markers", [])
+# Old format fields — absent in canonical, empty fallbacks
+markers_iron_rules = markers_raw.get("iron_rules_registry", [])
+markers_warnings = markers_raw.get("warnings", [])
+markers_patterns = markers_raw.get("patterns", [])
+markers_recommendations = markers_raw.get("recommendations", [])
+markers_metrics = markers_raw.get("metrics", [])
 
 # Hyperdoc blocks
 hyperdoc_files = [
@@ -93,18 +230,25 @@ pre{background:#0a0a0f;border:1px solid #333;padding:12px;overflow-x:auto;font-s
 """)
 
 # Header
+total_msgs = stats.get('total_messages', 0)
+user_msgs = stats.get('user_messages', 0)
+assistant_msgs = stats.get('assistant_messages', 0)
+frustration_count = len(stats.get('frustration_peaks', []))
+emergency_count = len(stats.get('emergency_interventions', []))
+unique_files_count = len(stats.get('file_mention_counts', {}))
+input_tokens = stats.get('total_input_tokens', 0)
 parts.append(f"""<div class="header">
 <h1>Hyperdocs Multi-Agent Extraction Pipeline</h1>
-<div class="sub">{stats['total_messages']} messages | {stats['user_messages']} user / {stats['assistant_messages']} assistant</div>
+<div class="sub">{total_msgs} messages | {user_msgs} user / {assistant_msgs} assistant</div>
 <div class="stats-bar">
-<div class="stat"><b>{stats['total_messages']}</b>Messages</div>
-<div class="stat"><b>{len(stats.get('frustration_peaks',[]))}</b>Frustration Peaks</div>
-<div class="stat"><b>{len(stats.get('emergency_interventions',[]))}</b>Emergency Interventions</div>
-<div class="stat"><b>{len(stats.get('file_mention_counts',{}))}</b>Unique Files</div>
-<div class="stat"><b>{stats['total_input_tokens']:,}</b>Input Tokens</div>
-<div class="stat"><b>{threads['total_analyzed']}</b>Extractions</div>
-<div class="stat"><b>{len(graph['nodes'])}</b>Idea Nodes</div>
-<div class="stat"><b>{len(graph['edges'])}</b>Transitions</div>
+<div class="stat"><b>{total_msgs}</b>Messages</div>
+<div class="stat"><b>{frustration_count}</b>Frustration Peaks</div>
+<div class="stat"><b>{emergency_count}</b>Emergency Interventions</div>
+<div class="stat"><b>{unique_files_count}</b>Unique Files</div>
+<div class="stat"><b>{input_tokens:,}</b>Input Tokens</div>
+<div class="stat"><b>{threads_total_analyzed}</b>Extractions</div>
+<div class="stat"><b>{len(graph_nodes)}</b>Idea Nodes</div>
+<div class="stat"><b>{len(graph_edges)}</b>Transitions</div>
 </div></div>
 """)
 
@@ -131,13 +275,16 @@ parts.append(f"""<table><tr><th>Phase</th><th>Agent</th><th>Output</th><th>Size<
 <tr><td>3</td><td>Hyperdoc Writer</td><td>5 hyperdoc blocks</td><td>74 KB</td></tr>
 </table>""")
 parts.append("<h2>Tier Distribution</h2>")
-td = stats["tier_distribution"]
-parts.append(f"""<table><tr><th>Tier</th><th>Count</th><th>%</th></tr>
-<tr><td>1 (Skip)</td><td>{td['1_skip']}</td><td>{td['1_skip']/stats['total_messages']*100:.0f}%</td></tr>
-<tr><td>2 (Basic)</td><td>{td['2_basic']}</td><td>{td['2_basic']/stats['total_messages']*100:.0f}%</td></tr>
-<tr><td>3 (Standard)</td><td>{td['3_standard']}</td><td>{td['3_standard']/stats['total_messages']*100:.0f}%</td></tr>
-<tr><td>4 (Priority)</td><td>{td['4_priority']}</td><td>{td['4_priority']/stats['total_messages']*100:.0f}%</td></tr>
-</table>""")
+td = stats.get("tier_distribution", {})
+if td and total_msgs > 0:
+    parts.append("<table><tr><th>Tier</th><th>Count</th><th>%</th></tr>")
+    for tier_key, tier_label in [("1_skip", "1 (Skip)"), ("2_basic", "2 (Basic)"), ("3_standard", "3 (Standard)"), ("4_priority", "4 (Priority)")]:
+        count = td.get(tier_key, 0)
+        pct = count / total_msgs * 100 if total_msgs else 0
+        parts.append(f"<tr><td>{tier_label}</td><td>{count}</td><td>{pct:.0f}%</td></tr>")
+    parts.append("</table>")
+else:
+    parts.append('<div class="card info">No tier distribution data available</div>')
 parts.append("<h2>Top Files by Mention Count</h2><table><tr><th>#</th><th>File</th><th>Mentions</th></tr>")
 for i, (f, c) in enumerate(stats.get("top_files", [])[:15], 1):
     parts.append(f"<tr><td>{i}</td><td>{esc(f)}</td><td>{c}</td></tr>")
@@ -146,145 +293,444 @@ parts.append("</table></div>")
 # Panel 1: Threads
 parts.append('<div class="panel" id="p1">')
 parts.append("<h2>Thread Extractions</h2>")
-parts.append(f"<p>Analyzed {threads['total_analyzed']} tier-4 messages</p>")
-parts.append("<h3>Narrative Arc (12 Chapters)</h3>")
-arc = threads.get("narrative_arc", {})
-parts.append("<table><tr><th>#</th><th>Chapter</th></tr>")
-for k, v in arc.items():
-    parts.append(f"<tr><td>{esc(k)}</td><td>{esc(v)}</td></tr>")
-parts.append("</table>")
-parts.append("<h3>Claude Behavior Patterns</h3>")
-for p in threads.get("claude_behavior_patterns", []):
-    parts.append(f'<div class="card warn">{esc(p)}</div>')
-parts.append("<h3>Key Crisis Moments</h3>")
-for c in threads.get("key_crisis_moments", []):
-    if isinstance(c, dict):
-        parts.append(f'<div class="card warn"><b>idx {c.get("index","?")}</b>: {esc(c.get("description",""))}</div>')
-    else:
-        parts.append(f'<div class="card warn">{esc(c)}</div>')
-parts.append("<h3>Marker Summary</h3>")
-pivots = sum(1 for e in threads.get("extractions",[]) if e.get("markers",{}).get("is_pivot"))
-failures = sum(1 for e in threads.get("extractions",[]) if e.get("markers",{}).get("is_failure"))
-breakthroughs = sum(1 for e in threads.get("extractions",[]) if e.get("markers",{}).get("is_breakthrough"))
-deceptions = sum(1 for e in threads.get("extractions",[]) if e.get("markers",{}).get("deception_detected"))
-gems = sum(1 for e in threads.get("extractions",[]) if e.get("markers",{}).get("is_ignored_gem"))
-parts.append(f"""<table><tr><th>Marker</th><th>Count</th></tr>
+parts.append(f"<p>Analyzed {threads_total_analyzed} entries</p>")
+
+# Canonical format: render thread categories with their entries
+if isinstance(threads_dict, dict) and threads_dict:
+    for cat_name, cat_data in threads_dict.items():
+        if not isinstance(cat_data, dict):
+            continue
+        desc = cat_data.get("description", "")
+        entries = cat_data.get("entries", [])
+        parts.append(f'<h3>{esc(cat_name.replace("_", " ").title())} ({len(entries)} entries)</h3>')
+        if desc:
+            parts.append(f'<p>{esc(desc)}</p>')
+        for entry in entries:
+            if isinstance(entry, dict):
+                idx = entry.get("msg_index", "?")
+                content = entry.get("content", "")
+                sig = entry.get("significance", "medium")
+                tag_cls = {"high": "tag-high", "medium": "tag-medium", "low": "tag-low"}.get(sig, "tag-medium")
+                parts.append(f'<div class="card info"><span class="tag {tag_cls}">{sig}</span> <b>msg {idx}</b>: {esc(content)}</div>')
+
+# Old reference format: narrative arc, behavior patterns, crisis moments
+if threads_narrative_arc:
+    parts.append("<h3>Narrative Arc</h3>")
+    parts.append("<table><tr><th>#</th><th>Chapter</th></tr>")
+    for k, v in threads_narrative_arc.items():
+        parts.append(f"<tr><td>{esc(k)}</td><td>{esc(v)}</td></tr>")
+    parts.append("</table>")
+
+if threads_behavior_patterns:
+    parts.append("<h3>Claude Behavior Patterns</h3>")
+    for p in threads_behavior_patterns:
+        parts.append(f'<div class="card warn">{esc(p)}</div>')
+
+if threads_crisis_moments:
+    parts.append("<h3>Key Crisis Moments</h3>")
+    for c in threads_crisis_moments:
+        if isinstance(c, dict):
+            parts.append(f'<div class="card warn"><b>idx {c.get("index","?")}</b>: {esc(c.get("description",""))}</div>')
+        else:
+            parts.append(f'<div class="card warn">{esc(c)}</div>')
+
+# Old reference format: marker summary from "extractions" list
+if threads_extractions:
+    parts.append("<h3>Marker Summary (from extractions)</h3>")
+    pivots = sum(1 for e in threads_extractions if isinstance(e, dict) and e.get("markers",{}).get("is_pivot"))
+    failures = sum(1 for e in threads_extractions if isinstance(e, dict) and e.get("markers",{}).get("is_failure"))
+    breakthroughs = sum(1 for e in threads_extractions if isinstance(e, dict) and e.get("markers",{}).get("is_breakthrough"))
+    deceptions = sum(1 for e in threads_extractions if isinstance(e, dict) and e.get("markers",{}).get("deception_detected"))
+    gems = sum(1 for e in threads_extractions if isinstance(e, dict) and e.get("markers",{}).get("is_ignored_gem"))
+    parts.append(f"""<table><tr><th>Marker</th><th>Count</th></tr>
 <tr><td>Pivots</td><td>{pivots}</td></tr>
 <tr><td>Failures</td><td>{failures}</td></tr>
 <tr><td>Breakthroughs</td><td>{breakthroughs}</td></tr>
 <tr><td>Deception Detected</td><td>{deceptions}</td></tr>
 <tr><td>Ignored Gems</td><td>{gems}</td></tr></table>""")
+
 parts.append("</div>")
 
 # Panel 2: Geological
 parts.append('<div class="panel" id="p2">')
 parts.append("<h2>Geological Notes</h2>")
-parts.append(f"<h3>Micro ({len(geo['micro'])} entries)</h3>")
-for m in geo["micro"]:
+
+# Geological metaphor (canonical)
+geo_metaphor = geo.get("geological_metaphor", "")
+if geo_metaphor:
+    parts.append(f'<div class="card success"><b>Geological Metaphor</b><br>{esc(geo_metaphor)}</div>')
+
+# Micro entries
+parts.append(f"<h3>Micro ({len(geo_micro)} entries)</h3>")
+for m in geo_micro:
+    if not isinstance(m, dict):
+        continue
     parts.append(f'<div class="card info"><b>idx {m.get("index","?")}</b> [{m.get("type","")}] {esc(m.get("significance",""))}</div>')
-parts.append(f"<h3>Meso ({len(geo['meso'])} patterns)</h3>")
-for m in geo["meso"]:
-    w = m.get("window", [])
-    parts.append(f'<div class="card info"><b>{w}</b> [{m.get("pattern","")}] {esc(m.get("description",""))}</div>')
-parts.append(f"<h3>Macro ({len(geo['macro'])} arcs)</h3>")
-for m in geo["macro"]:
-    w = m.get("window", [])
-    parts.append(f'<div class="card"><b>{esc(m.get("arc_name",""))}</b> [{w[0]}-{w[1]}]<br>{esc(m.get("goal",""))}<br><i>Outcome:</i> {esc(m.get("outcome",""))}<br><i>Fault lines:</i> {len(m.get("fault_lines",[]))}</div>')
-parts.append("<h3>Recurring Patterns</h3>")
-for k, v in geo.get("recurring_patterns", {}).items():
-    parts.append(f'<div class="card warn"><b>{esc(k)}</b><br>{esc(v.get("description","") if isinstance(v,dict) else v)}</div>')
+
+# Meso entries — canonical has {observation, message_range, pattern}, old has {window, description, pattern}
+parts.append(f"<h3>Meso ({len(geo_meso)} patterns)</h3>")
+for m in geo_meso:
+    if not isinstance(m, dict):
+        continue
+    # Canonical: "observation" + "message_range"
+    observation = m.get("observation", "")
+    message_range = m.get("message_range", "")
+    pattern = m.get("pattern", "")
+    # Old reference: "window" + "description"
+    window = m.get("window", [])
+    description = m.get("description", "")
+    # Use canonical fields if present, fall back to old
+    display_text = observation if observation else description
+    display_range = message_range if message_range else str(window) if window else ""
+    parts.append(f'<div class="card info"><b>{esc(display_range)}</b> [{esc(pattern)}] {esc(display_text)}</div>')
+
+# Macro entries — canonical has {observation, scope, significance}, old has {arc_name, window, goal, outcome, fault_lines}
+parts.append(f"<h3>Macro ({len(geo_macro)} arcs)</h3>")
+for m in geo_macro:
+    if not isinstance(m, dict):
+        continue
+    # Canonical format
+    observation = m.get("observation", "")
+    scope = m.get("scope", "")
+    significance = m.get("significance", "")
+    # Old reference format
+    arc_name = m.get("arc_name", "")
+    window = m.get("window", [])
+    goal = m.get("goal", "")
+    outcome = m.get("outcome", "")
+    fault_lines = m.get("fault_lines", [])
+
+    if observation:
+        # Canonical format rendering
+        parts.append(f'<div class="card"><b>{esc(scope)}</b><br>{esc(observation)}<br><i>Significance:</i> {esc(significance)}</div>')
+    elif arc_name:
+        # Old reference format rendering
+        w0 = window[0] if len(window) > 0 else "?"
+        w1 = window[1] if len(window) > 1 else "?"
+        parts.append(f'<div class="card"><b>{esc(arc_name)}</b> [{w0}-{w1}]<br>{esc(goal)}<br><i>Outcome:</i> {esc(outcome)}<br><i>Fault lines:</i> {len(fault_lines)}</div>')
+    else:
+        # Unknown format — dump as JSON
+        parts.append(f'<div class="card"><pre>{esc(json.dumps(m, indent=2))}</pre></div>')
+
+# Observations (canonical)
+geo_observations = geo.get("observations", [])
+if geo_observations:
+    parts.append(f"<h3>Observations ({len(geo_observations)})</h3>")
+    for obs in geo_observations:
+        if isinstance(obs, dict):
+            parts.append(f'<div class="card info">{esc(obs.get("observation", str(obs)))}</div>')
+        else:
+            parts.append(f'<div class="card info">{esc(obs)}</div>')
+
+# Recurring patterns (old reference format)
+if geo_recurring:
+    parts.append("<h3>Recurring Patterns</h3>")
+    for k, v in geo_recurring.items():
+        parts.append(f'<div class="card warn"><b>{esc(k)}</b><br>{esc(v.get("description","") if isinstance(v,dict) else v)}</div>')
+
 parts.append("</div>")
 
 # Panel 3: Primitives
 parts.append('<div class="panel" id="p3">')
 parts.append("<h2>Semantic Primitives</h2>")
-parts.append(f"<p>Tagged {prims['total_tagged']} messages</p>")
-dist = prims.get("distributions", {})
-for dim, vals in dist.items():
-    if isinstance(vals, dict):
-        parts.append(f"<h3>{dim}</h3><table><tr><th>Value</th><th>Count</th></tr>")
-        for k2, v2 in sorted(vals.items(), key=lambda x: -x[1] if isinstance(x[1],int) else 0):
-            parts.append(f"<tr><td>{esc(k2)}</td><td>{v2}</td></tr>")
-        parts.append("</table>")
-    else:
-        parts.append(f'<div class="card info"><b>{dim}</b>: {vals}</div>')
+parts.append(f"<p>Tagged {prims_total_tagged} messages</p>")
+
+# Distributions (present in both canonical and old formats)
+if prims_distributions:
+    for dim, vals in prims_distributions.items():
+        if isinstance(vals, dict):
+            parts.append(f"<h3>{esc(dim.replace('_', ' ').title())}</h3><table><tr><th>Value</th><th>Count</th></tr>")
+            for k2, v2 in sorted(vals.items(), key=lambda x: -x[1] if isinstance(x[1], (int, float)) else 0):
+                parts.append(f"<tr><td>{esc(k2)}</td><td>{v2}</td></tr>")
+            parts.append("</table>")
+        elif isinstance(vals, list):
+            parts.append(f"<h3>{esc(dim.replace('_', ' ').title())} ({len(vals)} items)</h3>")
+            for item in vals[:20]:
+                parts.append(f'<div class="card info">{esc(str(item))}</div>')
+        else:
+            parts.append(f'<div class="card info"><b>{esc(dim)}</b>: {esc(str(vals))}</div>')
+
+# Tagged messages detail (canonical)
+if prims_tagged:
+    parts.append(f"<h3>Tagged Messages ({len(prims_tagged)})</h3>")
+    for tm in prims_tagged[:30]:
+        if not isinstance(tm, dict):
+            continue
+        idx = tm.get("index", tm.get("msg_index", "?"))
+        role = tm.get("role", "?")
+        primitives = tm.get("primitives", {})
+        if isinstance(primitives, dict):
+            prim_strs = [f"{pk}: {pv}" for pk, pv in primitives.items() if pv]
+            parts.append(f'<div class="card"><b>msg {idx}</b> [{role}] {esc(", ".join(prim_strs))}</div>')
+        else:
+            parts.append(f'<div class="card"><b>msg {idx}</b> [{role}] {esc(str(primitives))}</div>')
+
 parts.append("</div>")
 
 # Panel 4: Explorer
 parts.append('<div class="panel" id="p4">')
 parts.append("<h2>Free Explorer Notes</h2>")
-parts.append(f'<div class="card success"><b>What Matters Most</b><br>{esc(explorer.get("what_matters_most",""))}</div>')
-for section in ["observations","warnings","patterns","abandoned_ideas","emotional_dynamics","surprises"]:
-    items = explorer.get(section, [])
-    parts.append(f"<h3>{section.replace('_',' ').title()} ({len(items)})</h3>")
-    for item in items:
-        cls = "warn" if "warn" in section else "info"
-        parts.append(f'<div class="card {cls}">{esc(item)}</div>')
-parts.append("<h3>Free Notes</h3>")
-parts.append(f'<pre>{esc(explorer.get("free_notes",""))}</pre>')
+
+# Explorer summary (canonical)
+if explorer_summary_text:
+    parts.append(f'<div class="card success"><b>Explorer Summary</b><br>{esc(explorer_summary_text)}</div>')
+
+# What matters most (old reference format)
+if explorer_what_matters:
+    parts.append(f'<div class="card success"><b>What Matters Most</b><br>{esc(explorer_what_matters)}</div>')
+
+# Observations (canonical: list of dicts with id/observation/evidence/significance)
+if explorer_observations:
+    parts.append(f"<h3>Observations ({len(explorer_observations)})</h3>")
+    for obs in explorer_observations:
+        if isinstance(obs, dict):
+            obs_id = obs.get("id", "")
+            obs_text = obs.get("observation", "")
+            obs_evidence = obs.get("evidence", "")
+            obs_sig = obs.get("significance", "medium")
+            tag_cls = {"high": "tag-high", "medium": "tag-medium", "low": "tag-low"}.get(obs_sig, "tag-medium")
+            parts.append(f'<div class="card info">')
+            if obs_id:
+                parts.append(f'<span class="tag {tag_cls}">{esc(obs_sig)}</span> <b>[{esc(obs_id)}]</b> ')
+            parts.append(f'{esc(obs_text)}')
+            if obs_evidence:
+                parts.append(f'<br><i>Evidence: {esc(obs_evidence)}</i>')
+            parts.append('</div>')
+        else:
+            parts.append(f'<div class="card info">{esc(obs)}</div>')
+
+# Verification (canonical)
+if explorer_verification:
+    parts.append(f"<h3>Verification</h3>")
+    for vk, vv in explorer_verification.items():
+        parts.append(f'<div class="card"><b>{esc(vk.replace("_", " ").title())}</b>: {esc(str(vv))}</div>')
+
+# Old reference format sections — render only if present
+for section_name, section_data, card_cls in [
+    ("Warnings", explorer_warnings, "warn"),
+    ("Patterns", explorer_patterns, "info"),
+    ("Abandoned Ideas", explorer_abandoned, "info"),
+    ("Emotional Dynamics", explorer_emotional, "info"),
+    ("Surprises", explorer_surprises, "info"),
+]:
+    if section_data:
+        parts.append(f"<h3>{section_name} ({len(section_data)})</h3>")
+        for item in section_data:
+            parts.append(f'<div class="card {card_cls}">{esc(item)}</div>')
+
+if explorer_free_notes:
+    parts.append("<h3>Free Notes</h3>")
+    parts.append(f'<pre>{esc(explorer_free_notes)}</pre>')
+
 parts.append("</div>")
 
 # Panel 5: Idea Graph
 parts.append('<div class="panel" id="p5">')
 parts.append("<h2>Idea Evolution Graph</h2>")
-gs = graph.get("statistics", {})
-parts.append(f"<p>{gs.get('total_ideas',0)} nodes, {gs.get('total_transitions',0)} edges, 0 cycles</p>")
-parts.append("<h3>Subgraphs</h3>")
-for sg in graph.get("subgraphs", []):
-    parts.append(f'<div class="card info"><b>{esc(sg.get("name",""))}</b> ({len(sg.get("node_ids",[]))} nodes)<br>{esc(sg.get("summary",""))}</div>')
-parts.append("<h3>Transition Distribution</h3><table><tr><th>Type</th><th>Count</th></tr>")
-for t, c in sorted(gs.get("transition_type_distribution",{}).items(), key=lambda x:-x[1]):
-    if c > 0:
-        parts.append(f"<tr><td>{t}</td><td>{c}</td></tr>")
-parts.append("</table>")
-parts.append("<h3>All Nodes</h3><div class='grid'>")
-for n in graph["nodes"][:30]:
-    conf_cls = {"fragile":"warn","experimental":"info","proven":"success"}.get(n.get("confidence",""),"")
-    parts.append(f'<div class="node"><div class="name">{esc(n["name"])}</div><div>{esc(n.get("description",""))}</div><div class="edge">Confidence: {n.get("confidence","")} | First: msg {n.get("first_appearance","?")}</div></div>')
+
+# Canonical uses "metadata", old reference uses "statistics"
+total_nodes_meta = graph_meta.get("total_nodes", graph_meta.get("total_ideas", len(graph_nodes)))
+total_edges_meta = graph_meta.get("total_edges", graph_meta.get("total_transitions", len(graph_edges)))
+parts.append(f"<p>{total_nodes_meta} nodes, {total_edges_meta} edges</p>")
+
+# Metadata details (canonical)
+if graph_meta:
+    meta_items = []
+    for mk, mv in graph_meta.items():
+        if mk not in ("total_nodes", "total_edges", "total_ideas", "total_transitions", "transition_type_distribution"):
+            meta_items.append(f"<b>{esc(mk.replace('_', ' ').title())}</b>: {esc(str(mv))}")
+    if meta_items:
+        parts.append(f'<div class="card info">{" | ".join(meta_items)}</div>')
+
+# Subgraphs (old reference format)
+if graph_subgraphs:
+    parts.append("<h3>Subgraphs</h3>")
+    for sg in graph_subgraphs:
+        if isinstance(sg, dict):
+            parts.append(f'<div class="card info"><b>{esc(sg.get("name",""))}</b> ({len(sg.get("node_ids",[]))} nodes)<br>{esc(sg.get("summary",""))}</div>')
+
+# Transition distribution (old reference "statistics" format)
+trans_dist = graph_meta.get("transition_type_distribution", {})
+if trans_dist:
+    parts.append("<h3>Transition Distribution</h3><table><tr><th>Type</th><th>Count</th></tr>")
+    for t, c in sorted(trans_dist.items(), key=lambda x: -x[1] if isinstance(x[1], (int, float)) else 0):
+        if isinstance(c, (int, float)) and c > 0:
+            parts.append(f"<tr><td>{esc(t)}</td><td>{c}</td></tr>")
+    parts.append("</table>")
+
+# Edge type summary (canonical — compute from edges)
+if graph_edges and not trans_dist:
+    edge_types = {}
+    for e in graph_edges:
+        if isinstance(e, dict):
+            etype = e.get("type", "unknown")
+            edge_types[etype] = edge_types.get(etype, 0) + 1
+    if edge_types:
+        parts.append("<h3>Edge Type Distribution</h3><table><tr><th>Type</th><th>Count</th></tr>")
+        for t, c in sorted(edge_types.items(), key=lambda x: -x[1]):
+            parts.append(f"<tr><td>{esc(t)}</td><td>{c}</td></tr>")
+        parts.append("</table>")
+
+# All Nodes — canonical has {id, label, description, message_index, confidence, maturity}
+#              old reference has {name, description, confidence, first_appearance}
+parts.append(f"<h3>All Nodes ({len(graph_nodes)})</h3><div class='grid'>")
+for n in graph_nodes[:30]:
+    if not isinstance(n, dict):
+        continue
+    # "label" is canonical, "name" is old reference
+    node_name = n.get("label", n.get("name", n.get("id", "?")))
+    description = n.get("description", "")
+    confidence = n.get("confidence", "")
+    maturity = n.get("maturity", "")
+    # "message_index" is canonical, "first_appearance" is old reference
+    first_msg = n.get("message_index", n.get("first_appearance", "?"))
+    conf_cls = {"fragile": "warn", "experimental": "info", "proven": "success"}.get(confidence, "")
+    details = f"Confidence: {confidence}"
+    if maturity:
+        details += f" | Maturity: {maturity}"
+    details += f" | First: msg {first_msg}"
+    parts.append(f'<div class="node"><div class="name">{esc(node_name)}</div><div>{esc(description)}</div><div class="edge">{details}</div></div>')
 parts.append("</div></div>")
 
 # Panel 6: Synthesis
 parts.append('<div class="panel" id="p6">')
-parts.append("<h2>6-Pass Synthesis</h2>")
-for p in synthesis.get("passes", []):
-    pn = p["pass_number"]
-    parts.append(f'<h3>Pass {pn}: {p["focus"]} (temp {p.get("temperature","?")})</h3>')
-    findings = p.get("findings", {})
-    for fk, fv in findings.items():
-        if isinstance(fv, list):
-            parts.append(f"<b>{fk}</b> ({len(fv)} items)")
-            for item in fv[:10]:
-                if isinstance(item, dict):
-                    parts.append(f'<div class="card info">{esc(json.dumps(item, indent=2))}</div>')
-                else:
-                    parts.append(f'<div class="card">{esc(str(item))}</div>')
-        elif isinstance(fv, dict):
-            parts.append(f'<div class="card"><b>{fk}</b><pre>{esc(json.dumps(fv, indent=2))}</pre></div>')
+parts.append("<h2>Multi-Pass Synthesis</h2>")
+
+# Session character (canonical)
+if synthesis_session_char:
+    parts.append(f'<div class="card success"><b>Session Character</b><br>{esc(synthesis_session_char)}</div>')
+
+# Key findings (canonical)
+if synthesis_key_findings:
+    if isinstance(synthesis_key_findings, list):
+        parts.append(f"<h3>Key Findings ({len(synthesis_key_findings)})</h3>")
+        for kf in synthesis_key_findings:
+            parts.append(f'<div class="card info">{esc(str(kf))}</div>')
+    elif isinstance(synthesis_key_findings, dict):
+        parts.append("<h3>Key Findings</h3>")
+        parts.append(f'<div class="card info"><pre>{esc(json.dumps(synthesis_key_findings, indent=2))}</pre></div>')
+
+# Passes — normalized to synthesis_passes_list (handles both dict and list source)
+for sp in synthesis_passes_list:
+    label = sp.get("label", sp.get("pass_key", "?"))
+    temperature = sp.get("temperature", "?")
+    content = sp.get("content", "")
+    findings = sp.get("findings", {})
+
+    parts.append(f'<h3>{esc(label)} (temp {temperature})</h3>')
+
+    # Canonical format: content is a string
+    if content:
+        parts.append(f'<div class="card"><pre>{esc(content)}</pre></div>')
+
+    # Old reference format: findings is a dict of lists/dicts/values
+    if findings:
+        for fk, fv in findings.items():
+            if isinstance(fv, list):
+                parts.append(f"<b>{esc(fk)}</b> ({len(fv)} items)")
+                for item in fv[:10]:
+                    if isinstance(item, dict):
+                        parts.append(f'<div class="card info">{esc(json.dumps(item, indent=2))}</div>')
+                    else:
+                        parts.append(f'<div class="card">{esc(str(item))}</div>')
+            elif isinstance(fv, dict):
+                parts.append(f'<div class="card"><b>{esc(fk)}</b><pre>{esc(json.dumps(fv, indent=2))}</pre></div>')
+            else:
+                parts.append(f'<div class="card"><b>{esc(fk)}</b>: {esc(str(fv))}</div>')
+
+# Cross-session links (canonical)
+cross_links = synthesis.get("cross_session_links", [])
+if cross_links:
+    parts.append(f"<h3>Cross-Session Links ({len(cross_links)})</h3>")
+    for cl in cross_links:
+        if isinstance(cl, dict):
+            parts.append(f'<div class="card info"><pre>{esc(json.dumps(cl, indent=2))}</pre></div>')
         else:
-            parts.append(f'<div class="card"><b>{fk}</b>: {esc(str(fv))}</div>')
+            parts.append(f'<div class="card info">{esc(str(cl))}</div>')
+
 parts.append("</div>")
 
 # Panel 7: Grounded Markers
 parts.append('<div class="panel" id="p7">')
 parts.append("<h2>Grounded Markers</h2>")
-parts.append("<h3>Iron Rules Registry</h3>")
-for r in markers.get("iron_rules_registry", []):
-    caps = r.get("caps_ratio", 0)
-    parts.append(f'<div class="iron"><b>Rule {r.get("rule_number","?")}</b>: {esc(r.get("rule",""))}<br><span class="caps">Established: msg {r.get("established_at","")} | Caps: {caps} | Status: {r.get("status","")}</span><br>{esc(r.get("evidence",""))}</div>')
-parts.append(f"<h3>Warnings ({len(markers.get('warnings',[]))})</h3>")
-for w in markers.get("warnings", []):
-    sev = w.get("severity","medium")
-    parts.append(f'<div class="card warn"><span class="tag tag-{sev}">{sev}</span> <b>[{w.get("id","")}] {esc(w.get("target",""))}</b><br>{esc(w.get("warning",""))}<br><i>Evidence: {esc(w.get("evidence",""))}</i></div>')
-parts.append(f"<h3>Behavioral Patterns ({len(markers.get('patterns',[]))})</h3>")
-for p in markers.get("patterns", []):
-    parts.append(f'<div class="card info"><b>[{p.get("id","")}]</b> {esc(p.get("pattern",""))}<br>Frequency: {esc(p.get("frequency",""))}<br>Action: {esc(p.get("action",""))}</div>')
-parts.append(f"<h3>Recommendations ({len(markers.get('recommendations',[]))})</h3>")
-for r in markers.get("recommendations", []):
-    pri = r.get("priority","medium")
-    parts.append(f'<div class="card"><span class="tag tag-{pri}">{pri}</span> <b>[{r.get("id","")}] {esc(r.get("target",""))}</b><br>{esc(r.get("recommendation",""))}</div>')
-parts.append(f"<h3>Metrics ({len(markers.get('metrics',[]))})</h3>")
-for m in markers.get("metrics", []):
-    parts.append(f'<div class="card metric"><b>[{m.get("id","")}] {esc(m.get("metric",""))}</b><br>Value: <b>{esc(m.get("value",""))}</b><br>Source: {esc(m.get("source",""))}</div>')
+
+# Canonical format: flat "markers" list with {marker_id, category, claim, evidence, confidence, actionable_guidance}
+if markers_flat:
+    # Group by category for better display
+    by_category = {}
+    for m in markers_flat:
+        if not isinstance(m, dict):
+            continue
+        cat = m.get("category", "uncategorized")
+        by_category.setdefault(cat, []).append(m)
+
+    parts.append(f"<p>{len(markers_flat)} markers across {len(by_category)} categories</p>")
+    for cat, cat_markers in sorted(by_category.items()):
+        parts.append(f'<h3>{esc(cat.replace("_", " ").title())} ({len(cat_markers)})</h3>')
+        for m in cat_markers:
+            marker_id = m.get("marker_id", "")
+            claim = m.get("claim", "")
+            evidence = m.get("evidence", "")
+            confidence = m.get("confidence", "")
+            guidance = m.get("actionable_guidance", "")
+            # Map confidence to tag class
+            if isinstance(confidence, (int, float)):
+                if confidence >= 0.8:
+                    tag_cls = "tag-high"
+                elif confidence >= 0.5:
+                    tag_cls = "tag-medium"
+                else:
+                    tag_cls = "tag-low"
+                conf_display = f"{confidence:.0%}"
+            else:
+                tag_cls = "tag-medium"
+                conf_display = str(confidence)
+            parts.append(f'<div class="card info"><span class="tag {tag_cls}">{conf_display}</span> <b>[{esc(marker_id)}]</b> {esc(claim)}')
+            if evidence:
+                parts.append(f'<br><i>Evidence: {esc(evidence)}</i>')
+            if guidance:
+                parts.append(f'<br><b>Guidance:</b> {esc(guidance)}')
+            parts.append('</div>')
+
+# Old reference format: iron_rules_registry, warnings, patterns, recommendations, metrics
+if markers_iron_rules:
+    parts.append(f"<h3>Iron Rules Registry ({len(markers_iron_rules)})</h3>")
+    for r in markers_iron_rules:
+        if not isinstance(r, dict):
+            continue
+        caps = r.get("caps_ratio", 0)
+        parts.append(f'<div class="iron"><b>Rule {r.get("rule_number","?")}</b>: {esc(r.get("rule",""))}<br><span class="caps">Established: msg {r.get("established_at","")} | Caps: {caps} | Status: {r.get("status","")}</span><br>{esc(r.get("evidence",""))}</div>')
+
+if markers_warnings:
+    parts.append(f"<h3>Warnings ({len(markers_warnings)})</h3>")
+    for w in markers_warnings:
+        if not isinstance(w, dict):
+            continue
+        sev = w.get("severity", "medium")
+        parts.append(f'<div class="card warn"><span class="tag tag-{sev}">{sev}</span> <b>[{w.get("id","")}] {esc(w.get("target",""))}</b><br>{esc(w.get("warning",""))}<br><i>Evidence: {esc(w.get("evidence",""))}</i></div>')
+
+if markers_patterns:
+    parts.append(f"<h3>Behavioral Patterns ({len(markers_patterns)})</h3>")
+    for p in markers_patterns:
+        if not isinstance(p, dict):
+            continue
+        parts.append(f'<div class="card info"><b>[{p.get("id","")}]</b> {esc(p.get("pattern",""))}<br>Frequency: {esc(p.get("frequency",""))}<br>Action: {esc(p.get("action",""))}</div>')
+
+if markers_recommendations:
+    parts.append(f"<h3>Recommendations ({len(markers_recommendations)})</h3>")
+    for r in markers_recommendations:
+        if not isinstance(r, dict):
+            continue
+        pri = r.get("priority", "medium")
+        parts.append(f'<div class="card"><span class="tag tag-{pri}">{pri}</span> <b>[{r.get("id","")}] {esc(r.get("target",""))}</b><br>{esc(r.get("recommendation",""))}</div>')
+
+if markers_metrics:
+    parts.append(f"<h3>Metrics ({len(markers_metrics)})</h3>")
+    for m in markers_metrics:
+        if not isinstance(m, dict):
+            continue
+        parts.append(f'<div class="card metric"><b>[{m.get("id","")}] {esc(m.get("metric",""))}</b><br>Value: <b>{esc(m.get("value",""))}</b><br>Source: {esc(m.get("source",""))}</div>')
+
 parts.append("</div>")
 
 # Panel 8: File Dossiers

@@ -28,8 +28,27 @@ SPECIAL_PATHS = {
     "opus_struggle_analyzer.py": BASE.parent.parent / ".claude" / "hooks" / "hyperdoc" / "opus_struggle_analyzer.py"
 }
 
+def _normalize_markers(m):
+    """Convert flat markers list to structured format if needed."""
+    if "warnings" in m or "patterns" in m:
+        return m
+    flat = m.get("markers", [])
+    if not flat:
+        return m
+    structured = {"warnings": [], "patterns": [], "recommendations": [], "metrics": [], "iron_rules_registry": []}
+    for item in flat:
+        cat = item.get("category", "behavior")
+        entry = {"id": item.get("marker_id", ""), "target": item.get("target_file", ""),
+                 "warning": item.get("claim", ""), "description": item.get("claim", ""),
+                 "recommendation": item.get("claim", ""), "confidence": item.get("confidence", 0.5)}
+        if cat == "risk": structured["warnings"].append(entry)
+        elif cat == "decision": structured["recommendations"].append(entry)
+        elif cat == "architecture": structured["metrics"].append(entry)
+        else: structured["patterns"].append(entry)
+    return {**m, **structured}
+
 dossiers = json.load(open(BASE / "file_dossiers.json"))
-markers = json.load(open(BASE / "grounded_markers.json"))
+markers = _normalize_markers(json.load(open(BASE / "grounded_markers.json")))
 
 
 def get_applicable_warnings(filename, all_warnings):
