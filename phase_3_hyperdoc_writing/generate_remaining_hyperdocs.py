@@ -3,16 +3,40 @@
 Generate hyperdoc blocks for the remaining 10 files (we already have 5).
 Uses file_dossiers.json + grounded_markers.json to compose blocks.
 """
+import argparse
 import json
 import re
 import os
+import sys
+from datetime import datetime
 from pathlib import Path
 
-BASE = Path(__file__).parent
-V5 = BASE.parent.parent / ".claude" / "hooks" / "hyperdoc" / "hyperdocs_2" / "V5" / "code"
+# ── Resolve session directory ─────────────────────────────────
+_parser = argparse.ArgumentParser(add_help=False)
+_parser.add_argument("--session", default=None, help="Session ID to process")
+_args, _ = _parser.parse_known_args()
+
+if _args.session:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    try:
+        from config import OUTPUT_DIR, V5_SOURCE_DIR
+    except ImportError:
+        OUTPUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(Path(__file__).resolve().parent.parent / "output")))
+        V5_SOURCE_DIR = Path(os.getenv("HYPERDOCS_V5_SOURCE", str(Path(__file__).resolve().parent.parent / "phase_0_prep")))
+    BASE = OUTPUT_DIR / f"session_{_args.session[:8]}"
+    if not BASE.exists():
+        print(f"ERROR: Session directory not found: {BASE}")
+        sys.exit(1)
+    V5 = V5_SOURCE_DIR
+    SESSION_ID = _args.session
+else:
+    BASE = Path(__file__).parent
+    V5 = BASE.parent.parent / ".claude" / "hooks" / "hyperdoc" / "hyperdocs_2" / "V5" / "code"
+    SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
+
 BLOCKS_DIR = BASE / "hyperdoc_blocks"
 PREVIEW_DIR = BASE / "hyperdoc_previews"
-DEST_DIR = BASE.parent.parent / ".claude" / "hooks" / "hyperdoc" / "hyperdocs_2" / "hyperdoc code files"
+DEST_DIR = BASE / "hyperdoc_code_files"
 BLOCKS_DIR.mkdir(exist_ok=True)
 PREVIEW_DIR.mkdir(exist_ok=True)
 DEST_DIR.mkdir(exist_ok=True)
@@ -76,7 +100,7 @@ def generate_block(dossier, filename):
     lines = []
     lines.append(f"# ===========================================================================")
     lines.append(f"# HYPERDOC BLOCK: {filename}")
-    lines.append(f"# Session: {SESSION_ID} | Generated: 2026-02-06")
+    lines.append(f"# Session: {SESSION_ID} | Generated: {datetime.now().strftime('%Y-%m-%d')}")
     lines.append(f"# ===========================================================================")
     lines.append(f"#")
 

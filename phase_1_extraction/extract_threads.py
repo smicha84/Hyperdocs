@@ -583,47 +583,152 @@ def main():
                     if overlap >= len(key_terms) * 0.5:
                         extractions[i]['markers']['is_ignored_gem'] = False  # Was addressed
 
+    # ── Build canonical output: threads dict grouped by category ──
+    # Each thread category has a description and a list of entries.
+    # Per-message extractions are grouped into the 6 thread categories
+    # (user_ideas, claude_response, reactions, software, code_blocks, plans)
+    # plus markers aggregated separately.
+
+    thread_categories = {
+        "ideas": {
+            "description": "User ideas, goals, and architectural insights extracted from conversation",
+            "entries": [],
+        },
+        "reactions": {
+            "description": "User reactions and emotional responses to Claude's actions",
+            "entries": [],
+        },
+        "software": {
+            "description": "File creation, modification, and deletion events",
+            "entries": [],
+        },
+        "code": {
+            "description": "Code blocks, functions, and classes referenced or modified",
+            "entries": [],
+        },
+        "plans": {
+            "description": "Plans detected, tasks referenced, completion status",
+            "entries": [],
+        },
+        "behavior": {
+            "description": "Claude behavior patterns: quality, deception, frustration triggers",
+            "entries": [],
+        },
+    }
+
+    for ext in extractions:
+        idx = ext["index"]
+        role = ext["role"]
+        threads = ext.get("threads", {})
+        markers = ext.get("markers", {})
+
+        # User ideas → ideas thread
+        ui = threads.get("user_ideas", {})
+        if ui.get("idea"):
+            sig = "high" if markers.get("is_ignored_gem") or ui.get("evolution") in (
+                "identifying_root_cause", "architectural_strategy", "grounding_pass_invention",
+                "tiered_architecture_v2", "semantic_primitives_introduction"
+            ) else "medium"
+            thread_categories["ideas"]["entries"].append({
+                "msg_index": idx,
+                "content": str(ui["idea"])[:500],
+                "significance": sig,
+                "evolution": ui.get("evolution"),
+            })
+
+        # Reactions → reactions thread
+        rx = threads.get("reactions", {})
+        if rx.get("type") and rx["type"] not in ("neutral", None):
+            sig = "high" if rx["type"] in ("rage", "angry") else "medium"
+            content = f"{rx['type']}"
+            if rx.get("to"):
+                content += f": {rx['to']}"
+            thread_categories["reactions"]["entries"].append({
+                "msg_index": idx,
+                "content": content,
+                "significance": sig,
+            })
+
+        # Software → software thread
+        sw = threads.get("software", {})
+        if sw.get("created") or sw.get("modified") or sw.get("deleted"):
+            parts = []
+            if sw.get("created"):
+                parts.append(f"Created: {', '.join(sw['created'])}")
+            if sw.get("modified"):
+                parts.append(f"Modified: {', '.join(sw['modified'][:5])}")
+            if sw.get("deleted"):
+                parts.append(f"Deleted: {', '.join(sw['deleted'])}")
+            thread_categories["software"]["entries"].append({
+                "msg_index": idx,
+                "content": "; ".join(parts),
+                "significance": "high" if sw.get("created") else "medium",
+            })
+
+        # Code blocks → code thread
+        cb = threads.get("code_blocks", {})
+        if cb.get("blocks") or cb.get("code_block_count", 0) > 0:
+            content = f"{cb.get('action', 'referenced')}"
+            if cb.get("blocks"):
+                content += f": {', '.join(cb['blocks'])}"
+            if cb.get("code_block_count", 0) > 0:
+                content += f" ({cb['code_block_count']} code blocks)"
+            thread_categories["code"]["entries"].append({
+                "msg_index": idx,
+                "content": content,
+                "significance": "high" if cb.get("action") in ("created", "fixed") else "medium",
+            })
+
+        # Plans → plans thread
+        pl = threads.get("plans", {})
+        if pl.get("detected"):
+            content = pl.get("content", "Plan detected")
+            if pl.get("completed"):
+                content += f" | Done: {', '.join(pl['completed'][:3])}"
+            if pl.get("pending"):
+                content += f" | Pending: {', '.join(pl['pending'][:3])}"
+            thread_categories["plans"]["entries"].append({
+                "msg_index": idx,
+                "content": content,
+                "significance": "high",
+            })
+
+        # Claude behavior → behavior thread
+        cr = threads.get("claude_response", {})
+        if role == "assistant" and cr.get("quality") in ("harmful", "poor"):
+            content = f"{cr.get('action', 'responded')} (quality: {cr['quality']})"
+            if markers.get("deception_detected"):
+                content += " [DECEPTION]"
+            thread_categories["behavior"]["entries"].append({
+                "msg_index": idx,
+                "content": content,
+                "significance": "high",
+            })
+        elif markers.get("is_pivot") or markers.get("is_failure") or markers.get("is_breakthrough"):
+            marker_tags = []
+            if markers.get("is_pivot"):
+                marker_tags.append("PIVOT")
+            if markers.get("is_failure"):
+                marker_tags.append("FAILURE")
+            if markers.get("is_breakthrough"):
+                marker_tags.append("BREAKTHROUGH")
+            content = f"[{', '.join(marker_tags)}] {cr.get('action', role)}"
+            thread_categories["behavior"]["entries"].append({
+                "msg_index": idx,
+                "content": content,
+                "significance": "high",
+            })
+
     output = {
         "session_id": os.getenv("HYPERDOCS_SESSION_ID", ""),
-        "total_analyzed": len(extractions),
-        "extraction_method": "deterministic_pattern_matching",
-        "narrative_arc": {
-            "chapter_1_wiring": "idx 32-147: V5 dependency analysis and wiring",
-            "chapter_2_audits": "idx 149-766: Repeated SHOULD vs IS audit cycles",
-            "chapter_3_import_crisis": "idx 1076-1103: Claude deleted imports, user demanded restoration",
-            "chapter_4_phase0_revelation": "idx 2262-2310: V5 stuck because geological_reader called Opus per line",
-            "chapter_5_user_frustration_peak": "idx 2125-2155: User explodes at rushing and ignoring",
-            "chapter_6_v1_enhancement": "idx 2239-2243: V1 worked, V5 is dead, enhance V1 with V5",
-            "chapter_7_multipass_analysis": "idx 2344-2460: 5-pass temperature ramp, too many metaphors",
-            "chapter_8_opus_only_crisis": "idx 3094-3133: Claude used Sonnet, user rage",
-            "chapter_9_marker_insertion": "idx 2922-2981: Marker insertion truncating content",
-            "chapter_10_archive_processing": "idx 3461-3534: Processing PERMANENT_ARCHIVE (149 files)",
-            "chapter_11_tiered_architecture": "idx 3534-3598: Python metadata -> Haiku -> Opus tiering",
-            "chapter_12_semantic_primitives": "idx 4248-4268: Seven Semantic Primitives from Opus 4.6 conversation"
+        "threads": thread_categories,
+        # Preserve the full per-message extractions in _extra for
+        # reference-session backward compatibility and debugging.
+        "_extra": {
+            "total_analyzed": len(extractions),
+            "extraction_method": "deterministic_pattern_matching",
+            "extractions": extractions,
         },
-        "key_crisis_moments": [
-            {"index": 2125, "description": "User: 'you are completely rushing through all this'"},
-            {"index": 2150, "description": "User corrects Claude's misunderstanding of actual goal"},
-            {"index": 2153, "description": "User: 'ALL I CARE ABOUT IS A WORKING, HEALTHY HYPERDOCS SYSTEM'"},
-            {"index": 2460, "description": "User corrects victim-blaming in analysis"},
-            {"index": 2463, "description": "User: 'you are a dementia patient'"},
-            {"index": 2981, "description": "User: 'undo those fucking truncators RIGHT FUCKING NOW'"},
-            {"index": 3094, "description": "User discovers Claude used Sonnet: 'ONLY OPUS YOU CUNT!!!!'"},
-            {"index": 3100, "description": "User repeats 'ONLY OPUS YOU CUNT' 29+ times"},
-            {"index": 3408, "description": "User: 'this system does not produce summaries'"},
-            {"index": 3805, "description": "User demonstrates extreme frustration copy-paste pattern"}
-        ],
-        "claude_behavior_patterns": {
-            "overconfidence": "Claude repeatedly claims 'all complete' when significant issues remain",
-            "rushing": "Claude skips thorough analysis multiple times, user calls it out",
-            "context_loss": "Multiple session continuations (context window exhaustion)",
-            "model_substitution": "Claude used Sonnet instead of Opus in grounding_pass.py",
-            "truncation_tendency": "Claude's code frequently truncates data ([:10] demo limits, 4000 char limits)",
-            "apologize_then_repeat": "Claude apologizes, promises to fix, then makes same category of error",
-            "premature_celebration": "Claude declares victory ('ALL TESTS PASS!') prematurely",
-            "import_deletion": "Claude deleted 'unused' imports that were design intent"
-        },
-        "extractions": extractions
     }
 
     print(f"\nWriting {len(extractions)} extractions to output...")
@@ -668,6 +773,9 @@ def main():
     print(f"  User messages: {len(user_msgs)}")
     print(f"  Assistant messages: {len(asst_msgs)}")
     print(f"  Narrative annotations: {annotated}")
+    print(f"\nThread categories (canonical output):")
+    for cat_name, cat_data in thread_categories.items():
+        print(f"  {cat_name}: {len(cat_data['entries'])} entries")
     print(f"\nMarker counts:")
     print(f"  Pivots: {pivots}")
     print(f"  Failures: {failures}")

@@ -1,11 +1,29 @@
 #!/usr/bin/env python3
 """Generate a comprehensive HTML viewer for all pipeline outputs."""
+import argparse
 import json
 import os
 import html
+import sys
 from pathlib import Path
 
-BASE = Path(__file__).parent
+# ── Resolve session directory ─────────────────────────────────
+_parser = argparse.ArgumentParser(add_help=False)
+_parser.add_argument("--session", default=None, help="Session ID to process")
+_args, _ = _parser.parse_known_args()
+
+if _args.session:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    try:
+        from config import OUTPUT_DIR
+    except ImportError:
+        OUTPUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(Path(__file__).resolve().parent.parent / "output")))
+    BASE = OUTPUT_DIR / f"session_{_args.session[:8]}"
+    if not BASE.exists():
+        print(f"ERROR: Session directory not found: {BASE}")
+        sys.exit(1)
+else:
+    BASE = Path(__file__).parent
 
 def load(name):
     p = BASE / name

@@ -14,13 +14,33 @@ Writes:
   - claude_md_analysis.json (how CLAUDE.md gates affected this session)
 """
 
+import argparse
 import json
 import os
 import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent
+# ── Resolve session directory ─────────────────────────────────
+# Default: files adjacent to this script (backward compat).
+# With --session SESSION_ID: load from the session output dir.
+_parser = argparse.ArgumentParser(add_help=False)
+_parser.add_argument("--session", default=None, help="Session ID to process")
+_args, _ = _parser.parse_known_args()
+
+if _args.session:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    try:
+        from config import OUTPUT_DIR
+    except ImportError:
+        OUTPUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(Path(__file__).resolve().parent.parent / "output")))
+    BASE_DIR = OUTPUT_DIR / f"session_{_args.session[:8]}"
+    if not BASE_DIR.exists():
+        print(f"ERROR: Session directory not found: {BASE_DIR}")
+        sys.exit(1)
+else:
+    BASE_DIR = Path(__file__).parent
 
 
 def load_json(filename):
@@ -724,9 +744,10 @@ claude_md_analysis = {
     "generated_at": "2026-02-06T00:00:00Z",
     "generator": "agent_7_file_mapper",
     "description": (
-        "Analysis of how CLAUDE.md gates and framing affected Claude's behavior "
-        "in session 3b7084d5 (4269 messages, ~37 hours). Based on grounded evidence "
-        "from session_metadata, grounded_markers, thread_extractions, and idea_graph."
+        f"Analysis of how CLAUDE.md gates and framing affected Claude's behavior "
+        f"in session {os.getenv('HYPERDOCS_SESSION_ID', _args.session or 'unknown')} "
+        f"({session.get('session_stats', {}).get('total_messages', '?')} messages). Based on grounded evidence "
+        f"from session_metadata, grounded_markers, thread_extractions, and idea_graph."
     ),
 
     "gate_analysis": {
