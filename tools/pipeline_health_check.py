@@ -326,6 +326,85 @@ class HealthCheck:
             except Exception as e:
                 self._record(name, "phase2_empty_input", False, str(e)[:100])
 
+    # ── 4b. Phase 3-4 Runtime ────────────────────────────────────────
+    def check_phase3_4_runtime(self):
+        """Test Phase 3 generate_viewer and Phase 4 insertion against real session data."""
+        name = "4b_phase3_4_runtime"
+        if not self.session_dir:
+            self._skip(name, "all", "No processed session found")
+            return
+
+        p3_dir = REPO / "phase_3_hyperdoc_writing"
+
+        # Test generate_viewer.py: symlink session data, run, check output, clean up
+        json_files = ["session_metadata.json", "thread_extractions.json", "geological_notes.json",
+                      "semantic_primitives.json", "explorer_notes.json", "idea_graph.json",
+                      "synthesis.json", "grounded_markers.json"]
+        links_created = []
+        try:
+            for fname in json_files:
+                src = self.session_dir / fname
+                dst = p3_dir / fname
+                if src.exists() and not dst.exists():
+                    os.symlink(str(src), str(dst))
+                    links_created.append(dst)
+
+            # Run generate_viewer.py
+            result = subprocess.run(
+                [sys.executable, str(p3_dir / "generate_viewer.py")],
+                capture_output=True, text=True, timeout=30,
+                cwd=str(p3_dir),
+            )
+            viewer_path = p3_dir / "pipeline_viewer.html"
+            if result.returncode == 0 and viewer_path.exists():
+                size = viewer_path.stat().st_size
+                self._record(name, "phase3_generate_viewer", True, f"{size:,} bytes HTML")
+                viewer_path.unlink()  # clean up
+            else:
+                err = result.stderr[:100] if result.stderr else "unknown error"
+                self._record(name, "phase3_generate_viewer", False, err)
+        except Exception as e:
+            self._record(name, "phase3_generate_viewer", False, str(e)[:100])
+        finally:
+            for link in links_created:
+                if link.is_symlink():
+                    link.unlink()
+
+        # Test Phase 4 insertion scripts parse without error
+        for script in ["insert_hyperdocs.py", "insert_hyperdocs_v2.py", "insert_from_phase4b.py",
+                        "hyperdoc_layers.py", "hyperdoc_store_init.py"]:
+            spath = REPO / "phase_4_insertion" / script
+            if spath.exists():
+                try:
+                    ast.parse(spath.read_text())
+                    self._record(name, f"phase4_syntax:{script}", True)
+                except SyntaxError as e:
+                    self._record(name, f"phase4_syntax:{script}", False, str(e)[:80])
+
+        # Test Phase 4 hyperdoc_layers.py can import and run
+        result = subprocess.run(
+            [sys.executable, "-c",
+             "from phase_4_insertion.hyperdoc_layers import migrate_directory; print('OK')"],
+            capture_output=True, text=True, timeout=10, cwd=str(REPO),
+        )
+        self._record(name, "phase4_import_hyperdoc_layers",
+                     result.returncode == 0,
+                     result.stdout.strip() if result.returncode == 0 else result.stderr[:80])
+
+        # Test that existing hyperdoc JSONs in PERMANENT_HYPERDOCS are readable
+        hd_dir = Path.home() / "PERMANENT_HYPERDOCS" / "hyperdocs"
+        if hd_dir.exists():
+            hd_files = list(hd_dir.glob("*_hyperdoc.json"))[:5]
+            for hf in hd_files:
+                try:
+                    data = json.loads(hf.read_text())
+                    has_layers = "layers" in data
+                    has_header = any(l.get("header") for l in data.get("layers", []))
+                    self._record(name, f"phase4_hyperdoc:{hf.name[:30]}",
+                                 has_layers, f"layers={len(data.get('layers', []))}, has_header={has_header}")
+                except Exception as e:
+                    self._record(name, f"phase4_hyperdoc:{hf.name[:30]}", False, str(e)[:60])
+
     # ── 5. Idempotency ────────────────────────────────────────────────
     def check_idempotency(self):
         """Verify running Phase 2 twice produces same output."""
@@ -577,7 +656,8 @@ class HealthCheck:
             ("1. Schema Compatibility", self.check_schema_compatibility),
             ("2. End-to-End", self.check_end_to_end),
             ("3. Data Volume", self.check_data_volume),
-            ("4. Empty Input", self.check_empty_input),
+            ("4a. Empty Input", self.check_empty_input),
+            ("4b. Phase 3-4 Runtime", self.check_phase3_4_runtime),
             ("5. Idempotency", self.check_idempotency),
             ("6. Imports", self.check_imports),
             ("7. Paths", self.check_paths),
@@ -647,6 +727,7 @@ class HealthCheck:
             "e2e": self.check_end_to_end,
             "volume": self.check_data_volume,
             "empty": self.check_empty_input,
+            "phase34": self.check_phase3_4_runtime,
             "idempotency": self.check_idempotency,
             "imports": self.check_imports,
             "paths": self.check_paths,
