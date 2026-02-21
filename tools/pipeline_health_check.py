@@ -90,6 +90,11 @@ CONSUMER_EXPECTATIONS = {
         "explorer_notes.json": ["observations"],
         "session_metadata.json": ["session_stats"],
     },
+    "output/batch_p2_generator.py": {
+        "thread_extractions.json": ["threads"],
+        "geological_notes.json": ["micro"],
+        "session_metadata.json": ["session_stats"],
+    },
     "phase_2_synthesis/file_genealogy.py": {
         "thread_extractions.json": ["threads"],
         "idea_graph.json": ["nodes", "edges"],
@@ -102,6 +107,31 @@ CONSUMER_EXPECTATIONS = {
         "idea_graph.json": ["nodes", "edges"],
         "synthesis.json": ["passes"],
         "grounded_markers.json": ["markers"],
+    },
+    "phase_3_hyperdoc_writing/generate_dossiers.py": {
+        "thread_extractions.json": ["threads"],
+        "session_metadata.json": ["session_stats"],
+        "grounded_markers.json": ["markers"],
+        "idea_graph.json": ["nodes", "edges"],
+    },
+    "phase_3_hyperdoc_writing/write_hyperdocs.py": {
+        "grounded_markers.json": ["markers"],
+    },
+    "phase_3_hyperdoc_writing/generate_remaining_hyperdocs.py": {
+        "grounded_markers.json": ["markers"],
+    },
+    "product/dashboard.py": {
+        "session_metadata.json": ["session_stats"],
+        "grounded_markers.json": ["markers"],
+    },
+    "phase_0_prep/completeness_scanner.py": {
+        "thread_extractions.json": ["threads"],
+        "semantic_primitives.json": ["tagged_messages"],
+        "idea_graph.json": ["nodes", "edges"],
+        "grounded_markers.json": ["markers"],
+    },
+    "phase_1_extraction/batch_orchestrator.py": {
+        "session_metadata.json": ["session_stats"],
     },
 }
 
@@ -232,12 +262,31 @@ class HealthCheck:
             nodes = len(ig.get("nodes", []))
             self._record(name, "phase2_idea_nodes", nodes > 0, f"{nodes} nodes")
 
-        # Phase 2: markers > 0
+        # Phase 2: markers > 0 (with volume diagnostic)
         gm_path = self.session_dir / "grounded_markers.json"
         if gm_path.exists():
             gm = json.loads(gm_path.read_text())
-            markers = len(gm.get("markers", []))
-            self._record(name, "phase2_markers", markers > 0, f"{markers} markers")
+            markers = gm.get("markers", [])
+            marker_count = len(markers)
+            # Minimum markers: should have at least 1 per top file + 1 per frustration peak
+            meta_path2 = self.session_dir / "session_metadata.json"
+            expected_min = 3  # bare minimum
+            if meta_path2.exists():
+                meta2 = json.loads(meta_path2.read_text())
+                stats2 = meta2.get("session_stats", {})
+                top_files = len(stats2.get("file_mention_counts", {}))
+                frustration = len(stats2.get("frustration_peaks", []))
+                expected_min = max(3, top_files // 2 + frustration)
+            self._record(name, "phase2_marker_count", marker_count > 0, f"{marker_count} markers")
+            self._record(name, "phase2_marker_volume", marker_count >= expected_min,
+                         f"{marker_count} markers (expected >={expected_min} based on {top_files} files, {frustration} peaks)")
+            # Check marker categories
+            if markers:
+                cats = defaultdict(int)
+                for m in markers:
+                    cats[m.get("category", "unknown")] += 1
+                self._record(name, "phase2_marker_categories", len(cats) >= 2,
+                             f"{len(cats)} categories: {dict(cats)}")
 
     # ── 4. Empty Input Handling ───────────────────────────────────────
     def check_empty_input(self):
@@ -318,7 +367,7 @@ class HealthCheck:
 
     # ── 6. Import Verification ────────────────────────────────────────
     def check_imports(self):
-        """Verify every Python file imports without errors."""
+        """Verify every Python file compiles AND key modules import at runtime."""
         name = "6_imports"
         skip_dirs = {"output", "obsolete", "tests", "__pycache__", ".pytest_cache",
                      "archive_originals", "commands", "standby"}
@@ -335,6 +384,26 @@ class HealthCheck:
                 self._record(name, f"syntax:{rel}", True)
             except SyntaxError as e:
                 self._record(name, f"syntax:{rel}", False, f"Line {e.lineno}: {e.msg}")
+
+        # Runtime import check for critical modules
+        runtime_imports = [
+            ("phase_0_prep.claude_session_reader", "ClaudeSessionReader"),
+            ("phase_0_prep.geological_reader", "GeologicalMessage"),
+            ("phase_0_prep.metadata_extractor", "MetadataExtractor"),
+            ("phase_0_prep.message_filter", "MessageFilter"),
+            ("phase_0_prep.claude_behavior_analyzer", "ClaudeBehaviorAnalyzer"),
+            ("phase_0_prep.schema_normalizer", "NORMALIZERS"),
+        ]
+        for mod_name, attr_name in runtime_imports:
+            result = subprocess.run(
+                [sys.executable, "-c",
+                 f"from {mod_name} import {attr_name}; print('{attr_name} OK')"],
+                capture_output=True, text=True, timeout=10,
+                cwd=str(REPO),
+            )
+            passed = result.returncode == 0
+            detail = result.stdout.strip() if passed else result.stderr.strip()[:80]
+            self._record(name, f"runtime:{mod_name}.{attr_name}", passed, detail)
 
     # ── 7. Path Resolution ────────────────────────────────────────────
     def check_paths(self):
@@ -370,31 +439,65 @@ class HealthCheck:
 
     # ── 8. Backward Compatibility ─────────────────────────────────────
     def check_backward_compat(self):
-        """Verify old-format sessions can still be read."""
+        """Verify old-format sessions can still be read by current consumers."""
         name = "8_backward_compat"
         perm = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
         if not perm.exists():
             self._skip(name, "all", "PERMANENT_HYPERDOCS not found")
             return
 
-        # Pick an old session (one of the original 284)
-        old_sessions = sorted(perm.iterdir())[:5]
-        for sd in old_sessions:
-            if not sd.is_dir():
-                continue
-            threads_path = sd / "thread_extractions.json"
-            if not threads_path.exists():
-                continue
+        # Test 10 sessions spread across the archive
+        all_sessions = sorted(d for d in perm.iterdir()
+                              if d.is_dir() and d.name.startswith("session_")
+                              and (d / "thread_extractions.json").exists())
+        if not all_sessions:
+            self._skip(name, "all", "No sessions with Phase 1 output found")
+            return
 
+        # Sample: first, middle, last, and 7 evenly spaced
+        sample_indices = set([0, len(all_sessions) // 2, len(all_sessions) - 1])
+        step = max(1, len(all_sessions) // 10)
+        for i in range(0, len(all_sessions), step):
+            sample_indices.add(i)
+        sample = [all_sessions[i] for i in sorted(sample_indices)][:10]
+
+        for sd in sample:
+            sid = sd.name[:16]
+            # Check thread_extractions readable (has threads or extractions)
             try:
-                data = json.loads(threads_path.read_text())
-                # Old format might have "extractions" or "threads" (list or dict)
-                has_data = bool(data.get("threads") or data.get("extractions"))
-                self._record(name, f"old_session:{sd.name[:16]}", has_data,
-                             f"keys: {list(data.keys())[:5]}")
+                data = json.loads((sd / "thread_extractions.json").read_text())
+                has_threads = bool(data.get("threads") or data.get("extractions"))
+                fmt = "dict" if isinstance(data.get("threads"), dict) else (
+                    "list" if isinstance(data.get("threads"), list) else (
+                    "extractions" if data.get("extractions") else "unknown"))
+                self._record(name, f"threads:{sid}", has_threads, f"format={fmt}")
             except Exception as e:
-                self._record(name, f"old_session:{sd.name[:16]}", False, str(e)[:80])
-            break  # Just test one
+                self._record(name, f"threads:{sid}", False, str(e)[:60])
+
+            # Check grounded_markers readable (has markers or structured)
+            gm_path = sd / "grounded_markers.json"
+            if gm_path.exists():
+                try:
+                    gm = json.loads(gm_path.read_text())
+                    # Check format is readable (has known keys, even if empty)
+                    readable = "markers" in gm or "warnings" in gm or "patterns" in gm
+                    count = len(gm.get("markers", [])) + len(gm.get("warnings", [])) + len(gm.get("patterns", []))
+                    fmt = "flat" if "markers" in gm else "structured"
+                    self._record(name, f"markers:{sid}", readable, f"format={fmt}, {count} items")
+                except Exception as e:
+                    self._record(name, f"markers:{sid}", False, str(e)[:60])
+
+            # Check semantic_primitives readable
+            sp_path = sd / "semantic_primitives.json"
+            if sp_path.exists():
+                try:
+                    sp = json.loads(sp_path.read_text())
+                    has_data = bool(sp.get("tagged_messages") or sp.get("primitives"))
+                    fmt = "canonical" if sp.get("tagged_messages") else (
+                        "old" if sp.get("primitives") else "unknown")
+                    self._record(name, f"primitives:{sid}", has_data, f"format={fmt}")
+                except Exception as e:
+                    self._record(name, f"primitives:{sid}", False, str(e)[:60])
 
     # ── 9. Cross-Stage Contracts ──────────────────────────────────────
     def check_contracts(self):
