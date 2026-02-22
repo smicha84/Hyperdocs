@@ -2,34 +2,37 @@
 """
 Phase 3a: Per-Session File Evidence Collector
 
-For each file mentioned in a session, collects 9 types of evidence from all
-10 data sources using time-window correlation (±10 messages around each mention).
+For each file mentioned in a session, collects 11 types of evidence from all
+12 data sources using time-window correlation (±10 messages around each mention).
 
 Reads per session:
-  - session_metadata.json — file mention counts, top_files
+  - session_metadata.json — file mention counts, top_files, session stats
   - geological_notes.json — micro/meso/macro observations
-  - semantic_primitives.json — tagged messages, distributions
-  - explorer_notes.json — observations, verification
+  - semantic_primitives.json — tagged messages, all 4 distributions
+  - explorer_notes.json — observations, verification, data quality
   - file_genealogy.json — file families
-  - thread_extractions.json — 6 thread categories
-  - grounded_markers.json — markers referencing files
+  - thread_extractions.json — 6 thread categories + per-message markers
+  - grounded_markers.json — markers referencing files (marker/context/confidence/source)
   - idea_graph.json — nodes, edges, subgraphs, statistics
-  - synthesis.json — 6-pass multi-temperature analysis
-  - claude_md_analysis.json — gate analysis, findings, recommendations
+  - synthesis.json — 6-pass multi-temperature analysis + passes.summary
+  - claude_md_analysis.json — gate analysis, findings, recommendations, tier2 security
+  - file_dossiers.json — per-file dossiers with summary, analysis_sources, canonical_path
 
 Writes per file:
   output/session_XXXX/file_evidence/{safe_filename}_evidence.json
 
-Each evidence JSON has 9 sections:
-  1. emotional_arc — primitives from the time window
+Each evidence JSON has 11 sections:
+  1. emotional_arc — primitives from the time window + all 4 distributions
   2. geological_character — geological observations by name + time overlap
-  3. lineage — genealogy links from file_genealogy + idea_graph
-  4. explorer_observations — explorer notes referencing the file
-  5. chronological_timeline — thread entries + grounded markers
+  3. lineage — genealogy links from file_genealogy + idea_graph + dossier extras
+  4. explorer_observations — explorer notes + overall_data_quality
+  5. chronological_timeline — thread entries + grounded markers (full schema)
   6. code_similarity — placeholder (populated by Phase 4a aggregation)
   7. graph_context — connected edges, subgraphs, graph statistics (session-level)
-  8. synthesis_context — multi-pass analysis passes 1-6 (session-level)
-  9. claude_md_context — file analyses, findings, recommendations (session-level)
+  8. synthesis_context — multi-pass analysis passes 1-6 + summary (session-level)
+  9. claude_md_context — file analyses, findings, recommendations, tier2 (session-level)
+  10. session_context — message counts, tokens, tier distribution, frustration peaks
+  11. thread_markers — pivot/failure/breakthrough/deception markers per message
 
 $0 cost — pure Python, no LLM calls.
 
@@ -64,11 +67,14 @@ def load_json(filename, search_dirs):
 
 
 def mentions_file(text, filename):
-    """Check if text mentions a file (by full name or stem)."""
+    """Check if text mentions a file (by full name or stem, case-insensitive)."""
     if not text or not isinstance(text, str):
         return False
+    text_lower = text.lower()
     base = Path(filename).stem
-    return filename in text or base in text
+    base_lower = base.lower()
+    base_spaced = base_lower.replace("_", " ")
+    return filename.lower() in text_lower or base_lower in text_lower or base_spaced in text_lower
 
 
 def in_window(msg_index, mention_indices, window=WINDOW):
@@ -202,10 +208,13 @@ def build_emotional_arc(target_file, mention_indices, window_indices, semantic_p
 
     return {
         "session_distribution": distributions.get("emotional_tenor", {}),
+        "session_distributions": distributions,  # all 4: emotional_tenor, action_vector, confidence_signal, intent_marker
         "file_window_distribution": dict(file_emotion_dist),
         "emotion_trajectory": emotion_trajectory,
         "session_arc": summary_stats.get("session_arc", ""),
         "dominant_emotion": summary_stats.get("dominant_emotion", ""),
+        "dominant_action": summary_stats.get("dominant_action", ""),
+        "key_decisions_count": summary_stats.get("key_decisions", 0),
         "friction_episodes": summary_stats.get("friction_episodes", 0),
         "file_nearby_emotions": window_emotions,
         "data_points": len(window_emotions),
@@ -306,7 +315,8 @@ def build_lineage(target_file, file_genealogy, idea_graph, perm_dossier=None):
             for k, v in dossiers.items():
                 if isinstance(v, dict) and (v.get("file_name") == target_file or target_file in k):
                     for field in ("alternate_locations", "implementation_descendants",
-                                  "related_ideas_from_session", "key_insight", "role_in_session"):
+                                  "related_ideas_from_session", "key_insight", "role_in_session",
+                                  "summary", "analysis_sources", "canonical_path"):
                         val = v.get(field)
                         if val:
                             dossier_extra[field] = val
@@ -447,6 +457,16 @@ def build_synthesis_context(synthesis):
                 "content": content,
             })
 
+    # Bug 7: Capture passes.summary or top-level summary (some sessions use this schema)
+    summary_data = source.get("summary", passes_container.get("summary", {})) if isinstance(passes_container, dict) else {}
+    if isinstance(summary_data, dict) and summary_data:
+        passes.append({
+            "pass_number": 0,
+            "temperature": 0,
+            "label": "SUMMARY",
+            "content": summary_data,
+        })
+
     cross_pass = synthesis.get("cross_pass_summary", {})
     key_findings = synthesis.get("key_findings", [])
     cross_session_links = synthesis.get("cross_session_links", [])  # L1
@@ -491,7 +511,7 @@ def build_claude_md_context(claude_md_analysis):
             result[key] = val
 
     # Schema C keys
-    for key in ("gate_activations", "gates_not_triggered", "overall_assessment", "behavior_profile"):
+    for key in ("gate_activations", "gates_not_triggered", "overall_assessment", "behavior_profile", "tier2_security_analysis"):
         val = claude_md_analysis.get(key)
         if val:
             result[key] = val
@@ -512,6 +532,29 @@ def build_claude_md_context(claude_md_analysis):
     result["data_points"] = dp
 
     return result
+
+
+def build_session_context(session_metadata):
+    """Build session-level context from session metadata stats.
+
+    Provides message counts, token usage, tier distribution, error counts,
+    and frustration peaks — same for all files in a session.
+    """
+    stats = session_metadata.get("session_stats", session_metadata)
+    return {
+        "total_messages": stats.get("total_messages", 0),
+        "user_messages": stats.get("user_messages", 0),
+        "assistant_messages": stats.get("assistant_messages", 0),
+        "tier_distribution": stats.get("tier_distribution", {}),
+        "error_count": stats.get("error_count", 0),
+        "tool_failure_count": stats.get("tool_failure_count", 0),
+        "total_input_tokens": stats.get("total_input_tokens", 0),
+        "total_output_tokens": stats.get("total_output_tokens", 0),
+        "total_thinking_chars": stats.get("total_thinking_chars", 0),
+        "is_subagent": stats.get("is_subagent", False),
+        "frustration_peaks": stats.get("frustration_peaks", []),
+        "data_points": 1,
+    }
 
 
 def build_explorer_observations(target_file, explorer_notes):
@@ -550,7 +593,39 @@ def build_explorer_observations(target_file, explorer_notes):
         "verification_issues": file_verification,
         "anomalies": anomalies,
         "session_explorer_summary": explorer_summary,  # L6: always include (session-level context)
+        "overall_data_quality": explorer_notes.get("verification", {}).get("overall_data_quality", ""),
         "data_points": len(file_explorer_obs) + len(file_verification) + len(anomalies),
+    }
+
+
+def build_thread_markers(target_file, thread_extractions):
+    """Build thread markers section from thread extraction per-message markers.
+
+    Extracts pivot/failure/breakthrough/ignored_gem/deception/frustration markers
+    from messages that mention this file.
+    """
+    extra = thread_extractions.get("_extra", {})
+    extractions = extra.get("extractions", [])
+    file_markers = []
+    for ext in extractions:
+        if not isinstance(ext, dict):
+            continue
+        threads = ext.get("threads", {})
+        marker_data = ext.get("markers", {})
+        content_preview = ext.get("content_preview", "")
+        if mentions_file(content_preview, target_file) or mentions_file(json.dumps(threads), target_file):
+            file_markers.append({
+                "msg_index": ext.get("index", -1),
+                "is_pivot": marker_data.get("is_pivot", False),
+                "is_failure": marker_data.get("is_failure", False),
+                "is_breakthrough": marker_data.get("is_breakthrough", False),
+                "is_ignored_gem": marker_data.get("is_ignored_gem", False),
+                "deception_detected": marker_data.get("deception_detected", False),
+                "frustration_level": marker_data.get("frustration_level", 0),
+            })
+    return {
+        "markers": file_markers,
+        "data_points": len(file_markers),
     }
 
 
@@ -606,10 +681,13 @@ def build_chronological_timeline(target_file, threads_dict, grounded_markers):
         marker_text = json.dumps(m)
         if mentions_file(marker_text, target_file):
             timeline.append({
-                "msg_index": m.get("msg_index", m.get("first_discovered", -1)),
+                "msg_index": m.get("msg_index", m.get("first_discovered", m.get("trigger_message", -1))),
                 "thread": "grounded_marker",
-                "content": m.get("claim", m.get("warning", m.get("title", "")))[:500],
-                "significance": m.get("severity", m.get("priority", "")),
+                "content": m.get("claim", m.get("warning", m.get("title", m.get("marker", m.get("context", "")))))[:500],
+                "significance": m.get("severity", m.get("priority", m.get("confidence", ""))),
+                "marker_type": m.get("type", ""),
+                "marker_source": m.get("source", ""),
+                "marker_id": m.get("id", ""),
             })
 
     timeline.sort(key=lambda x: x.get("msg_index", 0) if isinstance(x.get("msg_index"), int) else 0)
@@ -632,11 +710,13 @@ def build_chronological_timeline(target_file, threads_dict, grounded_markers):
 def collect_evidence_for_file(target_file, session_id, mention_indices, window_indices,
                                semantic_primitives, geological_notes, file_genealogy,
                                idea_graph, explorer_notes, threads_dict, grounded_markers,
-                               synthesis, claude_md_analysis, perm_dossier):
-    """Collect all 9 evidence sections for a single file.
+                               synthesis, claude_md_analysis, perm_dossier, session_metadata,
+                               thread_extractions):
+    """Collect all 11 evidence sections for a single file.
 
     Sections 1-6: file-level (filtered by name/time window)
-    Sections 7-9: session-level context (same for all files in session)
+    Sections 7-10: session-level context (same for all files in session)
+    Section 11: thread_markers (file-level behavioral markers)
     """
     return {
         "file": target_file,
@@ -655,6 +735,8 @@ def collect_evidence_for_file(target_file, session_id, mention_indices, window_i
         "graph_context": build_graph_context(target_file, idea_graph),
         "synthesis_context": build_synthesis_context(synthesis),
         "claude_md_context": build_claude_md_context(claude_md_analysis),
+        "session_context": build_session_context(session_metadata),
+        "thread_markers": build_thread_markers(target_file, thread_extractions),
     }
 
 
@@ -730,12 +812,14 @@ def main():
             target_file, session_id, mention_indices, window_indices,
             semantic_primitives, geological_notes, file_genealogy,
             idea_graph, explorer_notes, threads_dict, grounded_markers,
-            synthesis, claude_md_analysis, perm_dossier)
+            synthesis, claude_md_analysis, perm_dossier, session_metadata,
+            thread_extractions)
 
         # Count data points
         sections = ["emotional_arc", "geological_character", "lineage",
                     "explorer_observations", "chronological_timeline", "code_similarity",
-                    "graph_context", "synthesis_context", "claude_md_context"]
+                    "graph_context", "synthesis_context", "claude_md_context",
+                    "session_context", "thread_markers"]
         file_dp = sum(evidence[s].get("data_points", 0) for s in sections)
         total_data_points += file_dp
 
