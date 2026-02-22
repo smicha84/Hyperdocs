@@ -1,0 +1,34 @@
+name: Pipeline Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pytest anthropic python-dotenv
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
+      - name: Run pipeline health check (import verification only)
+        run: python -c "
+          import sys
+          sys.path.insert(0, '.')
+          from config import STORE_DIR, SESSIONS_STORE_DIR, OUTPUT_DIR
+          print(f'config.py imports OK: STORE_DIR={STORE_DIR}')
+          "

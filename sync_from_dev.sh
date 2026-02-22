@@ -40,7 +40,17 @@ if git diff --quiet && git diff --cached --quiet && [ -z "$(git ls-files --other
     exit 0
 fi
 
+# Run tests before committing
+echo "$LOG_PREFIX Running tests..."
+cd "$SRC"
+if ! python3 -m pytest tests/ -q 2>&1; then
+    echo "$LOG_PREFIX ERROR: Tests failed. Aborting sync."
+    exit 1
+fi
+echo "$LOG_PREFIX Tests passed."
+
 # Stage, commit, push
+cd "$DEST"
 git add -A
 CHANGED=$(git diff --cached --stat | tail -1)
 git commit -m "Auto-sync: $CHANGED

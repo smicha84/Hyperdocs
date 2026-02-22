@@ -5,3 +5,7 @@ output/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Security — never track secrets or key docs
+*.docx
+~$*
