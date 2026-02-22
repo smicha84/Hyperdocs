@@ -682,7 +682,7 @@ def main():
         # Plans → plans thread
         pl = threads.get("plans", {})
         if pl.get("detected"):
-            content = pl.get("content", "Plan detected")
+            content = pl.get("content") or "Plan detected"
             if pl.get("completed"):
                 content += f" | Done: {', '.join(pl['completed'][:3])}"
             if pl.get("pending"):

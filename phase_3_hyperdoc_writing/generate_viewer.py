@@ -642,7 +642,10 @@ for sp in synthesis_passes_list:
         parts.append(f'<div class="card"><pre>{esc(content)}</pre></div>')
 
     # Old reference format: findings is a dict of lists/dicts/values
-    if findings:
+    if findings and isinstance(findings, list):
+        for item in findings[:10]:
+            parts.append(f'<div class="card">{esc(str(item))}</div>')
+    elif findings and isinstance(findings, dict):
         for fk, fv in findings.items():
             if isinstance(fv, list):
                 parts.append(f"<b>{esc(fk)}</b> ({len(fv)} items)")

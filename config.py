@@ -66,6 +66,25 @@ def get_session_output_dir():
     return out
 
 
+def _find_jsonl(directory, session_id):
+    """Find a JSONL file by exact name or prefix match in a directory."""
+    if not directory.exists():
+        return None
+    # Exact match first
+    exact = directory / f"{session_id}.jsonl"
+    if exact.exists():
+        return exact
+    # Prefix match (e.g., "513d4807" matches "513d4807-bea5-4a06-...-3bb9b75b8d3f.jsonl")
+    matches = sorted(directory.glob(f"{session_id}*.jsonl"))
+    if matches:
+        return matches[0]
+    # Also check with underscore prefix (e.g., "prefix_513d4807-uuid.jsonl")
+    matches = sorted(directory.glob(f"*_{session_id}*.jsonl"))
+    if matches:
+        return matches[0]
+    return None
+
+
 def get_session_file():
     """Find the JSONL chat history file."""
     if CHAT_HISTORY_PATH:
@@ -74,23 +93,24 @@ def get_session_file():
             return p
 
     if SESSION_ID and PROJECT_ID:
-        candidate = CLAUDE_SESSIONS_DIR / PROJECT_ID / f"{SESSION_ID}.jsonl"
-        if candidate.exists():
-            return candidate
+        result = _find_jsonl(CLAUDE_SESSIONS_DIR / PROJECT_ID, SESSION_ID)
+        if result:
+            return result
 
     # Check permanent chat history directory
-    if SESSION_ID and CHAT_HISTORY_DIR.exists():
-        candidate = CHAT_HISTORY_DIR / f"{SESSION_ID}.jsonl"
-        if candidate.exists():
-            return candidate
-
     if SESSION_ID:
+        result = _find_jsonl(CHAT_HISTORY_DIR, SESSION_ID)
+        if result:
+            return result
+
+    # Search all project directories
+    if SESSION_ID and CLAUDE_SESSIONS_DIR.exists():
         for project_dir in CLAUDE_SESSIONS_DIR.iterdir():
             if not project_dir.is_dir():
                 continue
-            candidate = project_dir / f"{SESSION_ID}.jsonl"
-            if candidate.exists():
-                return candidate
+            result = _find_jsonl(project_dir, SESSION_ID)
+            if result:
+                return result
 
     return None
 

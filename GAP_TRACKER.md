@@ -405,31 +405,43 @@ Scope: 58 active Python files + 3 cron scripts + 285 session output dirs + git s
 
 ## TOTAL COUNT
 
-| Category | Count | Description |
-|----------|-------|-------------|
-| A: Runtime crashes | 5 | Duplicate mains, missing import, hard asserts |
-| B: Bare excepts | 4 | `except:` with no type |
-| C: Broad exceptions | 13 | `except Exception` |
-| D: Hardcoded paths | 1 | Absolute path in batch_p2_generator |
-| E: Truncation | 6 | Content truncation (1 no-op, 1 data, 3 prompt, 1 classifier) |
-| F: Missing __init__.py | 9 | Package directories without __init__.py |
-| G: Stale hyperdocs | 3 | Files marked DELETED that exist |
-| H: Reference-session | 4 | Hardcoded for session 3b7084d5 |
-| I: Beta API | 2 | Depends on Anthropic beta streaming |
-| J: Data flow refs | 3 | Stale directory references |
-| K: Schema validation | 2 | No validation between phases |
-| L: Logical bugs | 22 | Type errors, wrong conditions, silent failures |
-| M: Cross-file data flow | 8 | Mismatched paths, missing handoffs |
-| N: Infrastructure | 11 | Cron gaps, GitHub drift, missing deps, dead tests |
-| O: Corrected false positives | -1 | L15 was wrong |
-| P: Security | 4 | .env in git, API key docx files, missing .gitignore |
-| Q: Data integrity | 5 | Partial sessions, empty dirs, files-as-dirs, sync gaps |
-| R: Dead code | 1 | 155 orphan public functions (needs per-function audit) |
-| S: Schema normalizer never run | 1 | 93% of thread_extractions in non-canonical format |
-| T: Cron jobs broken | 2 | GitHub push auth fails, commits pile up locally |
-| U: Stale MEMORY.md claims | 4 | Wrong file counts, missing HTMLs/PDFs |
-| V: Missing referenced files | 2 | operations_panel.html, wrecktangle product files |
-| **TOTAL** | **111** | |
+| Category | Count | Resolved | Remaining | Description |
+|----------|-------|----------|-----------|-------------|
+| A: Runtime crashes | 5 | 5 | 0 | Duplicate mains, missing import, hard asserts |
+| B: Bare excepts | 4 | 4 | 0 | `except:` with no type |
+| C: Broad exceptions | 13 | 13 | 0 | `except Exception` → specific types |
+| D: Hardcoded paths | 1 | 1 | 0 | Absolute path in batch_p2_generator |
+| E: Truncation | 6 | 6 | 0 | All truncations removed (1 no-op deleted, 5 limits removed) |
+| F: Missing __init__.py | 9 | 9 | 0 | All 9 created |
+| G: Stale hyperdocs | 3 | 3 | 0 | Corrected to exists_on_disk=true |
+| H: Reference-session | 4 | 3 | 1 | H1 by design; H2-H4 made conditional |
+| I: Beta API | 2 | 2 | 0 | anthropic version pinned >=0.40.0,<1.0.0 |
+| J: Data flow refs | 3 | 3 | 0 | Paths updated, count made dynamic |
+| K: Schema validation | 2 | 2 | 0 | Normalizer auto-runs; Phase 2 entry check added |
+| L: Logical bugs | 22 | 19 | 3 | 19 fixed; L9 N/A (no regex), L10+L12 already resolved |
+| M: Cross-file data flow | 8 | 8 | 0 | Config imports, stage contracts, visible failures |
+| N: Infrastructure | 11 | 11 | 0 | SSH, sync fixes, file moves, stale copies, deps, tests |
+| O: Corrected false positives | -1 | — | — | L15 was wrong |
+| P: Security | 4 | 4 | 0 | .gitignore, untrack .env, delete API key docs |
+| Q: Data integrity | 5 | 4 | 1 | Q1 needs Opus API to run Phase 2 on 18 partial sessions |
+| R: Dead code | 1 | 0 | 1 | 155 orphans — future cleanup |
+| S: Schema normalizer | 1 | 1 | 0 | Ran on 286 sessions (2026-02-22) |
+| T: Cron jobs broken | 2 | 2 | 0 | SSH remote + push error checking |
+| U: Stale MEMORY.md | 4 | 4 | 0 | All numbers corrected |
+| V: Missing referenced files | 2 | 0 | 2 | Out of scope (Vercel/external) |
+| **TOTAL** | **111** | **103** | **8** | |
+
+### Unresolved gaps (8):
+- **H1**: REFERENCE_SESSION_ID — intentional, by design
+- **L9**: No greedy regex found — code uses find/rfind, not regex
+- **L10**: Guard already existed at line 47-48
+- **L12**: Budget subtraction already implemented at line 536-538
+- **Q1**: 18 partial sessions need Phase 2 — requires ANTHROPIC_API_KEY
+- **R1**: 155 orphan functions — future cleanup task
+- **V1**: operations_panel.html — exists in ~/Hyperdocs, not in dev tree
+- **V2**: wrecktangle.com files — deployed on Vercel, not in Python project
+
+### Resolution date: 2026-02-22
 
 ---
 

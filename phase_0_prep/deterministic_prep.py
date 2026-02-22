@@ -286,8 +286,9 @@ def main():
     print()
 
     # ── Step 1: Load session ───────────────────────────────────────────
-    if not SESSION_FILE.exists():
+    if SESSION_FILE is None or not SESSION_FILE.exists():
         print(f"ERROR: Session file not found: {SESSION_FILE}")
+        print(f"  Set HYPERDOCS_CHAT_HISTORY or check HYPERDOCS_SESSION_ID={SESSION_ID}")
         sys.exit(1)
 
     reader = ClaudeSessionReader(verbose=False)

@@ -130,6 +130,8 @@ else:
         entries = thread_val.get("entries", [])
         for entry in entries:
             content = entry.get("content", "") if isinstance(entry, dict) else ""
+            if not isinstance(content, str):
+                content = str(content) if content else ""
             for match in _file_pattern.findall(content):
                 # Use thread category to distinguish created vs modified references.
                 # The "software" thread describes file operations; for other threads

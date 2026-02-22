@@ -142,3 +142,30 @@ fatal: could not read Username for 'https://github.com': Device not configured
  create mode 100644 tests/test_schema_normalizer.py
  create mode 100644 tools/run_pipeline.py
 fatal: could not read Username for 'https://github.com': Device not configured
+[main cd618b1] Auto-sync:  52 files changed, 1384 insertions(+), 3752 deletions(-)
+ 52 files changed, 1384 insertions(+), 3752 deletions(-)
+ delete mode 100644 batch_llm_orchestrator.py
+ delete mode 100644 batch_orchestrator.py
+ delete mode 100644 batch_phase0_reprocess.py
+ delete mode 100644 concierge.py
+ delete mode 100644 dashboard.py
+ delete mode 100644 gap_checklist.py
+ delete mode 100644 install.py
+ delete mode 100644 phase1_redo_orchestrator.py
+ create mode 100644 phase_0_prep/__init__.py
+ create mode 100644 phase_1_extraction/__init__.py
+ create mode 100644 phase_2_synthesis/__init__.py
+ create mode 100644 phase_2_synthesis/batch_p2_generator.py
+ create mode 100644 phase_2_synthesis/batch_phase2_processor.py
+ create mode 100644 phase_3_hyperdoc_writing/__init__.py
+ create mode 100644 phase_4_hyperdoc_writing/__init__.py
+ create mode 100644 phase_4_insertion/__init__.py
+ create mode 100644 product/__init__.py
+ delete mode 100644 realtime_hook.py
+ create mode 100644 tools/__init__.py
+git@github.com: Permission denied (publickey).
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[2026-02-21 19:30:00] ERROR: git push failed

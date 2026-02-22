@@ -32,7 +32,7 @@ PHASE_3_DIR = REPO_ROOT / "phase_3_hyperdoc_writing"
 OUTPUT_DIR = REPO_ROOT / "output"
 
 
-def run_script(script_path, session_id, extra_env=None, description=""):
+def run_script(script_path, session_id, extra_env=None, description="", pass_session_arg=False):
     """Run a Python script with HYPERDOCS_SESSION_ID set."""
     env = {
         **os.environ,
@@ -48,8 +48,12 @@ def run_script(script_path, session_id, extra_env=None, description=""):
     print(f"  Session: {session_id}")
     print(f"{'='*60}")
 
+    cmd = [sys.executable, str(script_path)]
+    if pass_session_arg:
+        cmd.extend(["--session", session_id])
+
     result = subprocess.run(
-        [sys.executable, str(script_path)],
+        cmd,
         env=env,
         capture_output=True,
         text=True,
@@ -141,7 +145,7 @@ def run_phase_2(session_id):
     sys.path.insert(0, str(REPO_ROOT / "phase_2_synthesis"))
     sys.path.insert(0, str(REPO_ROOT / "output"))  # fallback for legacy location
     try:
-        from batch_p2_generator import build_idea_graph, build_synthesis, build_markers, read_json
+        from batch_p2_generator import build_idea_graph, build_synthesis, build_grounded_markers, read_json
     except ImportError:
         print("  ERROR: Cannot import batch_p2_generator.py")
         print("  Expected at phase_2_synthesis/batch_p2_generator.py or output/batch_p2_generator.py")
@@ -173,14 +177,14 @@ def run_phase_2(session_id):
     print(f"  idea_graph.json: {os.path.getsize(ig_path):,} bytes")
 
     # Build synthesis
-    syn = build_synthesis(session_id[:8], sdir, summary, threads, geo, prims, explorer)
+    syn = build_synthesis(session_id[:8], sdir, summary, threads, geo, prims, explorer, ig)
     syn_path = os.path.join(sdir, "synthesis.json")
     with open(syn_path, 'w') as f:
         json.dump(syn, f, indent=2)
     print(f"  synthesis.json: {os.path.getsize(syn_path):,} bytes")
 
     # Build grounded markers
-    gm = build_markers(session_id[:8], sdir, summary, threads, geo, prims, explorer)
+    gm = build_grounded_markers(session_id[:8], sdir, summary, threads, geo, prims, explorer, ig, syn)
     gm_path = os.path.join(sdir, "grounded_markers.json")
     with open(gm_path, 'w') as f:
         json.dump(gm, f, indent=2)
@@ -204,6 +208,7 @@ def run_phase_3(session_id):
         PHASE_3_DIR / "generate_dossiers.py",
         session_id,
         description="Phase 3a: Generate File Dossiers",
+        pass_session_arg=True,
     )
 
     if ok:
@@ -211,6 +216,7 @@ def run_phase_3(session_id):
             PHASE_3_DIR / "generate_viewer.py",
             session_id,
             description="Phase 3b: Generate HTML Viewer",
+            pass_session_arg=True,
         )
 
     return ok
