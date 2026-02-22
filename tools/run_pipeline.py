@@ -194,7 +194,7 @@ def run_phase_2(session_id):
 
 
 def run_phase_3(session_id):
-    """Phase 3: Generate dossiers and viewer."""
+    """Phase 3: Collect evidence, generate dossiers, and viewer."""
     session_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
 
     # Check prerequisites
@@ -204,18 +204,29 @@ def run_phase_3(session_id):
         print(f"\n  Phase 3 requires Phase 2 outputs. Missing: {', '.join(missing)}")
         return False
 
+    # Step 1: Collect per-file evidence (time-window correlated)
     ok = run_script(
-        PHASE_3_DIR / "generate_dossiers.py",
+        PHASE_3_DIR / "collect_file_evidence.py",
         session_id,
-        description="Phase 3a: Generate File Dossiers",
+        description="Phase 3a: Collect Per-File Evidence",
         pass_session_arg=True,
     )
 
+    # Step 2: Generate file dossiers
+    if ok:
+        ok = run_script(
+            PHASE_3_DIR / "generate_dossiers.py",
+            session_id,
+            description="Phase 3b: Generate File Dossiers",
+            pass_session_arg=True,
+        )
+
+    # Step 3: Generate HTML viewer
     if ok:
         ok = run_script(
             PHASE_3_DIR / "generate_viewer.py",
             session_id,
-            description="Phase 3b: Generate HTML Viewer",
+            description="Phase 3c: Generate HTML Viewer",
             pass_session_arg=True,
         )
 

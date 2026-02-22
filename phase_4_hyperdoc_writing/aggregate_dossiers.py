@@ -197,7 +197,8 @@ def aggregate_file_entries(entries: list[dict]) -> dict:
 
 def load_code_similarity(output_dir: Path) -> dict:
     """Load code similarity index and build per-file lookup.
-    Returns {filepath: [{similar_to, score, pattern_type}, ...]}"""
+    Returns {filepath: [{similar_to, score, pattern_type}, ...]}
+    Builds a basename lookup so both full paths and bare filenames resolve."""
     sim_path = output_dir / "code_similarity_index.json"
     # Also check PERMANENT_HYPERDOCS/indexes/
     if not sim_path.exists():
@@ -219,16 +220,32 @@ def load_code_similarity(output_dir: Path) -> dict:
             f1 = m.get("file_a", m.get("file1", ""))
             f2 = m.get("file_b", m.get("file2", ""))
             signals = m.get("signals", {})
-            # Score from signals (text_similarity or func_overlap) or top-level
-            score = m.get("score", signals.get("text_similarity", signals.get("func_overlap", 0)))
+            # Use signal_score (combined score) first, then fall back to text_similarity
+            score = m.get("score", signals.get("signal_score", signals.get("text_similarity", signals.get("func_overlap", 0))))
             ptype = m.get("pattern_type", m.get("type", "unknown"))
             if f1 and f2 and score > 0.3:
                 by_file[f1].append({"similar_to": f2, "score": round(score, 3), "pattern": ptype})
                 by_file[f2].append({"similar_to": f1, "score": round(score, 3), "pattern": ptype})
 
-    # Sort by score descending, keep top 5 per file
+    # Sort by score descending, keep top 10 per file (was 5, increased for richer data)
     for fp in by_file:
-        by_file[fp] = sorted(by_file[fp], key=lambda x: -x["score"])[:5]
+        by_file[fp] = sorted(by_file[fp], key=lambda x: -x["score"])[:10]
+
+    # Build basename lookup: map bare filenames to their matches
+    # so "geological_reader.py" resolves even if the index uses full paths or vice versa
+    basename_map = {}
+    for fp in list(by_file.keys()):
+        basename = Path(fp).name
+        if basename != fp and basename not in by_file:
+            basename_map[basename] = by_file[fp]
+        elif basename != fp and basename in by_file:
+            # Merge: full path matches + basename matches, deduplicate
+            existing = {m["similar_to"] for m in by_file[basename]}
+            for match in by_file[fp]:
+                if match["similar_to"] not in existing:
+                    by_file[basename].append(match)
+            by_file[basename] = sorted(by_file[basename], key=lambda x: -x["score"])[:10]
+    by_file.update(basename_map)
 
     return dict(by_file)
 
@@ -354,9 +371,152 @@ def build_frustration_file_map(output_dir: Path) -> dict:
     return dict(by_file)
 
 
+def load_cross_session_evidence(output_dir: Path) -> dict:
+    """Load per-file evidence from file_evidence/ subdirectories across all sessions.
+    Returns {filename: {
+        cross_session_emotional_arc: {per_session_emotions: {sid: {...}}, ...},
+        cross_session_geological: [...observations...],
+        cross_session_explorer: [...observations...],
+        cross_session_timeline: [...events...],
+        cross_session_graph_context: {per_session: {sid: {...}}, ...},
+        cross_session_synthesis: {per_session: {sid: {...}}, ...},
+        cross_session_geological_metaphors: {sid: metaphor_string, ...},
+        cross_session_claude_md: {per_session: {sid: {...}}, ...},
+    }}
+    Searches both output_dir/session_* and PERMANENT_HYPERDOCS/sessions/session_*."""
+    by_file = defaultdict(lambda: {
+        "cross_session_emotional_arc": {"per_session_emotions": {}, "cross_emotion_distribution": defaultdict(int)},
+        "cross_session_geological": [],
+        "cross_session_explorer": [],
+        "cross_session_timeline": [],
+        "cross_session_graph_context": {"per_session": {}, "all_connected_edges": [], "all_subgraphs": []},
+        "cross_session_synthesis": {"per_session": {}},
+        "cross_session_geological_metaphors": {},
+        "cross_session_claude_md": {"per_session": {}},
+    })
+
+    search_dirs = [output_dir]
+    perm_sessions = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+    if perm_sessions.exists():
+        search_dirs.append(perm_sessions)
+
+    sessions_scanned = 0
+    files_loaded = 0
+
+    for search_dir in search_dirs:
+        if not search_dir.exists():
+            continue
+        for d in sorted(search_dir.iterdir()):
+            if not d.is_dir() or not d.name.startswith("session_"):
+                continue
+            evidence_dir = d / "file_evidence"
+            if not evidence_dir.exists():
+                continue
+
+            sid = d.name.replace("session_", "")[:8]
+            sessions_scanned += 1
+
+            for evidence_file in sorted(evidence_dir.glob("*_evidence.json")):
+                try:
+                    data = json.loads(evidence_file.read_text())
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    continue
+
+                filename = data.get("file", "")
+                if not filename:
+                    continue
+
+                files_loaded += 1
+                entry = by_file[filename]
+
+                # Emotional arc: per-session summary
+                ea = data.get("emotional_arc", {})
+                if ea.get("data_points", 0) > 0:
+                    entry["cross_session_emotional_arc"]["per_session_emotions"][sid] = {
+                        "dominant_emotion": ea.get("dominant_emotion", ""),
+                        "session_arc": ea.get("session_arc", ""),
+                        "file_window_distribution": ea.get("file_window_distribution", {}),
+                        "friction_episodes": ea.get("friction_episodes", 0),
+                        "data_points": ea.get("data_points", 0),
+                    }
+                    # Aggregate emotion distribution across sessions
+                    for emotion, count in ea.get("file_window_distribution", {}).items():
+                        entry["cross_session_emotional_arc"]["cross_emotion_distribution"][emotion] += count
+
+                # Geological: collect all observations with session tag
+                gc = data.get("geological_character", {})
+                for zoom in ["micro_observations", "meso_observations", "macro_observations", "standalone_observations"]:
+                    for obs in gc.get(zoom, []):
+                        tagged_obs = obs if isinstance(obs, dict) else {"observation": str(obs)}
+                        if isinstance(tagged_obs, dict):
+                            tagged_obs = {**tagged_obs, "session": sid, "source_zoom": zoom}
+                        entry["cross_session_geological"].append(tagged_obs)
+
+                # Explorer: collect all observations with session tag
+                eo = data.get("explorer_observations", {})
+                for obs in eo.get("observations", []):
+                    tagged_obs = obs if isinstance(obs, dict) else {"observation": str(obs)}
+                    if isinstance(tagged_obs, dict):
+                        tagged_obs = {**tagged_obs, "session": sid}
+                    entry["cross_session_explorer"].append(tagged_obs)
+
+                # Timeline: collect all events with session tag
+                ct = data.get("chronological_timeline", {})
+                for event in ct.get("events", []):
+                    if isinstance(event, dict):
+                        entry["cross_session_timeline"].append({**event, "session": sid})
+
+                # Graph context: edges, subgraphs, statistics per session
+                gctx = data.get("graph_context", {})
+                if gctx.get("data_points", 0) > 0 or gctx.get("graph_statistics"):
+                    entry["cross_session_graph_context"]["per_session"][sid] = {
+                        "graph_statistics": gctx.get("graph_statistics", {}),
+                        "file_node_ids": gctx.get("file_node_ids", []),
+                        "edge_count": len(gctx.get("connected_edges", [])),
+                        "subgraph_count": len(gctx.get("containing_subgraphs", [])),
+                    }
+                    for edge in gctx.get("connected_edges", []):
+                        entry["cross_session_graph_context"]["all_connected_edges"].append(
+                            {**edge, "session": sid})
+                    for sg in gctx.get("containing_subgraphs", []):
+                        entry["cross_session_graph_context"]["all_subgraphs"].append(
+                            {**sg, "session": sid})
+
+                # Synthesis context: per-session pass summaries
+                sctx = data.get("synthesis_context", {})
+                if sctx.get("data_points", 0) > 0:
+                    entry["cross_session_synthesis"]["per_session"][sid] = {
+                        "pass_count": len(sctx.get("passes", [])),
+                        "passes": sctx.get("passes", []),
+                        "session_character": sctx.get("session_character", ""),
+                        "key_findings": sctx.get("key_findings", []),
+                    }
+
+                # Geological metaphor: extract from geological_character
+                geo_metaphor = gc.get("geological_metaphor", "")
+                if geo_metaphor:
+                    entry["cross_session_geological_metaphors"][sid] = geo_metaphor
+
+                # Claude MD context: per-session analysis
+                cmctx = data.get("claude_md_context", {})
+                if cmctx.get("data_points", 0) > 0:
+                    entry["cross_session_claude_md"]["per_session"][sid] = cmctx
+
+    # Convert defaultdicts to regular dicts for JSON serialization
+    result = {}
+    for filename, entry in by_file.items():
+        entry["cross_session_emotional_arc"]["cross_emotion_distribution"] = dict(
+            entry["cross_session_emotional_arc"]["cross_emotion_distribution"])
+        entry["cross_session_emotional_arc"]["sessions_with_emotional_data"] = len(
+            entry["cross_session_emotional_arc"]["per_session_emotions"])
+        result[filename] = entry
+
+    return result, sessions_scanned, files_loaded
+
+
 def main():
     print("=" * 60)
-    print("Phase 4a: Cross-Session Dossier Aggregation (v2 — with genealogy, similarity, frustration)")
+    print("Phase 4a: Cross-Session Dossier Aggregation (v3 — with graph context, synthesis, claude_md, metaphors)")
     print("=" * 60)
     print(f"Output dir: {OUTPUT}")
     print(f"Project root: {PROJECT_ROOT}")
@@ -484,6 +644,33 @@ def main():
         else:
             entry["frustration_associations"] = []
     print(f"  Frustration attribution: {frust_hits} files associated with frustration peaks")
+
+    # Cross-session evidence from file_evidence/ directories (Phase 3a output)
+    evidence_data, ev_sessions, ev_files = load_cross_session_evidence(OUTPUT)
+    ev_hits = 0
+    for fp, entry in aggregated.items():
+        basename = Path(fp).name
+        evidence = evidence_data.get(fp, evidence_data.get(basename, None))
+        if evidence:
+            entry["cross_session_emotional_arc"] = evidence["cross_session_emotional_arc"]
+            entry["cross_session_geological"] = evidence["cross_session_geological"]
+            entry["cross_session_explorer"] = evidence["cross_session_explorer"]
+            entry["cross_session_timeline"] = evidence["cross_session_timeline"]
+            entry["cross_session_graph_context"] = evidence["cross_session_graph_context"]
+            entry["cross_session_synthesis"] = evidence["cross_session_synthesis"]
+            entry["cross_session_geological_metaphors"] = evidence["cross_session_geological_metaphors"]
+            entry["cross_session_claude_md"] = evidence["cross_session_claude_md"]
+            ev_hits += 1
+        else:
+            entry["cross_session_emotional_arc"] = {}
+            entry["cross_session_geological"] = []
+            entry["cross_session_explorer"] = []
+            entry["cross_session_timeline"] = []
+            entry["cross_session_graph_context"] = {}
+            entry["cross_session_synthesis"] = {}
+            entry["cross_session_geological_metaphors"] = {}
+            entry["cross_session_claude_md"] = {}
+    print(f"  Cross-session evidence: {ev_hits} files enriched (from {ev_sessions} sessions, {ev_files} evidence files)")
     print()
 
     # Top 20
@@ -494,13 +681,16 @@ def main():
         sim = f" sim:{len(t.get('code_similarity', []))}" if t.get('code_similarity') else ""
         gen = " GEN" if t.get('genealogy') else ""
         frust = f" frust:{len(t.get('frustration_associations', []))}" if t.get('frustration_associations') else ""
-        print(f"  {t['session_count']:>3}x [{disk}]{gen}{sim}{frust} {t['file_path']}")
+        ev_geo = len(t.get('cross_session_geological', []))
+        ev_emo = len(t.get('cross_session_emotional_arc', {}).get('per_session_emotions', {}))
+        ev = f" ev:{ev_emo}s/{ev_geo}g" if ev_geo or ev_emo else ""
+        print(f"  {t['session_count']:>3}x [{disk}]{gen}{sim}{frust}{ev} {t['file_path']}")
     print()
 
     # Build output
     output_data = {
         "generated_at": datetime.utcnow().isoformat() + "Z",
-        "generator": "Phase 4a - Cross-Session Dossier Aggregation v2 (with genealogy, similarity, frustration)",
+        "generator": "Phase 4a - Cross-Session Dossier Aggregation v4 (with genealogy, similarity, frustration, cross-session evidence, graph context, synthesis, claude_md, metaphors)",
         "stats": {
             "sessions_read": sessions_read,
             "dict_format": dict_format,
@@ -550,7 +740,7 @@ def main():
         written += 1
 
     print(f"Per-file extracts written: {written} files to hyperdoc_inputs/")
-    print(f"  (includes code_similarity, genealogy, frustration_associations)")
+    print(f"  (includes code_similarity, genealogy, frustration, graph_context, synthesis, claude_md, metaphors)")
     print("Done.")
 
 
