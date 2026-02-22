@@ -402,6 +402,7 @@ def load_cross_session_evidence(output_dir: Path) -> dict:
 
     sessions_scanned = 0
     files_loaded = 0
+    seen_sessions = set()  # B4: deduplicate across output/ and PERMANENT_HYPERDOCS/
 
     for search_dir in search_dirs:
         if not search_dir.exists():
@@ -414,6 +415,9 @@ def load_cross_session_evidence(output_dir: Path) -> dict:
                 continue
 
             sid = d.name.replace("session_", "")[:8]
+            if sid in seen_sessions:
+                continue  # B4: skip duplicate session
+            seen_sessions.add(sid)
             sessions_scanned += 1
 
             for evidence_file in sorted(evidence_dir.glob("*_evidence.json")):

@@ -268,8 +268,8 @@ def build_geological_character(target_file, mention_indices, geological_notes):
     }
 
 
-def build_lineage(target_file, file_genealogy, idea_graph):
-    """Build lineage section from file genealogy and idea graph."""
+def build_lineage(target_file, file_genealogy, idea_graph, perm_dossier=None):
+    """Build lineage section from file genealogy, idea graph, and dossier _extra."""
     families = file_genealogy.get("file_families", [])
     session_family = None
     for fam in families:
@@ -285,7 +285,7 @@ def build_lineage(target_file, file_genealogy, idea_graph):
     lineage_nodes = []
     for node in idea_graph.get("nodes", []):
         if isinstance(node, dict):
-            label = node.get("label", node.get("id", ""))
+            label = node.get("label", node.get("name", node.get("id", "")))
             if mentions_file(label, target_file) or Path(target_file).stem in str(node).lower():
                 lineage_nodes.append({
                     "id": node.get("id", ""),
@@ -294,10 +294,28 @@ def build_lineage(target_file, file_genealogy, idea_graph):
                     "confidence": node.get("confidence", ""),
                 })
 
+    # L2: fold dossier _extra into lineage (concept_to_code_mapping, alternate_locations)
+    dossier_extra = {}
+    if perm_dossier:
+        top_extra = perm_dossier.get("_extra", {})
+        if top_extra:
+            dossier_extra = top_extra
+        # Also check per-file dossier entries for this file's extra data
+        dossiers = perm_dossier.get("dossiers", {})
+        if isinstance(dossiers, dict):
+            for k, v in dossiers.items():
+                if isinstance(v, dict) and (v.get("file_name") == target_file or target_file in k):
+                    for field in ("alternate_locations", "implementation_descendants",
+                                  "related_ideas_from_session", "key_insight", "role_in_session"):
+                        val = v.get(field)
+                        if val:
+                            dossier_extra[field] = val
+
     return {
         "session_family": session_family,
         "idea_graph_lineage_nodes": lineage_nodes,
-        "data_points": (1 if session_family else 0) + len(lineage_nodes),
+        "dossier_extra": dossier_extra,
+        "data_points": (1 if session_family else 0) + len(lineage_nodes) + (1 if dossier_extra else 0),
     }
 
 
@@ -308,25 +326,37 @@ def build_graph_context(target_file, idea_graph):
     *relational* structure — how ideas involving this file connect to other ideas, which
     named clusters they belong to, and the overall session graph topology.
     """
-    # Step 1: Find nodes that mention this file (same logic as build_lineage)
+    # Step 1: Find nodes that mention this file, capturing full node details (L4)
     file_node_ids = set()
+    file_nodes = []
     for node in idea_graph.get("nodes", []):
         if not isinstance(node, dict):
             continue
-        label = node.get("label", node.get("id", ""))
+        label = node.get("label", node.get("name", node.get("id", "")))
         desc = node.get("description", "")
         files_ref = node.get("files_referenced", [])
         searchable = f"{label} {desc} {' '.join(files_ref) if isinstance(files_ref, list) else str(files_ref)}"
         if mentions_file(searchable, target_file):
             file_node_ids.add(node.get("id", ""))
+            file_nodes.append({
+                "id": node.get("id", ""),
+                "label": label,
+                "description": desc,
+                "first_appearance": node.get("first_appearance", node.get("message_index")),
+                "confidence": node.get("confidence", ""),
+                "emotional_context": node.get("emotional_context", ""),
+                "trigger": node.get("trigger", ""),
+                "maturity": node.get("maturity", ""),
+                "source": node.get("source", ""),
+            })
 
-    # Step 2: Find edges connected to those nodes
+    # Step 2: Find edges connected to those nodes, including trigger_message (L5)
     connected_edges = []
     for edge in idea_graph.get("edges", []):
         if not isinstance(edge, dict):
             continue
-        src = edge.get("from", edge.get("from_node", ""))
-        tgt = edge.get("to", edge.get("to_node", ""))
+        src = edge.get("from", edge.get("from_node", edge.get("from_id", "")))
+        tgt = edge.get("to", edge.get("to_node", edge.get("to_id", "")))
         if src in file_node_ids or tgt in file_node_ids:
             connected_edges.append({
                 "id": edge.get("id", ""),
@@ -335,9 +365,10 @@ def build_graph_context(target_file, idea_graph):
                 "type": edge.get("type", edge.get("transition", edge.get("transition_type", ""))),
                 "label": edge.get("label", ""),
                 "evidence": edge.get("evidence", ""),
+                "trigger_message": edge.get("trigger_message"),
             })
 
-    # Step 3: Find subgraphs containing those nodes
+    # Step 3: Find subgraphs containing those nodes (B3: try name/summary as fallbacks)
     containing_subgraphs = []
     for sg in idea_graph.get("subgraphs", []):
         if not isinstance(sg, dict):
@@ -346,20 +377,23 @@ def build_graph_context(target_file, idea_graph):
         if sg_node_ids & file_node_ids:
             containing_subgraphs.append({
                 "id": sg.get("id", ""),
-                "label": sg.get("label", ""),
-                "description": sg.get("description", ""),
+                "label": sg.get("label", sg.get("name", "")),
+                "description": sg.get("description", sg.get("summary", "")),
                 "node_ids": sg.get("node_ids", []),
             })
 
-    # Step 4: Session-level graph statistics (same for all files in the session)
-    stats = idea_graph.get("statistics", idea_graph.get("graph_stats", {}))
+    # Step 4: Session-level graph statistics (B1: also check "metadata" key)
+    stats = idea_graph.get("statistics",
+        idea_graph.get("graph_stats",
+            idea_graph.get("metadata", {})))
 
     return {
         "connected_edges": connected_edges,
         "containing_subgraphs": containing_subgraphs,
         "graph_statistics": stats,
         "file_node_ids": sorted(file_node_ids),
-        "data_points": len(connected_edges) + len(containing_subgraphs),
+        "file_nodes": file_nodes,
+        "data_points": len(connected_edges) + len(containing_subgraphs) + len(file_nodes),
     }
 
 
@@ -373,13 +407,14 @@ def build_synthesis_context(synthesis):
     Collects all 6 passes with their sub-keys. Session-level — same for all files.
     Returns empty if all passes have no content.
     """
+    # B2: primary + alternate pass key names (some sessions use analytical/interpretive/etc.)
     pass_keys = [
-        ("pass_1_factual", 1, 0.3, "FACTUAL"),
-        ("pass_2_patterns", 2, 0.5, "PATTERNS"),
-        ("pass_3_vertical_structures", 3, 0.7, "VERTICAL STRUCTURES"),
-        ("pass_4_creative_synthesis", 4, 0.9, "CREATIVE SYNTHESIS"),
-        ("pass_5_wild_connections", 5, 1.0, "WILD CONNECTIONS"),
-        ("pass_6_grounding", 6, 0.0, "GROUNDING"),
+        ("pass_1_factual", "pass_1_analytical", 1, 0.3, "FACTUAL"),
+        ("pass_2_patterns", "pass_2_interpretive", 2, 0.5, "PATTERNS"),
+        ("pass_3_vertical_structures", "pass_3_creative", 3, 0.7, "VERTICAL STRUCTURES"),
+        ("pass_4_creative_synthesis", "pass_4_critical", 4, 0.9, "CREATIVE SYNTHESIS"),
+        ("pass_5_wild_connections", "pass_5_integrative", 5, 1.0, "WILD CONNECTIONS"),
+        ("pass_6_grounding", None, 6, 0.0, "GROUNDING"),
     ]
 
     # Schema B: passes nested inside a 'passes' dict
@@ -391,8 +426,10 @@ def build_synthesis_context(synthesis):
 
     passes = []
     metadata_keys = {"temperature", "label", "description", "focus"}
-    for key, num, temp, label in pass_keys:
-        pass_data = source.get(key, {})
+    for primary, alt, num, temp, label in pass_keys:
+        pass_data = source.get(primary, {})
+        if (not pass_data or not isinstance(pass_data, dict)) and alt:
+            pass_data = source.get(alt, {})
         if not pass_data or not isinstance(pass_data, dict):
             continue
         # Collect all content sub-keys (facts, patterns, structures, findings, etc.)
@@ -412,11 +449,15 @@ def build_synthesis_context(synthesis):
 
     cross_pass = synthesis.get("cross_pass_summary", {})
     key_findings = synthesis.get("key_findings", [])
+    cross_session_links = synthesis.get("cross_session_links", [])  # L1
+    extra = synthesis.get("_extra", {})  # L2
 
     return {
         "passes": passes,
         "cross_pass_summary": cross_pass,
         "key_findings": key_findings,
+        "cross_session_links": cross_session_links,
+        "extra": extra,
         "session_character": synthesis.get("session_character", ""),
         "data_points": len(passes),
     }
@@ -455,6 +496,11 @@ def build_claude_md_context(claude_md_analysis):
         if val:
             result[key] = val
 
+    # L2: capture _extra block (rich analysis in PERM versions)
+    extra = claude_md_analysis.get("_extra", {})
+    if extra:
+        result["extra"] = extra
+
     # Count meaningful data points
     dp = 0
     dp += len(result.get("file_analyses", {}))
@@ -462,6 +508,7 @@ def build_claude_md_context(claude_md_analysis):
     dp += len(result.get("gate_analysis", {}))
     dp += len(result.get("gate_activations", []))
     dp += len(result.get("claude_md_improvement_recommendations", []))
+    dp += len(extra)
     result["data_points"] = dp
 
     return result
@@ -502,7 +549,7 @@ def build_explorer_observations(target_file, explorer_notes):
         "observations": file_explorer_obs,
         "verification_issues": file_verification,
         "anomalies": anomalies,
-        "session_explorer_summary": explorer_summary if mentions_file(explorer_summary, target_file) else "",
+        "session_explorer_summary": explorer_summary,  # L6: always include (session-level context)
         "data_points": len(file_explorer_obs) + len(file_verification) + len(anomalies),
     }
 
@@ -585,7 +632,7 @@ def build_chronological_timeline(target_file, threads_dict, grounded_markers):
 def collect_evidence_for_file(target_file, session_id, mention_indices, window_indices,
                                semantic_primitives, geological_notes, file_genealogy,
                                idea_graph, explorer_notes, threads_dict, grounded_markers,
-                               synthesis, claude_md_analysis):
+                               synthesis, claude_md_analysis, perm_dossier):
     """Collect all 9 evidence sections for a single file.
 
     Sections 1-6: file-level (filtered by name/time window)
@@ -600,7 +647,7 @@ def collect_evidence_for_file(target_file, session_id, mention_indices, window_i
             target_file, mention_indices, window_indices, semantic_primitives),
         "geological_character": build_geological_character(
             target_file, mention_indices, geological_notes),
-        "lineage": build_lineage(target_file, file_genealogy, idea_graph),
+        "lineage": build_lineage(target_file, file_genealogy, idea_graph, perm_dossier),
         "explorer_observations": build_explorer_observations(target_file, explorer_notes),
         "chronological_timeline": build_chronological_timeline(
             target_file, threads_dict, grounded_markers),
@@ -624,7 +671,7 @@ def main():
 
     session_dir = OUTPUT_DIR / f"session_{session_id}"
     perm_session_dir = PERM_SESSIONS / f"session_{session_id}"
-    search_dirs = [session_dir, perm_session_dir]
+    search_dirs = [perm_session_dir, session_dir]  # L3: prefer PERM (rich Opus data) over DIR1 (thin stubs)
 
     print("=" * 60)
     print(f"Phase 3a: Per-Session File Evidence Collector")
@@ -683,7 +730,7 @@ def main():
             target_file, session_id, mention_indices, window_indices,
             semantic_primitives, geological_notes, file_genealogy,
             idea_graph, explorer_notes, threads_dict, grounded_markers,
-            synthesis, claude_md_analysis)
+            synthesis, claude_md_analysis, perm_dossier)
 
         # Count data points
         sections = ["emotional_arc", "geological_character", "lineage",
