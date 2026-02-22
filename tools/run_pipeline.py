@@ -138,12 +138,13 @@ def run_phase_2(session_id):
 
     # The batch_p2_generator.py is designed for bulk processing.
     # For a single session, we run its build functions directly.
-    sys.path.insert(0, str(REPO_ROOT / "output"))
+    sys.path.insert(0, str(REPO_ROOT / "phase_2_synthesis"))
+    sys.path.insert(0, str(REPO_ROOT / "output"))  # fallback for legacy location
     try:
         from batch_p2_generator import build_idea_graph, build_synthesis, build_markers, read_json
     except ImportError:
-        print("  ERROR: Cannot import batch_p2_generator.py from output/")
-        print("  Make sure output/batch_p2_generator.py exists.")
+        print("  ERROR: Cannot import batch_p2_generator.py")
+        print("  Expected at phase_2_synthesis/batch_p2_generator.py or output/batch_p2_generator.py")
         return False
 
     sdir = str(session_dir)
@@ -152,6 +153,12 @@ def run_phase_2(session_id):
     geo = read_json(os.path.join(sdir, "geological_notes.json"))
     prims = read_json(os.path.join(sdir, "semantic_primitives.json"))
     explorer = read_json(os.path.join(sdir, "explorer_notes.json"))
+
+    # K2: Validate Phase 1 output has expected keys before proceeding
+    if threads and not (threads.get("threads") or threads.get("extractions")):
+        print(f"\n  ERROR: thread_extractions.json exists but has no 'threads' or 'extractions' key.")
+        print(f"  Schema may be invalid. Run: python3 tools/run_pipeline.py {session_id} --normalize")
+        return False
 
     print(f"\n{'='*60}")
     print(f"  Running: Phase 2: Build Idea Graph + Synthesis")
@@ -251,9 +258,11 @@ Examples:
         if ok:
             ok = run_phase_3(session_id)
     else:
-        # Default: free phases only (0 → 2 if Phase 1 output exists)
+        # Default: free phases only (0 → normalize → 2 if Phase 1 output exists)
         ok = run_phase_0(session_id)
         session_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
+        if ok:
+            run_schema_normalizer(session_id)  # Always normalize after Phase 0
         if ok and (session_dir / "thread_extractions.json").exists():
             ok = run_phase_2(session_id)
         elif ok:

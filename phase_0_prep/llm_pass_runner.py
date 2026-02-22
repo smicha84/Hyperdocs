@@ -66,7 +66,7 @@ CHARS_PER_TOKEN = 3.5
 
 # Leave headroom for system prompt + response
 HAIKU_CONTEXT_LIMIT = 180_000   # tokens (200K window minus headroom)
-OPUS_CONTEXT_LIMIT = 180_000    # tokens
+OPUS_CONTEXT_LIMIT = 950_000    # tokens (1M window minus headroom)
 
 # Maximum messages per API call batch
 MAX_BATCH_SIZE = 40

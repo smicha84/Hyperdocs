@@ -440,7 +440,7 @@ def main():
             / "hyperdoc"
             / "hyperdocs_3"
             / "output"
-            / "enhanced_files"
+            / "enhanced_files_archive"
         )
 
     if not source_dir.exists():

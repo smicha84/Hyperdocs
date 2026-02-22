@@ -123,8 +123,8 @@ def build_opus_filtered(session_dir: Path):
     python_tier2plus = [m for m in all_messages if m.get("filter_tier", 0) >= 2]
 
     # Find messages Opus includes that Python excluded
-    priority_indices = set(m.get("index") for m in priority)
-    python_tier4_indices = set(m.get("index") for m in python_tier4)
+    priority_indices = set(m.get("index", m.get("msg_index")) for m in priority)
+    python_tier4_indices = set(m.get("index", m.get("msg_index")) for m in python_tier4)
     new_in_priority = priority_indices - python_tier4_indices
     lost_from_priority = python_tier4_indices - priority_indices
 

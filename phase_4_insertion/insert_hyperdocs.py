@@ -169,6 +169,8 @@ def find_insertion_point(lines):
 
 def insert_hyperdoc(source_lines, hyperdoc_text, filename):
     """Insert hyperdoc block at the appropriate position in source code."""
+    if not hyperdoc_text or not hyperdoc_text.strip():
+        return source_lines
     insertion_point = find_insertion_point(source_lines)
 
     # Build the result

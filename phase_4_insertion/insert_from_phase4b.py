@@ -23,7 +23,7 @@ from datetime import datetime
 # Paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
 HYPERDOCS_DIR = Path(__file__).resolve().parent.parent / "output" / "hyperdocs"
-ENHANCED_DIR = Path(__file__).resolve().parent.parent / "output" / "enhanced_files"
+ENHANCED_DIR = Path(__file__).resolve().parent.parent / "output" / "enhanced_files_archive"
 HOOKS_DIR = PROJECT_ROOT / ".claude" / "hooks"
 
 
@@ -101,7 +101,9 @@ def find_header_insertion_point(lines):
     # Skip module docstring
     if i < n and (lines[i].strip().startswith('"""') or lines[i].strip().startswith("'''")):
         quote = lines[i].strip()[:3]
-        if lines[i].strip().count(quote) >= 2:
+        # Check if closing quotes are on the same line (after the opening quotes)
+        rest_of_line = lines[i].strip()[3:]
+        if quote in rest_of_line:
             i += 1
         else:
             i += 1

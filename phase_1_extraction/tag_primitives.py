@@ -394,9 +394,6 @@ def extract_friction(content: str, metadata: dict, signals: dict,
     if role == "user" and (caps_ratio > 0.3 or profanity or emergency):
         # Try to extract the core complaint
         readable = reconstruct_content(content).strip()
-        # Truncate to a single compressed sentence
-        if len(readable) > 200:
-            readable = readable
         # Clean up
         readable = readable.replace("\n", " ").strip()
         if readable:

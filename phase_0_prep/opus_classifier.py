@@ -187,8 +187,6 @@ def format_messages_for_prompt(messages: list) -> str:
         idx = msg.get("index", "?")
         role = msg.get("role", "?")
         content = msg.get("content", msg.get("content_preview", ""))
-        if len(content) > 500:
-            content = content[:500] + "..."
         tier = msg.get("filter_tier", "?")
         length = msg.get("content_length", len(content))
 

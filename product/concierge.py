@@ -16,9 +16,13 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
-HYPERDOCS_ROOT = Path(__file__).resolve().parent.parent  # hyperdocs_3 root
-OUTPUT_BASE = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(HYPERDOCS_ROOT / "output")))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from config import OUTPUT_DIR as OUTPUT_BASE, REPO_ROOT as HYPERDOCS_ROOT, CLAUDE_SESSIONS_DIR as CLAUDE_PROJECTS
+except ImportError:
+    CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
+    HYPERDOCS_ROOT = Path(__file__).resolve().parent.parent
+    OUTPUT_BASE = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(HYPERDOCS_ROOT / "output")))
 
 
 def format_size(size_bytes):

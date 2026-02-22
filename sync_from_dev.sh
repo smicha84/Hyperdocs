@@ -7,7 +7,7 @@
 
 set -e
 
-SRC="/Users/stefanmichaelcheck/PycharmProjects/pythonProject ARXIV4/pythonProjectartifact/.claude/hooks/hyperdoc/hyperdocs_3"
+SRC="$HOME/PycharmProjects/pythonProject ARXIV4/pythonProjectartifact/.claude/hooks/hyperdoc/hyperdocs_3"
 DEST="$HOME/Hyperdocs"
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
 
@@ -20,9 +20,12 @@ fi
 # Rsync source files, excluding non-source content
 rsync -a \
     --exclude='output/' \
+    --exclude='obsolete/' \
+    --exclude='archive_originals/' \
     --exclude='__pycache__/' \
     --exclude='.DS_Store' \
     --exclude='*.pdf' \
+    --exclude='*.docx' \
     --exclude='convo txt.txt' \
     --exclude='archived_claude_md_gates.txt' \
     --exclude='.git/' \
@@ -44,6 +47,9 @@ git commit -m "Auto-sync: $CHANGED
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>"
 
-git push
+if ! git push; then
+    echo "$LOG_PREFIX ERROR: git push failed"
+    exit 1
+fi
 
 echo "$LOG_PREFIX Synced and pushed: $CHANGED"

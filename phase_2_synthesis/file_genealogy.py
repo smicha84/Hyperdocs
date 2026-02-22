@@ -194,9 +194,13 @@ def detect_temporal_succession(timelines):
             if first_b is None:
                 continue
 
-            # Check if B starts within 5 messages of A ending
+            # Check if B starts within 5 messages of A ending (bidirectional)
+            _, last_b = get_file_active_range(timelines[file_b])
+            first_a, _ = get_file_active_range(timelines[file_a])
             gap = first_b - last_a
-            if 0 < gap <= 5:
+            gap_reverse = first_a - last_b if last_b is not None and first_a is not None else float('inf')
+            if 0 < gap <= 5 or 0 < gap_reverse <= 5:
+                gap = min(abs(gap), abs(gap_reverse)) if gap_reverse != float('inf') else gap
                 links.append({
                     "from_file": file_a,
                     "to_file": file_b,

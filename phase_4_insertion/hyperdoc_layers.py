@@ -133,6 +133,7 @@ class HyperdocLayerManager:
         # Update cumulative summary
         summary = hyperdoc["cumulative_summary"]
         summary["total_layers"] = len(hyperdoc["layers"])
+        summary["total_sessions"] = summary.get("total_sessions", 0) + 1
         summary["last_updated"] = datetime.now().isoformat()
 
         layer_type = layer.get("type", "unknown")

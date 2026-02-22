@@ -719,7 +719,7 @@ def normalize_file(filepath, normalizer_fn, dry_run=False):
         with os.fdopen(fd, "w") as f:
             json.dump(canonical, f, indent=2, default=str)
         os.replace(tmp_path, filepath)
-    except Exception as e:
+    except (OSError, TypeError, ValueError) as e:
         os.unlink(tmp_path)
         return "WRITE_ERROR", [f"Failed to write: {e}"]
 

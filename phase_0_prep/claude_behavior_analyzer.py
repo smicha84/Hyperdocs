@@ -622,6 +622,8 @@ class ClaudeBehaviorAnalyzer:
         assistant_messages = [(i, m) for i, m in enumerate(session.messages) if m.role == "assistant"]
 
         for emergency_idx in emergency_indices:
+            if session.messages[emergency_idx].timestamp is None:
+                continue
             relevant_messages = [
                 (i, m) for i, m in assistant_messages
                 if m.timestamp and session.messages[emergency_idx].timestamp

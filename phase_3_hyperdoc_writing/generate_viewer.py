@@ -832,7 +832,7 @@ print(f"Written: {out} ({os.path.getsize(out):,} bytes)")
 # # HYPERDOC HEADER: generate_viewer.py
 # # @ctx:version=1 @ctx:schema=hyperdoc_v2 @ctx:source_sessions=conv_4953cc6b,conv_4c08a224,conv_750f50f9
 # # @ctx:generated=2026-02-08T18:42:00Z @ctx:generator=phase_4b_opus
-# # @ctx:file_status=DELETED @ctx:exists_on_disk=false
+# # @ctx:file_status=ACTIVE @ctx:exists_on_disk=true
 # # @ctx:confidence=tentative @ctx:churn=low @ctx:mentions=4
 # # @ctx:emotion=indifference_to_dismissal
 # # @ctx:failed_approaches=1

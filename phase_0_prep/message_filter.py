@@ -16,6 +16,7 @@ This reduces Opus calls by ~40-60% while preserving important context.
 """
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from typing import List, Tuple, Optional, Dict, Any

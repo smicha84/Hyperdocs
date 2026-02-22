@@ -133,3 +133,12 @@ fatal: could not read Username for 'https://github.com': Device not configured
 [main 4e47f1b] Auto-sync:  1 file changed, 3 insertions(+)
  1 file changed, 3 insertions(+)
 fatal: could not read Username for 'https://github.com': Device not configured
+[main 0c92b66] Auto-sync:  10 files changed, 1615 insertions(+), 47 deletions(-)
+ 10 files changed, 1615 insertions(+), 47 deletions(-)
+ create mode 100644 GAP_TRACKER.md
+ create mode 100644 tests/test_phase0_deterministic_prep.py
+ create mode 100644 tests/test_phase2_batch_processor.py
+ create mode 100644 tests/test_phase3_generate_viewer.py
+ create mode 100644 tests/test_schema_normalizer.py
+ create mode 100644 tools/run_pipeline.py
+fatal: could not read Username for 'https://github.com': Device not configured

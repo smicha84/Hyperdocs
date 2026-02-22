@@ -18,8 +18,12 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-HYPERDOCS_ROOT = Path(__file__).resolve().parent.parent  # hyperdocs_3 root
-OUTPUT_BASE = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(HYPERDOCS_ROOT / "output")))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from config import OUTPUT_DIR as OUTPUT_BASE, REPO_ROOT as HYPERDOCS_ROOT
+except ImportError:
+    HYPERDOCS_ROOT = Path(__file__).resolve().parent.parent
+    OUTPUT_BASE = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(HYPERDOCS_ROOT / "output")))
 
 
 def find_latest_session():
@@ -35,14 +39,14 @@ def find_latest_session():
 
 
 def load_json_safe(path):
-    """Load JSON or return empty dict."""
+    """Load JSON or return empty dict. Marks missing files for dashboard display."""
     if not path.exists():
-        return {}
+        return {"_data_missing": True, "_missing_file": path.name}
     try:
         with open(path) as f:
             return json.load(f)
     except (json.JSONDecodeError, OSError):
-        return {}
+        return {"_data_missing": True, "_missing_file": path.name}
 
 
 def _normalize_markers(m):

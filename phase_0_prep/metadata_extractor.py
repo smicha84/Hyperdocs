@@ -812,8 +812,8 @@ class MetadataExtractor:
             if msg_meta.has_terminal_paste:
                 meta.terminal_paste_count += 1
 
-            for session in msg_meta.terminal_sessions:
-                meta.unique_terminal_sessions.add(session)
+            for term_session in msg_meta.terminal_sessions:
+                meta.unique_terminal_sessions.add(term_session)
                 # Track max concurrent terminals (ttys000 = 0, ttys003 = 3)
                 try:
                     session_num = int(session)
@@ -875,6 +875,9 @@ def main():
     args = parser.parse_args()
 
     tracker = HyperdocTracker()
+    if DisplayFormatAdapter is None:
+        print("ERROR: DisplayFormatAdapter not available. Install display_format_adapter module.")
+        sys.exit(1)
     adapter = DisplayFormatAdapter(tracker.archive_path)
     extractor = MetadataExtractor()
 

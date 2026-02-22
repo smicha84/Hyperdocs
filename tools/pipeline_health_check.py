@@ -77,6 +77,19 @@ STAGE_CONTRACTS = {
             "required_keys": ["markers"],
         },
     },
+    "phase_3": {
+        "file_dossiers.json": {
+            "required_keys": ["session_id", "files"],
+        },
+        "claude_md_analysis.json": {
+            "required_keys": ["session_id"],
+        },
+    },
+    "phase_4": {
+        "file_genealogy.json": {
+            "required_keys": ["families"],
+        },
+    },
 }
 
 # ── Consumer Expectations ─────────────────────────────────────────────
@@ -323,7 +336,7 @@ class HealthCheck:
                 self._record(name, "phase2_empty_synthesis", True)
                 mk = build_markers("test", {}, {}, {}, {}, minimal["session_metadata.json"])
                 self._record(name, "phase2_empty_markers", True)
-            except Exception as e:
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
                 self._record(name, "phase2_empty_input", False, str(e)[:100])
 
     # ── 4b. Phase 3-4 Runtime ────────────────────────────────────────
@@ -363,7 +376,7 @@ class HealthCheck:
             else:
                 err = result.stderr[:100] if result.stderr else "unknown error"
                 self._record(name, "phase3_generate_viewer", False, err)
-        except Exception as e:
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
             self._record(name, "phase3_generate_viewer", False, str(e)[:100])
         finally:
             for link in links_created:
@@ -402,7 +415,7 @@ class HealthCheck:
                     has_header = any(l.get("header") for l in data.get("layers", []))
                     self._record(name, f"phase4_hyperdoc:{hf.name[:30]}",
                                  has_layers, f"layers={len(data.get('layers', []))}, has_header={has_header}")
-                except Exception as e:
+                except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
                     self._record(name, f"phase4_hyperdoc:{hf.name[:30]}", False, str(e)[:60])
 
     # ── 5. Idempotency ────────────────────────────────────────────────
@@ -550,7 +563,7 @@ class HealthCheck:
                     "list" if isinstance(data.get("threads"), list) else (
                     "extractions" if data.get("extractions") else "unknown"))
                 self._record(name, f"threads:{sid}", has_threads, f"format={fmt}")
-            except Exception as e:
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
                 self._record(name, f"threads:{sid}", False, str(e)[:60])
 
             # Check grounded_markers readable (has markers or structured)
@@ -563,7 +576,7 @@ class HealthCheck:
                     count = len(gm.get("markers", [])) + len(gm.get("warnings", [])) + len(gm.get("patterns", []))
                     fmt = "flat" if "markers" in gm else "structured"
                     self._record(name, f"markers:{sid}", readable, f"format={fmt}, {count} items")
-                except Exception as e:
+                except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
                     self._record(name, f"markers:{sid}", False, str(e)[:60])
 
             # Check semantic_primitives readable
@@ -575,7 +588,7 @@ class HealthCheck:
                     fmt = "canonical" if sp.get("tagged_messages") else (
                         "old" if sp.get("primitives") else "unknown")
                     self._record(name, f"primitives:{sid}", has_data, f"format={fmt}")
-                except Exception as e:
+                except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
                     self._record(name, f"primitives:{sid}", False, str(e)[:60])
 
     # ── 9. Cross-Stage Contracts ──────────────────────────────────────
@@ -676,7 +689,7 @@ class HealthCheck:
             print(f"\n{label}...")
             try:
                 fn()
-            except Exception as e:
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
                 self._record(label, "CRASH", False, str(e)[:100])
 
         # Print results
@@ -701,6 +714,12 @@ class HealthCheck:
         total = self.total_pass + self.total_fail
         pct = self.total_pass / total * 100 if total > 0 else 0
         print(f"HEALTH: {pct:.0f}%")
+        if self.total_fail > 0:
+            print(f"\n*** {self.total_fail} FAILURES REQUIRE ATTENTION ***")
+            for check_name, tests in self.results.items():
+                for t in tests:
+                    if t["status"] == "FAIL":
+                        print(f"  - [{check_name}] {t['test']}: {t['detail']}")
         print("=" * 70)
 
         # Write report

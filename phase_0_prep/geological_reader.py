@@ -315,7 +315,7 @@ if __name__ == "__main__":
 # # HYPERDOC: geological_reader.py
 # # @ctx:generated=2026-02-08T08:30:00Z @ctx:sessions=12 @ctx:version=1
 # # @ctx:state=fragile @ctx:confidence=proven_fix_high_regression_risk @ctx:emotion=relieved_then_concerned
-# # @ctx:intent=bugfix_and_architecture @ctx:exists_on_disk=false
+# # @ctx:intent=bugfix_and_architecture @ctx:exists_on_disk=true
 # # @ctx:edits=19 @ctx:total_mentions=40 @ctx:failed_approaches=5 @ctx:breakthroughs=8
 # # ===========================================================================
 # #
@@ -734,7 +734,7 @@ class GeologicalMessage:
         """Serialize for JSON storage."""
         return {
             "role": self.role,
-            "content": self.content[:500] + "..." if len(self.content) > 500 else self.content,
+            "content": self.content,
             "timestamp": self.timestamp.isoformat(),
             "session_id": self.session_id,
             "source_file": self.source_file,
@@ -831,7 +831,7 @@ class GeologicalReader:
                 if '+' in clean:
                     clean = clean.split('+')[0]
                 return datetime.fromisoformat(clean)
-            except:
+            except (ValueError, TypeError, AttributeError):
                 pass
         return datetime(1970, 1, 1)
 
@@ -919,7 +919,7 @@ class GeologicalReader:
                     )
                     messages.append(geo_msg)
 
-        except Exception as e:
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError, UnicodeDecodeError, OSError) as e:
             print(f"[geological_reader] Error parsing {file_path.name}: {e}")
 
         return messages

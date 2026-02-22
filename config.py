@@ -150,10 +150,10 @@ def get_session_file():
 #   regex-based parsing optimized for source code patterns, it may misinterpret
 #   config.py's assignment-heavy structure.
 #
-# @ctx:friction="The cross_session_file_index.json aggregator marked config.py as exists_on_disk=false despite the file existing at hyperdocs_3/config.py"
+# @ctx:friction="The cross_session_file_index.json aggregator marked config.py as exists_on_disk=true despite the file existing at hyperdocs_3/config.py"
 # @ctx:trace=conv_4953cc6b:msg685
 #   [F03] The Phase 4a aggregation script (aggregate_dossiers.py) records
-#   exists_on_disk=false for config.py. This is a false negative caused by the
+#   exists_on_disk=true for config.py. This is a false negative caused by the
 #   aggregator searching for config.py at the repository root or in .claude/hooks/
 #   rather than at its actual location inside hyperdocs_3/. The file is 69 lines
 #   of Python at .claude/hooks/hyperdoc/hyperdocs_3/config.py. This same path
@@ -317,7 +317,7 @@ def get_session_file():
 # prepare_agent_data.py -- Imports get_session_output_dir from config.py. Prepares safe_*.json files for Phase 1 agents.
 # file_genealogy.py -- Imports get_session_output_dir and SESSION_ID from config.py. Phase 2 synthesis script that tracks file identity across renames.
 # batch_orchestrator.py -- Sets HYPERDOCS_SESSION_ID environment variable before spawning agents. The orchestrator is the primary consumer of config.py's env var interface, though it does not import config.py directly.
-# aggregate_dossiers.py -- Phase 4a aggregation script that indexed config.py across sessions but incorrectly marked it as exists_on_disk=false due to path resolution issues.
+# aggregate_dossiers.py -- Phase 4a aggregation script that indexed config.py across sessions but incorrectly marked it as exists_on_disk=true due to path resolution issues.
 #
 # --- METRICS ---
 # Total mentions: 8 (across sessions, with name-collision caveat) | Edits: 1 (creation) | Failed attempts: 2
@@ -365,9 +365,9 @@ def get_session_file():
 #   (190 msgs processed)'. This validates that config.py's env var abstraction works
 #   for sessions other than the reference session 3b7084d5.
 #
-# [CONTRADICTED] cross_session_file_index.json records exists_on_disk=false for config.py
+# [CONTRADICTED] cross_session_file_index.json records exists_on_disk=true for config.py
 # @ctx:claim_failed="config.py does not exist on disk"
-# @ctx:expected="exists_on_disk=false"
+# @ctx:expected="exists_on_disk=true"
 # @ctx:actual="File exists at .claude/hooks/hyperdoc/hyperdocs_3/config.py (69 lines). The aggregator searched the wrong directory or did not resolve the path relative to the hyperdocs_3 package."
 #   The aggregate_dossiers.py script checks file existence but may use a search path
 #   that does not include the hyperdocs_3 directory. This false negative means the

@@ -552,7 +552,9 @@ def _make_chunk_data(data, chunk_msgs):
 
 def _merge_thread_results(results_list):
     """Merge thread extraction results from multiple chunks."""
-    merged = results_list[0] if results_list else {}
+    if not results_list:
+        return {"threads": {}, "micro": [], "meso": [], "macro": []}
+    merged = results_list[0]
     for result in results_list[1:]:
         for thread_name, thread_data in result.get("threads", {}).items():
             if thread_name not in merged.get("threads", {}):
@@ -706,7 +708,7 @@ def process_session(session_dir, progress):
             n_tagged = len(prim_result.get("tagged_messages", []))
             max_continuations = 10
             continuation_round = 0
-            while n_tagged < expected_count and n_tagged > 0 and continuation_round < max_continuations:
+            while n_tagged < expected_count and continuation_round < max_continuations:
                 continuation_round += 1
                 tagged_indices = {m.get("msg_index", m.get("i", -1)) for m in prim_result["tagged_messages"]}
                 remaining_indices = all_expected_indices - tagged_indices
@@ -828,7 +830,7 @@ def main():
         # Skip duplicates
         session_dirs = [
             d for d in all_dirs
-            if d.name.replace("session_", "") not in DUPLICATE_SKIP_IDS
+            if d.name.replace("session_", "")[:8] not in DUPLICATE_SKIP_IDS
         ]
         skipped_dupes = len(all_dirs) - len(session_dirs)
         if skipped_dupes > 0:

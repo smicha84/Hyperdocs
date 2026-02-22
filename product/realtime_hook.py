@@ -28,10 +28,14 @@ from pathlib import Path
 from datetime import datetime
 
 # Buffer file location — in the hyperdocs output directory
-BUFFER_DIR = Path(os.getenv(
-    "HYPERDOCS_OUTPUT_DIR",
-    str(Path(__file__).resolve().parent.parent / "output")
-))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from config import OUTPUT_DIR as BUFFER_DIR
+except ImportError:
+    BUFFER_DIR = Path(os.getenv(
+        "HYPERDOCS_OUTPUT_DIR",
+        str(Path(__file__).resolve().parent.parent / "output")
+    ))
 BUFFER_FILE = BUFFER_DIR / "realtime_buffer.jsonl"
 
 

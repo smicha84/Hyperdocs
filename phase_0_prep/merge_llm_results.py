@@ -95,7 +95,7 @@ def merge_into_message(msg: Dict, p1: Optional[Dict], p2: Optional[Dict],
             "scope": p1.get("scope_assumption", False),
         }
         llm_behavior["assumption_details"] = p1.get("assumption_details")
-        llm_behavior["pass1_model"] = PASS_CONFIGS[1]["model"]
+        llm_behavior["pass1_model"] = PASS_CONFIGS[1].get("model", "unknown")
 
     # Pass 2: Silent decisions + unverified claims + overconfidence
     if p2:
@@ -103,7 +103,7 @@ def merge_into_message(msg: Dict, p1: Optional[Dict], p2: Optional[Dict],
         llm_behavior["unverified_claims"] = p2.get("unverified_claims", [])
         llm_behavior["overconfident"] = p2.get("overconfident", False)
         llm_behavior["overconfidence_detail"] = p2.get("overconfidence_detail")
-        llm_behavior["pass2_model"] = PASS_CONFIGS[2]["model"]
+        llm_behavior["pass2_model"] = PASS_CONFIGS[2].get("model", "unknown")
 
     # Pass 3: Intent assumption (3-class)
     if p3:

@@ -12,6 +12,7 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = SCRIPT_DIR / "hyperdoc_blocks"
@@ -73,7 +74,7 @@ def normalize_markers(markers: dict) -> dict:
     return {**markers, **structured}
 
 
-def get_dossier(dossiers: dict, filename: str) -> dict | None:
+def get_dossier(dossiers: dict, filename: str) -> Optional[dict]:
     for file_entry in dossiers.get("files", []):
         if file_entry.get("filename") == filename:
             return file_entry

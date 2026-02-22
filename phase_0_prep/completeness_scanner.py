@@ -328,9 +328,13 @@ def scan_all(sessions_dir):
         }
 
     # Aggregate: field-level completeness across sessions
+    # Only count fields for files that exist in each session (not FILE_MISSING)
     field_completeness = {}
     for filename in FILE_CHECKERS:
         for r in all_results:
+            # Skip sessions where this file doesn't exist — don't count missing fields
+            if r["files"].get(filename) in ("FILE_MISSING", "STUB"):
+                continue
             fields = r.get("field_details", {}).get(filename, {})
             for field_name, status in fields.items():
                 if field_name.startswith("_"):

@@ -175,6 +175,15 @@ def run_batch_pass(sessions, pass_num, status, dry_run=False):
         status: Mutable status dict (updated in place)
         dry_run: If True, estimate costs without API calls
     """
+    # Deduplicate sessions by name
+    seen = set()
+    deduped = []
+    for s in sessions:
+        if s.name not in seen:
+            seen.add(s.name)
+            deduped.append(s)
+    sessions = deduped
+
     config = PASS_CONFIGS[pass_num]
     model = config["model"]
     is_opus = "opus" in model

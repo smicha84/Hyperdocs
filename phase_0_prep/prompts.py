@@ -281,11 +281,6 @@ def format_messages_for_prompt(messages, include_user_context=False):
         index = msg.get("index", "?")
         content = msg.get("content", "")
 
-        # Truncate extremely long messages to keep within context window
-        # but preserve enough for accurate analysis
-        if len(content) > 4000:
-            content = content[:3800] + "\n[... truncated for analysis ...]"
-
         header = f"--- Message {index} ({role}) ---"
         parts.append(f"{header}\n{content}")
 
@@ -324,14 +319,10 @@ def format_messages_with_context(target_messages, all_messages):
         if context_msgs:
             for cm in context_msgs:
                 c_content = cm.get("content", "")
-                if len(c_content) > 2000:
-                    c_content = c_content[:1800] + "\n[... truncated ...]"
                 parts.append(f"--- User context (message {cm['index']}) ---\n{c_content}")
 
         # Format target message
         content = msg.get("content", "")
-        if len(content) > 4000:
-            content = content[:3800] + "\n[... truncated for analysis ...]"
         parts.append(f"--- Message {msg['index']} (assistant) [ANALYZE THIS] ---\n{content}")
         parts.append("")  # blank line separator
 
