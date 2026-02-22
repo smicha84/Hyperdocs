@@ -702,6 +702,7 @@ def normalize_file(filepath, normalizer_fn, dry_run=False):
     # Run the normalizer
     canonical = normalizer_fn(data)
     canonical["_normalized_at"] = datetime.now(timezone.utc).isoformat()
+    canonical["_schema_version"] = 2  # v1=original agent output, v2=post-normalization
 
     if dry_run:
         return "WOULD_NORMALIZE", canonical.get("_normalization_log", [])

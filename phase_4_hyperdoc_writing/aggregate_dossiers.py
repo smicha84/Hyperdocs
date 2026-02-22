@@ -715,8 +715,12 @@ def main():
     }
 
     out_path = OUTPUT / "cross_session_file_index.json"
-    with open(out_path, "w") as f:
-        json.dump(output_data, f, indent=2, default=str)
+    try:
+        from tools.file_lock import atomic_json_write
+        atomic_json_write(out_path, output_data)
+    except ImportError:
+        with open(out_path, "w") as f:
+            json.dump(output_data, f, indent=2, default=str)
 
     size = out_path.stat().st_size
     logger.info(f"Written: {out_path}")

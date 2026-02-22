@@ -72,6 +72,7 @@ def setup_logging(session_id):
 
 def run_script(script_path, session_id, extra_env=None, description="", pass_session_arg=False):
     """Run a Python script with HYPERDOCS_SESSION_ID set."""
+    import time as _time
     env = {
         **os.environ,
         "HYPERDOCS_SESSION_ID": session_id,
@@ -80,8 +81,9 @@ def run_script(script_path, session_id, extra_env=None, description="", pass_ses
     if extra_env:
         env.update(extra_env)
 
+    desc = description or script_path.name
     print(f"\n{'='*60}")
-    print(f"  Running: {description or script_path.name}")
+    print(f"  Running: {desc}")
     print(f"  Script:  {script_path}")
     print(f"  Session: {session_id}")
     print(f"{'='*60}")
@@ -90,6 +92,7 @@ def run_script(script_path, session_id, extra_env=None, description="", pass_ses
     if pass_session_arg:
         cmd.extend(["--session", session_id])
 
+    t0 = _time.time()
     result = subprocess.run(
         cmd,
         env=env,
@@ -97,9 +100,9 @@ def run_script(script_path, session_id, extra_env=None, description="", pass_ses
         text=True,
         timeout=300,
     )
+    elapsed = _time.time() - t0
 
     if result.stdout:
-        # Print last 20 lines of output to keep it readable
         lines = result.stdout.strip().split('\n')
         if len(lines) > 20:
             print(f"  ... ({len(lines) - 20} lines omitted)")
@@ -107,17 +110,40 @@ def run_script(script_path, session_id, extra_env=None, description="", pass_ses
             print(f"  {line}")
 
     if result.returncode != 0:
-        print(f"\n  ERROR (exit code {result.returncode}):")
+        print(f"\n  ERROR (exit code {result.returncode}) after {elapsed:.1f}s:")
         if result.stderr:
             for line in result.stderr.strip().split('\n')[-10:]:
                 print(f"  {line}")
+        logger.info(f"FAILED: {desc} — {elapsed:.1f}s")
         return False
 
+    logger.info(f"OK: {desc} — {elapsed:.1f}s")
+    print(f"  [{elapsed:.1f}s]")
     return True
 
 
-def run_phase_0(session_id):
+# ── Idempotency ──────────────────────────────────────────────────────
+
+PHASE_OUTPUTS = {
+    0: ["enriched_session.json", "session_metadata.json"],
+    1: ["thread_extractions.json"],
+    2: ["idea_graph.json", "synthesis.json", "grounded_markers.json"],
+    3: ["file_dossiers.json"],
+}
+
+def phase_already_complete(session_id, phase):
+    """Check if a phase's output files already exist."""
+    session_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
+    required = PHASE_OUTPUTS.get(phase, [])
+    return all((session_dir / f).exists() for f in required)
+
+
+def run_phase_0(session_id, force=False):
     """Phase 0: Deterministic prep (free, pure Python)."""
+    if not force and phase_already_complete(session_id, 0):
+        print(f"\n  Phase 0: already complete (use --force to re-run)")
+        return True
+
     session_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
     session_dir.mkdir(parents=True, exist_ok=True)
 
@@ -152,8 +178,12 @@ def run_schema_normalizer(session_id):
     )
 
 
-def run_phase_1(session_id):
+def run_phase_1(session_id, force=False):
     """Phase 1: Thread extraction (requires Opus API key)."""
+    if not force and phase_already_complete(session_id, 1):
+        print(f"\n  Phase 1: already complete (use --force to re-run)")
+        return True
+
     if not os.environ.get("ANTHROPIC_API_KEY"):
         print("\n  WARNING: ANTHROPIC_API_KEY not set. Phase 1 requires Opus API calls.")
         print("  Set ANTHROPIC_API_KEY to run Phase 1.")
@@ -166,8 +196,12 @@ def run_phase_1(session_id):
     )
 
 
-def run_phase_2(session_id):
+def run_phase_2(session_id, force=False):
     """Phase 2: Build idea graph + synthesis (deterministic from Phase 1 output)."""
+    if not force and phase_already_complete(session_id, 2):
+        print(f"\n  Phase 2: already complete (use --force to re-run)")
+        return True
+
     session_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
 
     # Check if Phase 1 outputs exist
@@ -230,8 +264,12 @@ def run_phase_2(session_id):
     return True
 
 
-def run_phase_3(session_id):
+def run_phase_3(session_id, force=False):
     """Phase 3: Collect evidence, generate dossiers, and viewer."""
+    if not force and phase_already_complete(session_id, 3):
+        print(f"\n  Phase 3: already complete (use --force to re-run)")
+        return True
+
     session_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
 
     # Check prerequisites
@@ -323,59 +361,69 @@ Examples:
     parser.add_argument("--full", action="store_true", help="Run all phases including Opus agents")
     parser.add_argument("--phase", type=int, choices=[0, 1, 2, 3], help="Run only this phase")
     parser.add_argument("--normalize", action="store_true", help="Run schema normalizer after processing")
+    parser.add_argument("--force", action="store_true", help="Re-run even if output already exists")
 
     args = parser.parse_args()
     session_id = args.session_id
+    force = args.force
 
     setup_logging(session_id)
-    logger.info(f"Hyperdocs Pipeline Runner — session={session_id}")
+    logger.info(f"Hyperdocs Pipeline Runner — session={session_id} force={force}")
+
+    import time as _time
+    pipeline_start = _time.time()
 
     print(f"Hyperdocs Pipeline Runner")
     print(f"Session: {session_id}")
     print(f"Output:  {OUTPUT_DIR / f'session_{session_id[:8]}'}")
     print(f"Log:     {OUTPUT_DIR / f'session_{session_id[:8]}' / 'pipeline_run.log'}")
+    if force:
+        print(f"Mode:    --force (re-run all phases)")
 
     if args.phase is not None:
         # Run a single phase
         phase_runners = {0: run_phase_0, 1: run_phase_1, 2: run_phase_2, 3: run_phase_3}
-        ok = phase_runners[args.phase](session_id)
+        ok = phase_runners[args.phase](session_id, force=force)
         if ok:
             validate_phase_output(session_id, args.phase)
     elif args.normalize:
         ok = run_schema_normalizer(session_id)
     elif args.full:
         # Full pipeline: 0 → 1 → normalize → 2 → 3
-        ok = run_phase_0(session_id)
+        ok = run_phase_0(session_id, force=force)
         if ok:
-            ok = run_phase_1(session_id)
+            ok = run_phase_1(session_id, force=force)
         if ok:
             ok = run_schema_normalizer(session_id)
         if ok:
-            ok = run_phase_2(session_id)
+            ok = run_phase_2(session_id, force=force)
         if ok:
-            ok = run_phase_3(session_id)
+            ok = run_phase_3(session_id, force=force)
     else:
         # Default: free phases only (0 → normalize → 2 if Phase 1 output exists)
-        ok = run_phase_0(session_id)
+        ok = run_phase_0(session_id, force=force)
         session_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
         if ok:
             run_schema_normalizer(session_id)  # Always normalize after Phase 0
         if ok and (session_dir / "thread_extractions.json").exists():
-            ok = run_phase_2(session_id)
+            ok = run_phase_2(session_id, force=force)
         elif ok:
             print(f"\n  Phase 1 outputs not found. Run --phase 1 first for Phase 2.")
             print(f"  Phase 0 outputs written to: {session_dir}")
 
+    elapsed_total = _time.time() - pipeline_start
     if ok:
         print(f"\n{'='*60}")
-        print(f"  Pipeline run succeeded.")
+        print(f"  Pipeline run succeeded in {elapsed_total:.1f}s.")
         session_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
         if session_dir.exists():
             files = list(session_dir.glob("*.json"))
             print(f"  Output: {len(files)} JSON files in {session_dir}")
         print(f"{'='*60}")
+        logger.info(f"Pipeline complete — {elapsed_total:.1f}s total")
     else:
-        print(f"\n  Pipeline run had errors. Check output above.")
+        print(f"\n  Pipeline run had errors after {elapsed_total:.1f}s. Check output above.")
+        logger.info(f"Pipeline FAILED — {elapsed_total:.1f}s total")
         sys.exit(1)
 
 

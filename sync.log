@@ -225,3 +225,19 @@ and the repository exists.
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 84 passed, 1 warning in 1.81s
 [2026-02-22 04:30:00] Tests passed.
+[main 5cbcf96] Auto-sync:  31 files changed, 1341 insertions(+), 154 deletions(-)
+ 31 files changed, 1341 insertions(+), 154 deletions(-)
+ create mode 100644 tests/test_aggregate_dossiers.py
+ create mode 100644 tests/test_collect_file_evidence.py
+ create mode 100644 tests/test_config.py
+ create mode 100644 tests/test_e2e_pipeline.py
+ create mode 100644 tests/test_generate_dossiers.py
+ create mode 100644 tests/test_run_pipeline.py
+ create mode 100644 tools/extract_viz_data.py
+fatal: could not read Username for 'https://github.com': Device not configured
+[2026-02-22 04:30:00] ERROR: git push failed
+[2026-02-22 05:30:00] Running tests...
+........................................................................ [ 85%]
+............                                                             [100%]
+84 passed in 1.65s
+[2026-02-22 05:30:00] Tests passed.

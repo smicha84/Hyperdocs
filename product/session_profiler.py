@@ -598,7 +598,7 @@ def main():
     if args.output:
         output_path = Path(args.output)
     else:
-        output_path = HYPERDOCS_ROOT / "output" / "session_profile.html"
+        output_path = HYPERDOCS_ROOT / "output" / "pipeline_profile.html"
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     generate_html(sessions, output_path)

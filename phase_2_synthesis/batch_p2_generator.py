@@ -151,6 +151,7 @@ def build_idea_graph(sid, sdir, summary, threads, geo, prims, explorer):
 
     stats_obj = (summary or {}).get("session_stats", {})
     return {
+        "_schema_version": 2,
         "session_id": sid,
         "generated_at": NOW,
         "generator": "Phase 2 - Idea Graph Builder (Opus 4.6, batch)",
@@ -259,6 +260,7 @@ def build_synthesis(sid, sdir, summary, threads, geo, prims, explorer, idea_grap
     grounding_findings.append({"id": f"G{len(grounding_findings)+1:02d}", "type": "metric", "metric": "Input/output token ratio", "value": f"{io_ratio:.0f}:1", "source": "session_metadata.json"})
 
     return {
+        "_schema_version": 2,
         "session_id": sid, "generated_at": NOW,
         "generator": "Phase 2 - 6-Pass Synthesizer (Opus 4.6, batch)",
         "source_files": ["session_metadata.json", "thread_extractions.json", "geological_notes.json", "semantic_primitives.json", "explorer_notes.json", "idea_graph.json"],
@@ -349,6 +351,7 @@ def build_grounded_markers(sid, sdir, summary, threads, geo, prims, explorer, id
     })
 
     return {
+        "_schema_version": 2,
         "session_id": sid, "generated_at": NOW,
         "generator": "Phase 2 - Grounded Marker Builder (Opus 4.6, batch)",
         "source_files": ["session_metadata.json", "thread_extractions.json", "geological_notes.json",

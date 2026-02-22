@@ -292,9 +292,27 @@ def main():
         sys.exit(1)
 
     reader = ClaudeSessionReader(verbose=False)
-    session = reader.load_session_file(SESSION_FILE)
+    try:
+        session = reader.load_session_file(SESSION_FILE)
+    except Exception as e:
+        print(f"ERROR: Exception while parsing session file: {type(e).__name__}: {e}")
+        sys.exit(1)
     if not session:
-        print("ERROR: Could not parse session file")
+        # Check why: empty file, no valid JSON lines, or no parseable messages
+        try:
+            size = SESSION_FILE.stat().st_size
+            lines = sum(1 for _ in open(SESSION_FILE))
+            json_lines = sum(1 for line in open(SESSION_FILE) if line.strip())
+            print(f"ERROR: Could not parse session file: {SESSION_FILE}")
+            print(f"  File size: {size:,} bytes, total lines: {lines}, non-empty lines: {json_lines}")
+            if size == 0:
+                print(f"  Cause: file is empty")
+            elif json_lines == 0:
+                print(f"  Cause: no non-empty lines")
+            else:
+                print(f"  Cause: no lines parsed into valid messages (check JSONL format)")
+        except Exception:
+            print(f"ERROR: Could not parse session file: {SESSION_FILE}")
         sys.exit(1)
 
     print(f"Loaded {len(session.messages)} messages "
