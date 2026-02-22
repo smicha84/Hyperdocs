@@ -744,7 +744,7 @@ def main():
     parser.add_argument("--session", type=str, help="Normalize a single session directory name")
     args = parser.parse_args()
 
-    sessions_dir = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+    sessions_dir = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "sessions"
 
     if args.session:
         target = sessions_dir / args.session

@@ -16,11 +16,15 @@ Writes:
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
+
+logger = logging.getLogger("hyperdocs.generate_dossiers")
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 # ── Resolve session directory ─────────────────────────────────
 # Default: files adjacent to this script (backward compat).
@@ -37,7 +41,7 @@ if _args.session:
         OUTPUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(Path(__file__).resolve().parent.parent / "output")))
     BASE_DIR = OUTPUT_DIR / f"session_{_args.session[:8]}"
     if not BASE_DIR.exists():
-        print(f"ERROR: Session directory not found: {BASE_DIR}")
+        logger.error(f"Session directory not found: {BASE_DIR}")
         sys.exit(1)
 else:
     BASE_DIR = Path(__file__).parent
@@ -45,27 +49,34 @@ else:
 
 def load_json(filename):
     path = BASE_DIR / filename
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logger.warning(f"{filename} not found in {BASE_DIR}, returning empty dict")
+        return {}
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        logger.warning(f"{filename} is corrupt ({e}), returning empty dict")
+        return {}
 
 
 def save_json(filename, data):
     path = BASE_DIR / filename
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-    print(f"  Wrote {path} ({os.path.getsize(path):,} bytes)")
+    logger.info(f"  Wrote {path} ({os.path.getsize(path):,} bytes)")
 
 
 # ---------------------------------------------------------------------------
 # 1. Load all source data
 # ---------------------------------------------------------------------------
-print("Loading source data...")
+logger.info("Loading source data...")
 session = load_json("session_metadata.json")
 markers = load_json("grounded_markers.json")
 idea_graph = load_json("idea_graph.json")
 
 # thread_extractions is large; load and scan once
-print("Loading thread_extractions.json (may take a moment)...")
+logger.info("Loading thread_extractions.json (may take a moment)...")
 threads = load_json("thread_extractions.json")
 
 # ---------------------------------------------------------------------------
@@ -100,7 +111,7 @@ if not TARGET_FILES:
 # ---------------------------------------------------------------------------
 # 3. Count file references inside thread_extractions software threads
 # ---------------------------------------------------------------------------
-print("Counting file references in thread extractions...")
+logger.info("Counting file references in thread extractions...")
 thread_file_counts = defaultdict(lambda: {"created": 0, "modified": 0, "total": 0})
 
 # Canonical format: top-level "threads" dict with keys ideas/reactions/software/code/plans/behavior.
@@ -148,7 +159,7 @@ else:
 # ---------------------------------------------------------------------------
 # 4. Map warnings and recommendations to files
 # ---------------------------------------------------------------------------
-print("Mapping warnings and recommendations to files...")
+logger.info("Mapping warnings and recommendations to files...")
 
 
 def file_matches_target(target_text, filename):
@@ -291,7 +302,7 @@ if "markers" in markers:
 # ---------------------------------------------------------------------------
 # 5. Map idea_graph subgraphs to files
 # ---------------------------------------------------------------------------
-print("Mapping idea graph subgraphs to files...")
+logger.info("Mapping idea graph subgraphs to files...")
 
 # Map between idea graph concepts and files
 IDEA_FILE_MAP = {
@@ -379,7 +390,7 @@ for sg in idea_graph.get("subgraphs", []):
 # ---------------------------------------------------------------------------
 # 6. Derive story arcs and key decisions per file
 # ---------------------------------------------------------------------------
-print("Deriving story arcs and key decisions...")
+logger.info("Deriving story arcs and key decisions...")
 
 # Reference session annotations — only activated for session 3b7084d5
 _CURRENT_SESSION = os.getenv("HYPERDOCS_SESSION_ID", _args.session or "")
@@ -531,7 +542,7 @@ STORY_ARCS = _REFERENCE_STORY_ARCS if _IS_REFERENCE_SESSION else {}
 # ---------------------------------------------------------------------------
 # 7. Derive claude_behavior profiles per file
 # ---------------------------------------------------------------------------
-print("Deriving Claude behavior profiles per file...")
+logger.info("Deriving Claude behavior profiles per file...")
 
 # Map behavioral patterns to files based on grounded_markers patterns and
 # the thread_extractions claude_behavior_patterns section
@@ -633,7 +644,7 @@ BEHAVIOR_PROFILES = _REFERENCE_BEHAVIOR_PROFILES if _IS_REFERENCE_SESSION else {
 # ---------------------------------------------------------------------------
 # 8. Identify related files per target file
 # ---------------------------------------------------------------------------
-print("Identifying related files per target file...")
+logger.info("Identifying related files per target file...")
 
 _REFERENCE_RELATED_FILES = {
     "unified_orchestrator.py": [
@@ -692,7 +703,7 @@ RELATED_FILES = _REFERENCE_RELATED_FILES if _IS_REFERENCE_SESSION else {}
 # ---------------------------------------------------------------------------
 # 9. Build file_dossiers.json
 # ---------------------------------------------------------------------------
-print("\nBuilding file_dossiers.json...")
+logger.info("Building file_dossiers.json...")
 dossiers = {
     "session_id": os.getenv("HYPERDOCS_SESSION_ID", ""),
     "generated_at": "2026-02-06T00:00:00Z",
@@ -756,7 +767,7 @@ save_json("file_dossiers.json", dossiers)
 # Only the reference session (3b7084d5) has hardcoded gate analysis data.
 # For other sessions, generate a minimal skeleton.
 if not _IS_REFERENCE_SESSION:
-    print("\nSkipping detailed claude_md_analysis (not reference session)...")
+    logger.info("Skipping detailed claude_md_analysis (not reference session)...")
     claude_md_analysis = {
         "session_id": os.getenv("HYPERDOCS_SESSION_ID", ""),
         "generated_at": datetime.now().isoformat() if 'datetime' in dir() else "auto",
@@ -997,7 +1008,7 @@ if _IS_REFERENCE_SESSION:
 # ---------------------------------------------------------------------------
 # 11. Validation
 # ---------------------------------------------------------------------------
-print("\nValidating output files...")
+logger.info("Validating output files...")
 
 validation_warnings = []
 for fname in ["file_dossiers.json", "claude_md_analysis.json"]:
@@ -1010,7 +1021,7 @@ for fname in ["file_dossiers.json", "claude_md_analysis.json"]:
     if not isinstance(data, dict):
         validation_warnings.append(f"WARNING: {fname} is not a JSON object")
         continue
-    print(f"  {fname}: valid JSON, {os.path.getsize(path):,} bytes")
+    logger.info(f"  {fname}: valid JSON, {os.path.getsize(path):,} bytes")
 
 # Validate dossier structure
 dossiers_data = load_json("file_dossiers.json")
@@ -1024,7 +1035,7 @@ if dossiers_data and "files" in dossiers_data:
             if field not in d:
                 validation_warnings.append(f"WARNING: {d.get('filename', 'unknown')} missing field: {field}")
         if all(f in d for f in ["filename", "total_mentions", "warnings", "recommendations"]):
-            print(f"  {d['filename']}: {d['total_mentions']} mentions, {len(d['warnings'])} warnings, {len(d['recommendations'])} recs")
+            logger.info(f"  {d['filename']}: {d['total_mentions']} mentions, {len(d['warnings'])} warnings, {len(d['recommendations'])} recs")
 
 # Validate claude_md_analysis structure
 cmd_data = load_json("claude_md_analysis.json")
@@ -1037,11 +1048,11 @@ if cmd_data:
             if gate not in cmd_data["gate_analysis"]:
                 validation_warnings.append(f"WARNING: gate_analysis missing: {gate}")
     if "claude_md_improvement_recommendations" in cmd_data:
-        print(f"  claude_md_analysis.json: {len(cmd_data['claude_md_improvement_recommendations'])} recommendations")
+        logger.info(f"  claude_md_analysis.json: {len(cmd_data['claude_md_improvement_recommendations'])} recommendations")
 
 if validation_warnings:
-    print(f"\n{len(validation_warnings)} validation warnings:")
+    logger.warning(f"{len(validation_warnings)} validation warnings:")
     for w in validation_warnings:
-        print(f"  {w}")
+        logger.warning(f"  {w}")
 
-print("\nDone. Both output files generated and validated.")
+logger.info("Both output files generated and validated.")

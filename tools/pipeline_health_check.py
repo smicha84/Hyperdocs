@@ -96,14 +96,14 @@ STAGE_CONTRACTS = {
 # What each consumer file reads from which JSON file.
 
 CONSUMER_EXPECTATIONS = {
-    "output/batch_phase2_processor.py": {
+    "phase_2_synthesis/batch_phase2_processor.py": {
         "thread_extractions.json": ["threads"],
         "semantic_primitives.json": ["tagged_messages"],
         "geological_notes.json": ["micro", "meso", "macro"],
         "explorer_notes.json": ["observations"],
         "session_metadata.json": ["session_stats"],
     },
-    "output/batch_p2_generator.py": {
+    "phase_2_synthesis/batch_p2_generator.py": {
         "thread_extractions.json": ["threads"],
         "geological_notes.json": ["micro"],
         "session_metadata.json": ["session_stats"],
@@ -159,7 +159,7 @@ class HealthCheck:
 
     def _find_session(self):
         """Find a processed session to test against."""
-        perm = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+        perm = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "sessions"
         local = REPO / "output"
         for base in [local, perm]:
             if not base.exists():
@@ -405,7 +405,7 @@ class HealthCheck:
                      result.stdout.strip() if result.returncode == 0 else result.stderr[:80])
 
         # Test that existing hyperdoc JSONs in PERMANENT_HYPERDOCS are readable
-        hd_dir = Path.home() / "PERMANENT_HYPERDOCS" / "hyperdocs"
+        hd_dir = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "hyperdocs"
         if hd_dir.exists():
             hd_files = list(hd_dir.glob("*_hyperdoc.json"))[:5]
             for hf in hd_files:
@@ -436,7 +436,7 @@ class HealthCheck:
 
         # Re-run Phase 2
         result = subprocess.run(
-            [sys.executable, str(REPO / "output" / "batch_phase2_processor.py"),
+            [sys.executable, str(REPO / "phase_2_synthesis" / "batch_phase2_processor.py"),
              "--force", self.session_dir.name.replace("session_", "")],
             capture_output=True, text=True, timeout=30,
             cwd=str(REPO),
@@ -533,7 +533,7 @@ class HealthCheck:
     def check_backward_compat(self):
         """Verify old-format sessions can still be read by current consumers."""
         name = "8_backward_compat"
-        perm = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+        perm = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "sessions"
         if not perm.exists():
             self._skip(name, "all", "PERMANENT_HYPERDOCS not found")
             return
@@ -776,7 +776,7 @@ def main():
     if args.session:
         candidates = [
             REPO / "output" / f"session_{args.session[:8]}",
-            Path.home() / "PERMANENT_HYPERDOCS" / "sessions" / f"session_{args.session[:8]}",
+            Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "sessions" / f"session_{args.session[:8]}",
         ]
         session_dir = next((c for c in candidates if c.exists()), None)
 

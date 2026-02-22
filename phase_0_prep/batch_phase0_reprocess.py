@@ -26,8 +26,9 @@ try:
     CHAT_DIR = CHAT_ARCHIVE_DIR / "sessions"
     OUTPUT_DIR = SESSIONS_STORE_DIR
 except ImportError:
-    CHAT_DIR = Path.home() / "PERMANENT_CHAT_HISTORY" / "sessions"
-    OUTPUT_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+    CHAT_DIR = Path(os.getenv("HYPERDOCS_CHAT_ARCHIVE", str(Path.home() / "PERMANENT_CHAT_HISTORY"))) / "sessions"
+    _STORE = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS")))
+    OUTPUT_DIR = _STORE / "sessions"
 
 def _build_duplicate_set():
     """Identify duplicate session directories that process the same conversation.
@@ -201,7 +202,7 @@ def main():
         from config import INDEXES_DIR as _IDX
         log_path = _IDX / "phase0_reprocess_log.json"
     except ImportError:
-        log_path = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "phase0_reprocess_log.json"
+        log_path = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "indexes" / "phase0_reprocess_log.json"
     with open(log_path, "w") as f:
         json.dump(log, f, indent=2)
 

@@ -20,9 +20,11 @@ Usage:
 
 import argparse
 import json
+import logging
 import os
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -30,6 +32,42 @@ PHASE_0_DIR = REPO_ROOT / "phase_0_prep"
 PHASE_1_DIR = REPO_ROOT / "phase_1_extraction"
 PHASE_3_DIR = REPO_ROOT / "phase_3_hyperdoc_writing"
 OUTPUT_DIR = REPO_ROOT / "output"
+
+# ── Logging setup ─────────────────────────────────────────────────────
+logger = logging.getLogger("hyperdocs.pipeline")
+
+def setup_logging(session_id):
+    """Configure logging with both console and file output."""
+    log_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "pipeline_run.log"
+
+    # JSON-structured file handler
+    file_handler = logging.FileHandler(log_file, mode="a")
+    file_handler.setLevel(logging.DEBUG)
+
+    class JsonFormatter(logging.Formatter):
+        def format(self, record):
+            entry = {
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "level": record.levelname,
+                "phase": getattr(record, "phase", ""),
+                "session": getattr(record, "session", ""),
+                "message": record.getMessage(),
+            }
+            return json.dumps(entry)
+
+    file_handler.setFormatter(JsonFormatter())
+
+    # Console handler (simple format)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(logging.Formatter("%(message)s"))
+
+    root = logging.getLogger("hyperdocs")
+    root.setLevel(logging.DEBUG)
+    root.addHandler(file_handler)
+    root.addHandler(console_handler)
 
 
 def run_script(script_path, session_id, extra_env=None, description="", pass_session_arg=False):
@@ -143,12 +181,11 @@ def run_phase_2(session_id):
     # The batch_p2_generator.py is designed for bulk processing.
     # For a single session, we run its build functions directly.
     sys.path.insert(0, str(REPO_ROOT / "phase_2_synthesis"))
-    sys.path.insert(0, str(REPO_ROOT / "output"))  # fallback for legacy location
     try:
         from batch_p2_generator import build_idea_graph, build_synthesis, build_grounded_markers, read_json
     except ImportError:
         print("  ERROR: Cannot import batch_p2_generator.py")
-        print("  Expected at phase_2_synthesis/batch_p2_generator.py or output/batch_p2_generator.py")
+        print("  Expected at phase_2_synthesis/batch_p2_generator.py")
         return False
 
     sdir = str(session_dir)
@@ -233,6 +270,43 @@ def run_phase_3(session_id):
     return ok
 
 
+def validate_phase_output(session_id, phase):
+    """Validate that a phase produced output with the expected schema keys."""
+    session_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
+    EXPECTED = {
+        0: {"enriched_session.json": ["session_id", "messages"],
+            "session_metadata.json": ["session_id", "session_stats"]},
+        1: {"thread_extractions.json": ["threads"]},
+        2: {"idea_graph.json": ["nodes", "edges"],
+            "synthesis.json": ["session_id"],
+            "grounded_markers.json": ["markers"]},
+        3: {"file_dossiers.json": ["dossiers"],
+            "claude_md_analysis.json": []},
+    }
+    checks = EXPECTED.get(phase, {})
+    errors = []
+    for filename, required_keys in checks.items():
+        path = session_dir / filename
+        if not path.exists():
+            errors.append(f"  MISSING: {filename}")
+            continue
+        try:
+            data = json.loads(path.read_text())
+            for key in required_keys:
+                if key not in data:
+                    errors.append(f"  SCHEMA: {filename} missing key '{key}'")
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            errors.append(f"  CORRUPT: {filename}: {e}")
+    if errors:
+        print(f"\n  Phase {phase} validation FAILED:")
+        for e in errors:
+            print(e)
+        return False
+    if checks:
+        print(f"  Phase {phase} validation: {len(checks)} files checked, all valid")
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Run the Hyperdocs pipeline on a session.",
@@ -253,14 +327,20 @@ Examples:
     args = parser.parse_args()
     session_id = args.session_id
 
+    setup_logging(session_id)
+    logger.info(f"Hyperdocs Pipeline Runner — session={session_id}")
+
     print(f"Hyperdocs Pipeline Runner")
     print(f"Session: {session_id}")
     print(f"Output:  {OUTPUT_DIR / f'session_{session_id[:8]}'}")
+    print(f"Log:     {OUTPUT_DIR / f'session_{session_id[:8]}' / 'pipeline_run.log'}")
 
     if args.phase is not None:
         # Run a single phase
         phase_runners = {0: run_phase_0, 1: run_phase_1, 2: run_phase_2, 3: run_phase_3}
         ok = phase_runners[args.phase](session_id)
+        if ok:
+            validate_phase_output(session_id, args.phase)
     elif args.normalize:
         ok = run_schema_normalizer(session_id)
     elif args.full:

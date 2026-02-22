@@ -42,14 +42,16 @@ Usage:
 """
 import argparse
 import json
+import logging
 import os
-import re
 from pathlib import Path
 from collections import defaultdict
 
+logger = logging.getLogger("hyperdocs.collect_evidence")
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(REPO_ROOT / "output")))
-PERM_SESSIONS = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+PERM_SESSIONS = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "sessions"
 WINDOW = 10  # Messages before/after a mention to include as context
 
 
@@ -61,7 +63,8 @@ def load_json(filename, search_dirs):
             try:
                 with open(path, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except (json.JSONDecodeError, UnicodeDecodeError):
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                logger.warning(f"Failed to load {filename} from {d}: {e}")
                 continue
     return {}
 
@@ -748,21 +751,21 @@ def main():
 
     session_id = args.session[:8] if args.session else ""
     if not session_id:
-        print("ERROR: No session ID provided. Use --session or set HYPERDOCS_SESSION_ID.")
+        logger.error("No session ID provided. Use --session or set HYPERDOCS_SESSION_ID.")
         return
 
     session_dir = OUTPUT_DIR / f"session_{session_id}"
     perm_session_dir = PERM_SESSIONS / f"session_{session_id}"
     search_dirs = [perm_session_dir, session_dir]  # L3: prefer PERM (rich Opus data) over DIR1 (thin stubs)
 
-    print("=" * 60)
-    print(f"Phase 3a: Per-Session File Evidence Collector")
-    print(f"  Session: {session_id}")
-    print(f"  Output dir: {session_dir}")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info(f"Phase 3a: Per-Session File Evidence Collector")
+    logger.info(f"  Session: {session_id}")
+    logger.info(f"  Output dir: {session_dir}")
+    logger.info("=" * 60)
 
     # Load all data sources
-    print("Loading data sources...")
+    logger.info("Loading data sources...")
     session_metadata = load_json("session_metadata.json", search_dirs)
     geological_notes = load_json("geological_notes.json", search_dirs)
     semantic_primitives = load_json("semantic_primitives.json", search_dirs)
@@ -781,10 +784,10 @@ def main():
     # Get all target files
     target_files = get_all_target_files(session_metadata)
     if not target_files:
-        print("  No files found in session_metadata. Nothing to collect.")
+        logger.warning("No files found in session_metadata. Nothing to collect.")
         return
 
-    print(f"  Found {len(target_files)} files to process: {target_files}")
+    logger.info(f"  Found {len(target_files)} files to process: {target_files}")
 
     # Create output directory
     evidence_dir = session_dir / "file_evidence"
@@ -830,12 +833,12 @@ def main():
             json.dump(evidence, f, indent=2, ensure_ascii=False)
 
         files_written += 1
-        print(f"  {target_file}: {file_dp} data points, {len(mention_indices)} mentions → {out_name}")
+        logger.info(f"  {target_file}: {file_dp} data points, {len(mention_indices)} mentions → {out_name}")
 
-    print()
-    print(f"Evidence collected for {files_written} files")
-    print(f"Total data points: {total_data_points}")
-    print(f"Output: {evidence_dir}")
+    logger.info("")
+    logger.info(f"Evidence collected for {files_written} files")
+    logger.info(f"Total data points: {total_data_points}")
+    logger.info(f"Output: {evidence_dir}")
 
 
 if __name__ == "__main__":

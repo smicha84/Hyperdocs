@@ -85,19 +85,27 @@ try:
     SESSIONS_DIR = SESSIONS_STORE_DIR
     PROGRESS_FILE = INDEXES_DIR / "phase1_redo_progress.json"
 except ImportError:
-    SESSIONS_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
-    PROGRESS_FILE = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "phase1_redo_progress.json"
+    _STORE = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS")))
+    SESSIONS_DIR = _STORE / "sessions"
+    PROGRESS_FILE = _STORE / "indexes" / "phase1_redo_progress.json"
 MODEL = "claude-opus-4-6"
 MAX_TOKENS = 128000     # Hard API limit for claude-opus-4-6 output
 
-# Load API key from .env file
-ENV_FILE = REPO / ".env"
-if ENV_FILE.exists():
-    for line in ENV_FILE.read_text().splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            key, val = line.split("=", 1)
-            os.environ[key.strip()] = val.strip()
+# Load API key from .env file — check multiple locations
+ENV_CANDIDATES = [
+    REPO / ".env",
+    REPO.parent.parent.parent.parent.parent / ".env",  # project root
+    Path.home() / "Hyperdocs" / ".env",
+]
+for env_path in ENV_CANDIDATES:
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, val = line.split("=", 1)
+                if key.strip() not in os.environ:  # don't override existing
+                    os.environ[key.strip()] = val.strip()
+        break  # use first found
 
 client = anthropic.Anthropic()
 
@@ -113,8 +121,8 @@ try:
     CHAT_DIR = CHAT_ARCHIVE_DIR / "sessions"
     MEASUREMENTS_FILE = _IDX / "session_measurements.json"
 except ImportError:
-    CHAT_DIR = Path.home() / "PERMANENT_CHAT_HISTORY" / "sessions"
-    MEASUREMENTS_FILE = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "session_measurements.json"
+    CHAT_DIR = Path(os.getenv("HYPERDOCS_CHAT_ARCHIVE", str(Path.home() / "PERMANENT_CHAT_HISTORY"))) / "sessions"
+    MEASUREMENTS_FILE = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "indexes" / "session_measurements.json"
 
 
 def _build_duplicate_skip_ids():
@@ -389,6 +397,7 @@ def call_opus(prompt, max_retries=3):
                 thinking={"type": "adaptive"},
                 betas=["context-1m-2025-08-07"],
                 messages=[{"role": "user", "content": prompt}],
+                timeout=300.0,  # 5 min timeout for connection
             ) as stream:
                 for event in stream:
                     if hasattr(event, 'type'):

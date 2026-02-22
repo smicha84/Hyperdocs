@@ -9,6 +9,7 @@ Usage:
     python3 verify_data_locations.py
 """
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -18,7 +19,7 @@ try:
     from config import OUTPUT_DIR, SESSIONS_STORE_DIR
 except ImportError:
     OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
-    SESSIONS_STORE_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+    SESSIONS_STORE_DIR = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "sessions"
 
 
 def get_session_dirs(base: Path) -> dict:

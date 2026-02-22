@@ -13,6 +13,7 @@ Output: ~/PERMANENT_HYPERDOCS/indexes/completeness_report.json
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
@@ -384,7 +385,8 @@ def scan_all(sessions_dir):
 
 
 def main():
-    sessions_dir = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+    _store = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS")))
+    sessions_dir = _store / "sessions"
     if not sessions_dir.exists():
         print(f"Sessions directory not found: {sessions_dir}", file=sys.stderr)
         sys.exit(1)
@@ -392,7 +394,7 @@ def main():
     print(f"Scanning {sessions_dir}...")
     report = scan_all(sessions_dir)
 
-    output_path = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "completeness_report.json"
+    output_path = _store / "indexes" / "completeness_report.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
         json.dump(report, f, indent=2)

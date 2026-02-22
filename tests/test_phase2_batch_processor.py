@@ -10,7 +10,8 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "output"))
+sys.path.insert(0, str(PROJECT_ROOT / "phase_2_synthesis"))
+sys.path.insert(0, str(PROJECT_ROOT / "output"))  # legacy fallback
 
 # Canonical test data (same as conftest.py fixtures)
 THREAD_EXTRACTIONS = {
@@ -61,37 +62,38 @@ class TestBuildIdeaGraphCanonical:
 
     def test_build_from_canonical_threads(self):
         """build_idea_graph should extract nodes from canonical threads dict."""
-        from output.batch_p2_generator import build_idea_graph
+        import tempfile, os
+        from batch_p2_generator import build_idea_graph
 
-        nodes, edges = [], []
-        # Call with canonical format data
-        result_nodes = []
-        result_edges = []
+        # Create a temp session dir with test data
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import json
+            # Write minimal required input files
+            for name, data in [
+                ("session_metadata.json", {"session_id": "test", "session_stats": {"total_messages": 50}}),
+                ("thread_extractions.json", THREAD_EXTRACTIONS),
+                ("geological_notes.json", {"micro": [], "meso": [], "macro": []}),
+                ("semantic_primitives.json", {"tagged_messages": []}),
+                ("explorer_notes.json", {"observations": []}),
+            ]:
+                with open(os.path.join(tmpdir, name), "w") as f:
+                    json.dump(data, f)
 
-        # The function modifies nodes/edges in place via the sid and sdir args,
-        # but we can test the logic by calling it with our test data
-        threads = THREAD_EXTRACTIONS
-        thread_data = threads.get("threads", {})
+            result = build_idea_graph(
+                "test1234", tmpdir,
+                {"session_id": "test", "session_stats": {"total_messages": 50}},
+                THREAD_EXTRACTIONS,
+                {"micro": [], "meso": [], "macro": []},
+                {"tagged_messages": []},
+                {"observations": []},
+            )
 
-        # Verify our test data IS canonical format
-        assert isinstance(thread_data, dict)
-        assert "ideas" in thread_data
-        assert "entries" in thread_data["ideas"]
-
-        # Manually verify what build_idea_graph would extract:
-        # it looks for entries with content > 20 chars
-        for category, cat_data in thread_data.items():
-            if not isinstance(cat_data, dict):
-                continue
-            entries = cat_data.get("entries", [])
-            for entry in entries:
-                if isinstance(entry, dict):
-                    content = entry.get("content", "")
-                    if content and len(content) > 20:
-                        result_nodes.append(content)
-
-        # "Refactored error handling" (30 chars) and others should appear
-        assert len(result_nodes) > 0
+        # Verify result has required structure
+        assert isinstance(result, dict)
+        assert "nodes" in result
+        assert "edges" in result
+        assert isinstance(result["nodes"], list)
+        assert isinstance(result["edges"], list)
 
     def test_canonical_format_has_required_keys(self):
         """Canonical thread format must have threads dict with entries lists."""

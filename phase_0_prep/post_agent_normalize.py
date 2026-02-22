@@ -21,6 +21,7 @@ Usage:
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -88,7 +89,7 @@ def main():
     parser.add_argument("--validate-only", action="store_true", help="Check without modifying")
     args = parser.parse_args()
 
-    sessions_dir = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+    sessions_dir = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "sessions"
     session_dir = sessions_dir / args.session
     if not session_dir.exists():
         print(f"Session not found: {session_dir}")

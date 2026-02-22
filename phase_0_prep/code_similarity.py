@@ -456,7 +456,7 @@ def main():
             from config import INDEXES_DIR
             output_path = INDEXES_DIR / "code_similarity_index.json"
         except ImportError:
-            output_path = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "code_similarity_index.json"
+            output_path = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "indexes" / "code_similarity_index.json"
 
     print("=" * 60)
     print("CODE SIMILARITY ENGINE — Full Scan")

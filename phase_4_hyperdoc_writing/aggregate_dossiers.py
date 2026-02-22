@@ -11,14 +11,19 @@ Output: output/cross_session_file_index.json
 $0 cost — pure Python, no LLM calls.
 """
 import json
+import logging
 import os
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
 
+logger = logging.getLogger("hyperdocs.aggregate_dossiers")
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+
 H3 = Path(__file__).resolve().parent.parent
 OUTPUT = H3 / "output"
 PROJECT_ROOT = H3.parent.parent.parent.parent  # .claude/hooks/hyperdoc/hyperdocs_3 -> project root
+_STORE = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS")))
 
 COMMON_FIELDS = [
     "claude_behavior", "confidence", "key_decisions",
@@ -202,7 +207,7 @@ def load_code_similarity(output_dir: Path) -> dict:
     sim_path = output_dir / "code_similarity_index.json"
     # Also check PERMANENT_HYPERDOCS/indexes/
     if not sim_path.exists():
-        alt = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "code_similarity_index.json"
+        alt = _STORE / "indexes" / "code_similarity_index.json"
         if alt.exists():
             sim_path = alt
     if not sim_path.exists():
@@ -396,7 +401,7 @@ def load_cross_session_evidence(output_dir: Path) -> dict:
     })
 
     search_dirs = [output_dir]
-    perm_sessions = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+    perm_sessions = _STORE / "sessions"
     if perm_sessions.exists():
         search_dirs.append(perm_sessions)
 
@@ -519,12 +524,12 @@ def load_cross_session_evidence(output_dir: Path) -> dict:
 
 
 def main():
-    print("=" * 60)
-    print("Phase 4a: Cross-Session Dossier Aggregation (v3 — with graph context, synthesis, claude_md, metaphors)")
-    print("=" * 60)
-    print(f"Output dir: {OUTPUT}")
-    print(f"Project root: {PROJECT_ROOT}")
-    print()
+    logger.info("=" * 60)
+    logger.info("Phase 4a: Cross-Session Dossier Aggregation (v3 — with graph context, synthesis, claude_md, metaphors)")
+    logger.info("=" * 60)
+    logger.info(f"Output dir: {OUTPUT}")
+    logger.info(f"Project root: {PROJECT_ROOT}")
+    logger.info("")
 
     # Collect all normalized entries
     all_entries = []
@@ -564,12 +569,12 @@ def main():
 
         all_entries.extend(entries)
 
-    print(f"Sessions read: {sessions_read}")
-    print(f"  Dict format: {dict_format}")
-    print(f"  List format: {list_format}")
-    print(f"  Skipped: {skipped}")
-    print(f"Total dossier entries: {len(all_entries)}")
-    print()
+    logger.info(f"Sessions read: {sessions_read}")
+    logger.info(f"  Dict format: {dict_format}")
+    logger.info(f"  List format: {list_format}")
+    logger.info(f"  Skipped: {skipped}")
+    logger.info(f"Total dossier entries: {len(all_entries)}")
+    logger.info("")
 
     # Group by file path
     by_file = defaultdict(list)
@@ -577,7 +582,7 @@ def main():
         fp = entry["file"]
         by_file[fp].append(entry)
 
-    print(f"Unique file paths: {len(by_file)}")
+    logger.info(f"Unique file paths: {len(by_file)}")
 
     # Aggregate
     aggregated = {}
@@ -590,22 +595,22 @@ def main():
     multi_3plus = sum(1 for v in aggregated.values() if v["session_count"] >= 3)
     exists_count = sum(1 for v in aggregated.values() if v["exists_on_disk"])
 
-    print(f"  1 session only: {single}")
-    print(f"  2 sessions: {multi_2}")
-    print(f"  3+ sessions: {multi_3plus}")
-    print(f"  Exist on disk: {exists_count}")
-    print()
+    logger.info(f"  1 session only: {single}")
+    logger.info(f"  2 sessions: {multi_2}")
+    logger.info(f"  3+ sessions: {multi_3plus}")
+    logger.info(f"  Exist on disk: {exists_count}")
+    logger.info("")
 
     # ── Enrich with cross-session signals ─────────────────────────────
-    print("Loading cross-session enrichment data...")
+    logger.info("Loading cross-session enrichment data...")
 
     # Also check PERMANENT_HYPERDOCS for session data
-    PERM_SESSIONS = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
+    PERM_SESSIONS = _STORE / "sessions"
 
     # Code similarity
     sim_data = load_code_similarity(OUTPUT)
     if not sim_data:
-        sim_data = load_code_similarity(Path.home() / "PERMANENT_HYPERDOCS" / "indexes")
+        sim_data = load_code_similarity(_STORE / "indexes")
     sim_hits = 0
     for fp, entry in aggregated.items():
         basename = Path(fp).name
@@ -615,14 +620,14 @@ def main():
             sim_hits += 1
         else:
             entry["code_similarity"] = []
-    print(f"  Code similarity: {sim_hits} files have matches (from {len(sim_data)} indexed)")
+    logger.info(f"  Code similarity: {sim_hits} files have matches (from {len(sim_data)} indexed)")
 
     # Genealogy families — check both output/ and PERMANENT_HYPERDOCS/
     gen_data = load_genealogy_families(OUTPUT)
     if not gen_data and PERM_SESSIONS.exists():
         gen_data = load_genealogy_families(PERM_SESSIONS.parent)
     if not gen_data:
-        gen_data = load_genealogy_families(Path.home() / "PERMANENT_HYPERDOCS")
+        gen_data = load_genealogy_families(_STORE)
     gen_hits = 0
     for fp, entry in aggregated.items():
         basename = Path(fp).name
@@ -632,12 +637,12 @@ def main():
             gen_hits += 1
         else:
             entry["genealogy"] = None
-    print(f"  Genealogy: {gen_hits} files in families (from {len(gen_data)} mapped)")
+    logger.info(f"  Genealogy: {gen_hits} files in families (from {len(gen_data)} mapped)")
 
     # Frustration-file associations — check both output/ and PERMANENT_HYPERDOCS/
     frust_data = build_frustration_file_map(OUTPUT)
     if not frust_data and PERM_SESSIONS.exists():
-        frust_data = build_frustration_file_map(Path.home() / "PERMANENT_HYPERDOCS")
+        frust_data = build_frustration_file_map(_STORE)
     frust_hits = 0
     for fp, entry in aggregated.items():
         basename = Path(fp).name
@@ -647,7 +652,7 @@ def main():
             frust_hits += 1
         else:
             entry["frustration_associations"] = []
-    print(f"  Frustration attribution: {frust_hits} files associated with frustration peaks")
+    logger.info(f"  Frustration attribution: {frust_hits} files associated with frustration peaks")
 
     # Cross-session evidence from file_evidence/ directories (Phase 3a output)
     evidence_data, ev_sessions, ev_files = load_cross_session_evidence(OUTPUT)
@@ -674,12 +679,12 @@ def main():
             entry["cross_session_synthesis"] = {}
             entry["cross_session_geological_metaphors"] = {}
             entry["cross_session_claude_md"] = {}
-    print(f"  Cross-session evidence: {ev_hits} files enriched (from {ev_sessions} sessions, {ev_files} evidence files)")
-    print()
+    logger.info(f"  Cross-session evidence: {ev_hits} files enriched (from {ev_sessions} sessions, {ev_files} evidence files)")
+    logger.info("")
 
     # Top 20
     top = sorted(aggregated.values(), key=lambda x: x["session_count"], reverse=True)[:20]
-    print("Top 20 files by session count:")
+    logger.info("Top 20 files by session count:")
     for t in top:
         disk = "DISK" if t["exists_on_disk"] else "    "
         sim = f" sim:{len(t.get('code_similarity', []))}" if t.get('code_similarity') else ""
@@ -688,8 +693,8 @@ def main():
         ev_geo = len(t.get('cross_session_geological', []))
         ev_emo = len(t.get('cross_session_emotional_arc', {}).get('per_session_emotions', {}))
         ev = f" ev:{ev_emo}s/{ev_geo}g" if ev_geo or ev_emo else ""
-        print(f"  {t['session_count']:>3}x [{disk}]{gen}{sim}{frust}{ev} {t['file_path']}")
-    print()
+        logger.info(f"  {t['session_count']:>3}x [{disk}]{gen}{sim}{frust}{ev} {t['file_path']}")
+    logger.info("")
 
     # Build output
     output_data = {
@@ -714,8 +719,8 @@ def main():
         json.dump(output_data, f, indent=2, default=str)
 
     size = out_path.stat().st_size
-    print(f"Written: {out_path}")
-    print(f"Size: {size:,} bytes")
+    logger.info(f"Written: {out_path}")
+    logger.info(f"Size: {size:,} bytes")
 
     # ── Write per-file extracts to hyperdoc_inputs/ ─────────────────────
     # These are what Phase 4b agents actually read — one JSON per file.
@@ -723,7 +728,7 @@ def main():
     inputs_dir.mkdir(exist_ok=True)
 
     # Also write to PERMANENT_HYPERDOCS if it exists
-    perm_inputs = Path.home() / "PERMANENT_HYPERDOCS" / "hyperdoc_inputs"
+    perm_inputs = _STORE / "hyperdoc_inputs"
     if perm_inputs.parent.exists():
         perm_inputs.mkdir(exist_ok=True)
 
@@ -743,9 +748,9 @@ def main():
 
         written += 1
 
-    print(f"Per-file extracts written: {written} files to hyperdoc_inputs/")
-    print(f"  (includes code_similarity, genealogy, frustration, graph_context, synthesis, claude_md, metaphors)")
-    print("Done.")
+    logger.info(f"Per-file extracts written: {written} files to hyperdoc_inputs/")
+    logger.info(f"  (includes code_similarity, genealogy, frustration, graph_context, synthesis, claude_md, metaphors)")
+    logger.info("Aggregation run finished.")
 
 
 if __name__ == "__main__":

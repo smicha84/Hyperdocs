@@ -816,7 +816,7 @@ class MetadataExtractor:
                 meta.unique_terminal_sessions.add(term_session)
                 # Track max concurrent terminals (ttys000 = 0, ttys003 = 3)
                 try:
-                    session_num = int(session)
+                    session_num = int(term_session)
                     meta.max_concurrent_terminals = max(meta.max_concurrent_terminals, session_num)
                 except ValueError:
                     pass

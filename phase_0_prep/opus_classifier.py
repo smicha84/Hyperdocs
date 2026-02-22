@@ -320,7 +320,7 @@ def main():
     elif args.session:
         candidates = [
             Path(__file__).resolve().parent.parent / "output" / f"session_{args.session[:8]}",
-            Path.home() / "PERMANENT_HYPERDOCS" / "sessions" / f"session_{args.session[:8]}",
+            Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "sessions" / f"session_{args.session[:8]}",
         ]
         session_dir = next((c for c in candidates if c.exists()), candidates[0])
     else:

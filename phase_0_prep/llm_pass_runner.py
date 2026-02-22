@@ -115,7 +115,13 @@ def find_session_dir(session_name: str) -> Optional[Path]:
 
 
 def load_enriched_session(session_dir: Path) -> Dict:
-    """Load enriched_session.json for a session."""
+    """Load session data, preferring safe_condensed.json over raw enriched_session.json.
+    safe_condensed.json strips profanity/PII that triggers API content policy blocks."""
+    # Prefer safe (metadata-only) version to avoid content policy triggers
+    safe_path = session_dir / "safe_condensed.json"
+    if safe_path.exists():
+        with open(safe_path) as f:
+            return json.load(f)
     path = session_dir / "enriched_session.json"
     with open(path) as f:
         return json.load(f)
@@ -270,6 +276,7 @@ def call_api(model: str, system_prompt: str, user_prompt: str,
                 max_tokens=MAX_OUTPUT_TOKENS,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],
+                timeout=300.0,  # 5 min timeout per API call
             )
 
             # Track usage
@@ -298,6 +305,15 @@ def call_api(model: str, system_prompt: str, user_prompt: str,
             print(f"    Rate limited (batch {batch_num}/{total_batches}). "
                   f"Waiting {wait}s... (attempt {attempt + 1}/{MAX_RETRIES})")
             time.sleep(wait)
+
+        except anthropic.BadRequestError as e:
+            # Content policy violation — skip this batch, don't retry
+            error_msg = str(e)
+            if "content" in error_msg.lower() and "policy" in error_msg.lower():
+                print(f"    CONTENT POLICY: Batch {batch_num} blocked. Skipping. Error: {error_msg[:200]}")
+            else:
+                print(f"    BAD REQUEST: Batch {batch_num} rejected: {error_msg[:200]}")
+            return [], usage
 
         except anthropic.APIError as e:
             usage["retries"] = attempt + 1

@@ -52,6 +52,7 @@ STORE_DIR = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_H
 SESSIONS_STORE_DIR = STORE_DIR / "sessions"
 INDEXES_DIR = STORE_DIR / "indexes"
 HYPERDOCS_STORE_DIR = STORE_DIR / "hyperdocs"
+HYPERDOC_INPUTS_DIR = STORE_DIR / "hyperdoc_inputs"
 CHAT_ARCHIVE_DIR = Path(os.getenv("HYPERDOCS_CHAT_ARCHIVE", str(Path.home() / "PERMANENT_CHAT_HISTORY")))
 
 # ── Helpers ────────────────────────────────────────────────────

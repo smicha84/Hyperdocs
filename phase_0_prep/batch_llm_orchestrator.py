@@ -60,9 +60,10 @@ try:
     STATUS_FILE = _IDX / "batch_llm_status.json"
     MANIFEST_FILE = _IDX / "duplicate_manifest.json"
 except ImportError:
-    SESSIONS_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
-    STATUS_FILE = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "batch_llm_status.json"
-    MANIFEST_FILE = Path.home() / "PERMANENT_HYPERDOCS" / "indexes" / "duplicate_manifest.json"
+    _STORE = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS")))
+    SESSIONS_DIR = _STORE / "sessions"
+    STATUS_FILE = _STORE / "indexes" / "batch_llm_status.json"
+    MANIFEST_FILE = _STORE / "indexes" / "duplicate_manifest.json"
 
 # Concurrency limits (proven from historical processing — Chapter 16)
 HAIKU_CONCURRENCY = 50

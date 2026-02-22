@@ -47,8 +47,9 @@ try:
     OUTPUT_DIR = SESSIONS_STORE_DIR
     CHECKPOINT_DIR = INDEXES_DIR
 except ImportError:
-    OUTPUT_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
-    CHECKPOINT_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "indexes"
+    _STORE = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS")))
+    OUTPUT_DIR = _STORE / "sessions"
+    CHECKPOINT_DIR = _STORE / "indexes"
 CHECKPOINT_FILE = CHECKPOINT_DIR / "llm_pass_checkpoint.json"
 COST_LOG_FILE = CHECKPOINT_DIR / "llm_pass_cost_log.json"
 

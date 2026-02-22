@@ -40,7 +40,7 @@ try:
     from config import HYPERDOCS_STORE_DIR
     HYPERDOCS_DIR = HYPERDOCS_STORE_DIR
 except ImportError:
-    HYPERDOCS_DIR = Path.home() / "PERMANENT_HYPERDOCS" / "hyperdocs"
+    HYPERDOCS_DIR = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "hyperdocs"
 
 
 class HyperdocLayerManager:
