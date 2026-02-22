@@ -607,8 +607,8 @@ def build_thread_markers(target_file, thread_extractions):
     Extracts pivot/failure/breakthrough/ignored_gem/deception/frustration markers
     from messages that mention this file.
     """
-    extra = thread_extractions.get("_extra", {})
-    extractions = extra.get("extractions", [])
+    extra = thread_extractions.get("_extra") or {}
+    extractions = extra.get("extractions", []) if isinstance(extra, dict) else []
     file_markers = []
     for ext in extractions:
         if not isinstance(ext, dict):
