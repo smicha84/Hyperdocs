@@ -26,6 +26,43 @@ from pathlib import Path
 logger = logging.getLogger("hyperdocs.generate_dossiers")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
+# ── Evidence directive documentation ────────────────────────────
+# This constant is available for inclusion in any LLM narrator prompt.
+# When the narrator produces text containing @evidence directives,
+# the evidence_resolver.resolve() post-processing step will expand
+# them into formatted evidence blocks from pipeline data.
+EVIDENCE_DIRECTIVE_DOCS = """
+When describing high-impact events (debugging sequences, user frustration peaks,
+critical decisions, idea pivots), DO NOT summarize — embed the raw evidence using
+@evidence directives. The resolver will replace these with timestamped action logs.
+
+Available directives:
+  @evidence:debug_sequence(range=[start,end])
+    Renders timestamped error→fix→verify sequence with filter signals and duration.
+
+  @evidence:emotional_arc(range=[start,end])
+    Renders per-message emotional_tenor + confidence changes across a range.
+
+  @evidence:idea_transition(chain=[N01,N02,N03])
+    Renders idea graph state chain: proposed → constrained → pivoted → proven.
+
+  @evidence:reaction_log(range=[start,end])
+    Renders raw user emotional events with caps_ratio and content preview.
+
+  @evidence:file_timeline(file="config.py")
+    Renders per-file chronological edit/mention history across the session.
+
+  @evidence:geological_event(msg=523)
+    Renders single-message turning point with full metadata and observation.
+
+  @evidence:decision_trace(marker="GM-001")
+    Renders chain of decisions leading to an outcome, with alternatives rejected.
+
+Use these when the raw evidence is more impactful than your interpretation.
+The narrator decides WHEN to cut to footage vs. when to summarize.
+"Don't describe the scream. Show the scream."
+""".strip()
+
 # ── Resolve session directory ─────────────────────────────────
 # Default: files adjacent to this script (backward compat).
 # With --session SESSION_ID: load from the session output dir.
@@ -758,6 +795,36 @@ for filename in TARGET_FILES:
         "claude_behavior": behavior,
     }
     dossiers["files"].append(dossier)
+
+# ---------------------------------------------------------------------------
+# 9a. Resolve @evidence directives in dossier text fields
+# ---------------------------------------------------------------------------
+# If any story_arc or key_decisions text contains @evidence:type(params)
+# directives, resolve them into rendered evidence blocks.
+try:
+    from phase_3_hyperdoc_writing.evidence_resolver import resolve, resolve_count
+except ImportError:
+    try:
+        from evidence_resolver import resolve, resolve_count
+    except ImportError:
+        resolve = None
+        resolve_count = None
+
+if resolve is not None:
+    total_directives = 0
+    for file_entry in dossiers.get("files", []):
+        story = file_entry.get("story_arc", "")
+        if story and resolve_count(story) > 0:
+            file_entry["story_arc"] = resolve(story, BASE_DIR)
+            total_directives += resolve_count(story)
+        # Also resolve in key_decisions entries
+        decisions = file_entry.get("key_decisions", [])
+        for i, dec in enumerate(decisions):
+            if isinstance(dec, str) and "@evidence:" in dec:
+                decisions[i] = resolve(dec, BASE_DIR)
+                total_directives += 1
+    if total_directives > 0:
+        logger.info(f"  Resolved {total_directives} @evidence directives in dossier text")
 
 save_json("file_dossiers.json", dossiers)
 
