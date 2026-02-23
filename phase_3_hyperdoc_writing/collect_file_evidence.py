@@ -143,7 +143,17 @@ def find_mention_indices(target_file, threads_dict, geological_notes, perm_dossi
                                 mention_indices.add(ext.get("msg_index", -1))
 
     # From dossiers (has first/last mention index)
-    for k, v in perm_dossier.get("dossiers", {}).items():
+    # Handle both dict-keyed and list-based dossier schemas
+    raw_dossiers = perm_dossier.get("dossiers", {})
+    dossier_items = []
+    if isinstance(raw_dossiers, dict):
+        dossier_items = list(raw_dossiers.items())
+    elif isinstance(raw_dossiers, list):
+        dossier_items = [
+            (item.get("file", item.get("filename", item.get("name", ""))), item)
+            for item in raw_dossiers if isinstance(item, dict)
+        ]
+    for k, v in dossier_items:
         if not isinstance(v, dict):
             continue
         if v.get("file_name") == target_file or target_file in k:
