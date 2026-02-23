@@ -530,7 +530,7 @@ def build_claude_md_context(claude_md_analysis):
             result[key] = val
 
     # L2: capture _extra block (rich analysis in PERM versions)
-    extra = claude_md_analysis.get("_extra", {})
+    extra = claude_md_analysis.get("_extra") or {}
     if extra:
         result["extra"] = extra
 
