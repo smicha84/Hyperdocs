@@ -21,7 +21,13 @@ try:
 except ImportError:
     _SID = os.getenv("HYPERDOCS_SESSION_ID", "")
     _OUT = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", "./output")) / f"session_{_SID[:8]}"
-INPUT_PATH = str(_OUT / "tier4_priority_messages.json")
+# Prefer Opus-classified priority messages when available.
+# The Opus classifier produces richer, more accurate importance ratings than
+# the Python keyword-based tier system — especially for short high-intensity
+# messages that keyword matching misses entirely.
+_OPUS_INPUT = _OUT / "opus_priority_messages.json"
+_PYTHON_INPUT = _OUT / "tier4_priority_messages.json"
+INPUT_PATH = str(_OPUS_INPUT if _OPUS_INPUT.exists() else _PYTHON_INPUT)
 OUTPUT_PATH = str(_OUT / "thread_extractions.json")
 
 def reconstruct_content(content):
@@ -554,12 +560,14 @@ def process_message(msg, session_id=""):
     return result
 
 def main():
-    print("Loading tier4 priority messages...")
+    input_source = "Opus-classified" if "opus_priority" in INPUT_PATH else "Python tier-4"
+    print(f"Loading priority messages ({input_source})...")
+    print(f"  Source: {INPUT_PATH}")
     with open(INPUT_PATH) as f:
         data = json.load(f)
 
     messages = data['messages']
-    print(f"Processing {len(messages)} tier4 messages...")
+    print(f"Processing {len(messages)} priority messages ({input_source})...")
 
     current_session_id = os.getenv("HYPERDOCS_SESSION_ID", "")
     extractions = []

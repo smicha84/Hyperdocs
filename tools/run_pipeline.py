@@ -178,21 +178,57 @@ def run_schema_normalizer(session_id):
     )
 
 
+def run_opus_classifier(session_id, force=False):
+    """Phase 0c: Opus message classification (replaces Python tier heuristics)."""
+    session_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
+    cls_path = session_dir / "opus_classifications.json"
+
+    if not force and cls_path.exists():
+        print(f"\n  Opus Classifier: already complete (use --force to re-run)")
+        return True
+
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print("\n  WARNING: ANTHROPIC_API_KEY not set. Opus classifier requires API calls.")
+        print("  Falling back to Python tier system.")
+        return True  # Not a failure — Python tiers are the fallback
+
+    # Step 1: Classify messages with Opus
+    ok = run_script(
+        PHASE_0_DIR / "opus_classifier.py",
+        session_id,
+        extra_env={"HYPERDOCS_SESSION_ID": session_id},
+        description="Phase 0c: Opus Message Classification (replaces Python tier heuristics)",
+        pass_session_arg=True,
+    )
+
+    if not ok:
+        print("  Opus classification failed. Falling back to Python tier system.")
+        return True  # Graceful fallback — not a pipeline failure
+
+    # Step 2: Build filtered files from Opus classifications
+    ok = run_script(
+        PHASE_0_DIR / "build_opus_filtered.py",
+        session_id,
+        description="Phase 0c: Build Opus-Filtered Priority Files",
+        pass_session_arg=True,
+    )
+
+    if not ok:
+        print("  Opus filtered file build failed. Phase 1 will use Python tier files.")
+
+    return True  # Always return True — Python tiers are the fallback
+
+
 def run_phase_1(session_id, force=False):
-    """Phase 1: Thread extraction (requires Opus API key)."""
+    """Phase 1: Thread extraction (reads Opus-classified priority when available, else Python tier-4)."""
     if not force and phase_already_complete(session_id, 1):
         print(f"\n  Phase 1: already complete (use --force to re-run)")
         return True
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("\n  WARNING: ANTHROPIC_API_KEY not set. Phase 1 requires Opus API calls.")
-        print("  Set ANTHROPIC_API_KEY to run Phase 1.")
-        return False
-
     return run_script(
         PHASE_1_DIR / "extract_threads.py",
         session_id,
-        description="Phase 1: Thread Extraction (deterministic pattern matching)",
+        description="Phase 1: Thread Extraction (reads Opus priority or Python tier-4)",
     )
 
 
@@ -352,14 +388,16 @@ def main():
         epilog="""
 Examples:
   python3 tools/run_pipeline.py 1c9e0a77              # Free phases (0 + 2)
-  python3 tools/run_pipeline.py 1c9e0a77 --full       # All phases
+  python3 tools/run_pipeline.py 1c9e0a77 --full       # All phases (incl. Opus classifier)
+  python3 tools/run_pipeline.py 1c9e0a77 --classify   # Run Opus classifier only
   python3 tools/run_pipeline.py 1c9e0a77 --phase 1    # Just Phase 1
   python3 tools/run_pipeline.py 1c9e0a77 --normalize   # Schema normalizer
         """,
     )
     parser.add_argument("session_id", help="Session UUID (full or first 8 chars)")
-    parser.add_argument("--full", action="store_true", help="Run all phases including Opus agents")
+    parser.add_argument("--full", action="store_true", help="Run all phases including Opus classifier")
     parser.add_argument("--phase", type=int, choices=[0, 1, 2, 3], help="Run only this phase")
+    parser.add_argument("--classify", action="store_true", help="Run Opus message classifier only (Phase 0c)")
     parser.add_argument("--normalize", action="store_true", help="Run schema normalizer after processing")
     parser.add_argument("--force", action="store_true", help="Re-run even if output already exists")
 
@@ -380,7 +418,10 @@ Examples:
     if force:
         print(f"Mode:    --force (re-run all phases)")
 
-    if args.phase is not None:
+    if args.classify:
+        # Run Opus classifier only (Phase 0c)
+        ok = run_opus_classifier(session_id, force=force)
+    elif args.phase is not None:
         # Run a single phase
         phase_runners = {0: run_phase_0, 1: run_phase_1, 2: run_phase_2, 3: run_phase_3}
         ok = phase_runners[args.phase](session_id, force=force)
@@ -389,8 +430,10 @@ Examples:
     elif args.normalize:
         ok = run_schema_normalizer(session_id)
     elif args.full:
-        # Full pipeline: 0 → 1 → normalize → 2 → 3
+        # Full pipeline: 0 → Opus classify → 1 → normalize → 2 → 3
         ok = run_phase_0(session_id, force=force)
+        if ok:
+            ok = run_opus_classifier(session_id, force=force)
         if ok:
             ok = run_phase_1(session_id, force=force)
         if ok:

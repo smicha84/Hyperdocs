@@ -502,12 +502,14 @@ def main():
         caps = metadata_dict.get("caps_ratio", 0) if isinstance(metadata_dict, dict) else 0
         profanity = metadata_dict.get("profanity", False) if isinstance(metadata_dict, dict) else False
         emergency = metadata_dict.get("emergency_intervention", False) if isinstance(metadata_dict, dict) else False
+        exclamation_count = metadata_dict.get("exclamations", 0) if isinstance(metadata_dict, dict) else 0
 
-        if msg.role == "user" and not protocol_info["is_protocol"] and (caps > 0.3 or profanity):
+        if msg.role == "user" and not protocol_info["is_protocol"] and (caps > 0.3 or profanity or exclamation_count >= 5):
             stats["frustration_peaks"].append({
                 "index": idx,
                 "caps_ratio": caps,
                 "profanity": profanity,
+                "exclamations": exclamation_count,
                 "content_preview": analysis_content[:120],
             })
 

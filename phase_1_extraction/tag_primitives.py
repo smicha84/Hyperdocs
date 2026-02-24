@@ -31,8 +31,12 @@ except ImportError:
     _SID = os.getenv("HYPERDOCS_SESSION_ID", "")
     SESSION_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", "./output")) / f"session_{_SID[:8]}"
 
-TIER4_FILE = SESSION_DIR / "tier4_priority_messages.json"
+# Prefer Opus-classified priority when available, fall back to Python tier-4
+_OPUS_PRIORITY = SESSION_DIR / "opus_priority_messages.json"
+_PYTHON_TIER4 = SESSION_DIR / "tier4_priority_messages.json"
+TIER4_FILE = _OPUS_PRIORITY if _OPUS_PRIORITY.exists() else _PYTHON_TIER4
 USER_FILE = SESSION_DIR / "user_messages_tier2plus.json"
+ENRICHED_FILE = SESSION_DIR / "enriched_session.json"
 OUTPUT_FILE = SESSION_DIR / "semantic_primitives.json"
 
 
@@ -529,12 +533,13 @@ def tag_message(msg: dict) -> dict:
 
 
 def main():
-    print(f"Loading tier4 messages from {TIER4_FILE}...")
+    input_source = "Opus-classified" if "opus_priority" in str(TIER4_FILE) else "Python tier-4"
+    print(f"Loading priority messages ({input_source}) from {TIER4_FILE}...")
     with open(TIER4_FILE, "r") as f:
         tier4_data = json.load(f)
 
     messages = tier4_data.get("messages", [])
-    print(f"Found {len(messages)} tier4 priority messages")
+    print(f"Found {len(messages)} priority messages")
 
     # Also load user messages for supplementary context
     print(f"Loading user messages from {USER_FILE}...")
@@ -544,15 +549,39 @@ def main():
     user_messages = user_data.get("messages", [])
     print(f"Found {len(user_messages)} user tier2+ messages")
 
-    # Build index of user messages already in tier4
-    tier4_indices = {m["index"] for m in messages}
+    # Build index of messages already included
+    included_indices = {m["index"] for m in messages}
 
-    # Add user messages not already in tier4
+    # Add user messages not already included
     extra_user = [m for m in user_messages
-                  if m["index"] not in tier4_indices and m.get("filter_tier", 0) >= 2]
+                  if m["index"] not in included_indices and m.get("filter_tier", 0) >= 2]
     print(f"Adding {len(extra_user)} additional user messages from tier2+")
+    included_indices.update(m["index"] for m in extra_user)
 
-    all_messages = messages + extra_user
+    # Also pull in high-intensity user messages that the tier system missed entirely.
+    # Short messages with 5+ exclamation marks or high caps are emotionally significant
+    # and must be tagged with primitives regardless of their tier classification.
+    extra_intense = []
+    if ENRICHED_FILE.exists():
+        with open(ENRICHED_FILE, "r") as f:
+            enriched = json.load(f)
+        for m in enriched.get("messages", []):
+            if m["index"] in included_indices:
+                continue
+            if m.get("is_protocol"):
+                continue
+            if m.get("role") != "user":
+                continue
+            meta = m.get("metadata", {})
+            excl = meta.get("exclamations", 0) if isinstance(meta, dict) else 0
+            caps = meta.get("caps_ratio", 0) if isinstance(meta, dict) else 0
+            if excl >= 5 or caps > 0.3:
+                extra_intense.append(m)
+                included_indices.add(m["index"])
+    if extra_intense:
+        print(f"Adding {len(extra_intense)} high-intensity user messages (excl>=5 or caps>0.3) missed by tier system")
+
+    all_messages = messages + extra_user + extra_intense
     all_messages.sort(key=lambda m: m["index"])
 
     print(f"Total messages to tag: {len(all_messages)}")
