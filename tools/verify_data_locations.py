@@ -8,6 +8,10 @@ Differences indicate sync issues (the hourly cron may have missed sessions).
 Usage:
     python3 verify_data_locations.py
 """
+from tools.log_config import get_logger
+
+logger = get_logger("tools.verify_data_locations")
+
 import json
 import os
 import sys
@@ -35,31 +39,31 @@ def get_session_dirs(base: Path) -> dict:
 
 
 def main():
-    print("=" * 60)
-    print("Data Location Consistency Check")
-    print(f"  Local:     {OUTPUT_DIR}")
-    print(f"  Permanent: {SESSIONS_STORE_DIR}")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Data Location Consistency Check")
+    logger.info(f"  Local:     {OUTPUT_DIR}")
+    logger.info(f"  Permanent: {SESSIONS_STORE_DIR}")
+    logger.info("=" * 60)
 
     local = get_session_dirs(OUTPUT_DIR)
     permanent = get_session_dirs(SESSIONS_STORE_DIR)
 
-    print(f"\n  Local sessions:     {len(local)}")
-    print(f"  Permanent sessions: {len(permanent)}")
+    logger.info(f"\n  Local sessions:     {len(local)}")
+    logger.info(f"  Permanent sessions: {len(permanent)}")
 
     # Sessions in local but not permanent
     only_local = set(local.keys()) - set(permanent.keys())
     if only_local:
-        print(f"\n  MISSING from permanent ({len(only_local)}):")
+        logger.info(f"\n  MISSING from permanent ({len(only_local)}):")
         for s in sorted(only_local):
-            print(f"    {s} ({local[s]} files)")
+            logger.info(f"    {s} ({local[s]} files)")
 
     # Sessions in permanent but not local
     only_permanent = set(permanent.keys()) - set(local.keys())
     if only_permanent:
-        print(f"\n  MISSING from local ({len(only_permanent)}):")
+        logger.info(f"\n  MISSING from local ({len(only_permanent)}):")
         for s in sorted(only_permanent):
-            print(f"    {s} ({permanent[s]} files)")
+            logger.info(f"    {s} ({permanent[s]} files)")
 
     # Sessions in both but with different file counts
     both = set(local.keys()) & set(permanent.keys())
@@ -69,24 +73,24 @@ def main():
             mismatches.append((s, local[s], permanent[s]))
 
     if mismatches:
-        print(f"\n  FILE COUNT MISMATCHES ({len(mismatches)}):")
+        logger.info(f"\n  FILE COUNT MISMATCHES ({len(mismatches)}):")
         for s, lc, pc in mismatches:
-            print(f"    {s}: local={lc}, permanent={pc}")
+            logger.info(f"    {s}: local={lc}, permanent={pc}")
 
     # Summary
-    print("\n" + "=" * 60)
+    logger.info("\n" + "=" * 60)
     total_issues = len(only_local) + len(only_permanent) + len(mismatches)
     if total_issues == 0:
-        print(f"  CONSISTENT: {len(both)} sessions match across both locations")
+        logger.info(f"  CONSISTENT: {len(both)} sessions match across both locations")
     else:
-        print(f"  {total_issues} issues found:")
+        logger.info(f"  {total_issues} issues found:")
         if only_local:
-            print(f"    {len(only_local)} sessions only in local")
+            logger.info(f"    {len(only_local)} sessions only in local")
         if only_permanent:
-            print(f"    {len(only_permanent)} sessions only in permanent")
+            logger.info(f"    {len(only_permanent)} sessions only in permanent")
         if mismatches:
-            print(f"    {len(mismatches)} file count mismatches")
-    print("=" * 60)
+            logger.info(f"    {len(mismatches)} file count mismatches")
+    logger.info("=" * 60)
 
     return 0 if total_issues == 0 else 1
 

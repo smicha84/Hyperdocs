@@ -6,7 +6,7 @@ Call after any agent writes a JSON file to ensure it conforms to canonical schem
 If it doesn't, normalizes it immediately. Logs all corrections.
 
 Usage:
-    # As a library (call from batch_orchestrator.py after each agent):
+    # As a library (call from interactive_batch_runner.py after each agent):
     from phase_0_prep.schema_validator import validate_and_normalize
     validate_and_normalize(session_dir / "thread_extractions.json")
 
@@ -25,6 +25,9 @@ from pathlib import Path
 # Import normalizers from the normalizer module
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from schema_normalizer import NORMALIZERS
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.schema_validator")
 
 
 CANONICAL_DATA_KEYS = {
@@ -100,34 +103,34 @@ def main():
         filepath = Path(args.file)
         valid, missing = validate_file(filepath)
         if valid:
-            print(f"VALID: {filepath.name}")
+            logger.info(f"VALID: {filepath.name}")
         else:
-            print(f"INVALID: {filepath.name} — missing keys: {missing}")
-            print("Run schema_normalizer.py to fix.")
+            logger.info(f"INVALID: {filepath.name} — missing keys: {missing}")
+            logger.info("Run schema_normalizer.py to fix.")
         sys.exit(0 if valid else 1)
 
     if args.session:
         sessions_dir = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "sessions"
         session_dir = sessions_dir / args.session
         if not session_dir.exists():
-            print(f"Session not found: {session_dir}")
+            logger.info(f"Session not found: {session_dir}")
             sys.exit(1)
 
         results = validate_session(session_dir)
         all_valid = True
         for filename, result in results.items():
             status = "VALID" if result["valid"] else f"INVALID (missing: {result['missing_keys']})"
-            print(f"  {filename:<36s}  {status}")
+            logger.info(f"  {filename:<36s}  {status}")
             if not result["valid"]:
                 all_valid = False
 
         if all_valid:
-            print("\nAll files valid.")
+            logger.info("\nAll files valid.")
         else:
-            print("\nSome files invalid. Run schema_normalizer.py to fix.")
+            logger.info("\nSome files invalid. Run schema_normalizer.py to fix.")
         sys.exit(0 if all_valid else 1)
 
-    print("Usage: schema_validator.py <session_name> | --file <path>")
+    logger.info("Usage: schema_validator.py <session_name> | --file <path>")
     sys.exit(1)
 
 

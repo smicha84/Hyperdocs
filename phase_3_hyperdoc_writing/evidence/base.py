@@ -7,9 +7,15 @@ PERM-first search strategy as collect_file_evidence.py.
 """
 import json
 import logging
+import sys
 from pathlib import Path
 
-logger = logging.getLogger("hyperdocs.evidence")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from tools.json_io import load_json as _load_json
+
+from tools.log_config import get_logger
+
+logger = get_logger("phase3.evidence")
 
 # Permanent storage paths (mirroring collect_file_evidence.py L3 pattern)
 _PERM_SESSIONS = Path.home() / "PERMANENT_HYPERDOCS" / "sessions"
@@ -25,8 +31,7 @@ def load_json(filename, search_dirs):
         path = d / filename
         if path.exists():
             try:
-                with open(path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                return _load_json(path)
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
                 logger.warning(f"Failed to load {filename} from {d}: {e}")
                 continue

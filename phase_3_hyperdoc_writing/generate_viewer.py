@@ -6,6 +6,9 @@ import os
 import html
 import sys
 from pathlib import Path
+from tools.log_config import get_logger
+
+logger = get_logger("phase3.generate_viewer")
 
 # ── Resolve session directory ─────────────────────────────────
 _parser = argparse.ArgumentParser(add_help=False)
@@ -20,7 +23,7 @@ if _args.session:
         OUTPUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(Path(__file__).resolve().parent.parent / "output")))
     BASE = OUTPUT_DIR / f"session_{_args.session[:8]}"
     if not BASE.exists():
-        print(f"ERROR: Session directory not found: {BASE}")
+        logger.error(f"ERROR: Session directory not found: {BASE}")
         sys.exit(1)
 else:
     BASE = Path(__file__).parent
@@ -813,7 +816,7 @@ html_content = "\n".join(parts)
 out = BASE / "pipeline_viewer.html"
 with open(out, "w") as f:
     f.write(html_content)
-print(f"Written: {out} ({os.path.getsize(out):,} bytes)")
+logger.info(f"Written: {out} ({os.path.getsize(out):,} bytes)")
 
 # ======================================================================
 # @ctx HYPERDOC — HISTORICAL (generated 2026-02-08, requires realtime update)

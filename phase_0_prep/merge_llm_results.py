@@ -28,6 +28,9 @@ from config import OUTPUT_DIR as DEFAULT_OUTPUT_DIR
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from prompts import PASS_CONFIGS
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.merge_llm_results")
 
 
 def find_session_dir(session_name: str) -> Optional[Path]:
@@ -139,8 +142,8 @@ def merge_session(session_dir: Path, write_output: bool = True) -> Dict:
     messages = data.get("messages", [])
     session_id = data.get("session_id", "unknown")
 
-    print(f"\nMerging LLM results for session {session_id}")
-    print(f"  Messages: {len(messages)}")
+    logger.info(f"\nMerging LLM results for session {session_id}")
+    logger.info(f"  Messages: {len(messages)}")
 
     # Load all pass results
     pass_results = {}
@@ -153,7 +156,7 @@ def merge_session(session_dir: Path, write_output: bool = True) -> Dict:
             print(f"  Pass {pass_num}: {result.get('results_count', 0)} results "
                   f"({result.get('model', 'unknown')})")
         else:
-            print(f"  Pass {pass_num}: not found")
+            logger.info(f"  Pass {pass_num}: not found")
 
     # Merge into messages
     merged_count = 0
@@ -192,7 +195,7 @@ def merge_session(session_dir: Path, write_output: bool = True) -> Dict:
         with open(output_path, "w") as f:
             json.dump(data, f, indent=2, default=str)
         size_mb = output_path.stat().st_size / (1024 * 1024)
-        print(f"\n  Output: {output_path.name} ({size_mb:.1f} MB)")
+        logger.info(f"\n  Output: {output_path.name} ({size_mb:.1f} MB)")
 
     stats = {
         "session_id": session_id,
@@ -203,7 +206,7 @@ def merge_session(session_dir: Path, write_output: bool = True) -> Dict:
         "total_cost": data["llm_merge_metadata"]["total_cost"],
     }
 
-    print(f"  Merged: {merged_count} messages with LLM data, {null_count} without")
+    logger.info(f"  Merged: {merged_count} messages with LLM data, {null_count} without")
     return stats
 
 
@@ -220,7 +223,7 @@ def main():
 
     session_dir = find_session_dir(args.session)
     if not session_dir:
-        print(f"ERROR: Session not found: {args.session}")
+        logger.error(f"ERROR: Session not found: {args.session}")
         sys.exit(1)
 
     merge_session(session_dir)

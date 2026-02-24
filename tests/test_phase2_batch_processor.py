@@ -1,6 +1,6 @@
 """Tests for Phase 2 deterministic processing (idea graph, synthesis, markers).
 
-Tests the build_idea_graph function from batch_p2_generator.py which
+Tests the build_idea_graph function from backfill_phase2.py which
 constructs idea graphs from canonical thread extractions data.
 """
 import sys
@@ -63,7 +63,7 @@ class TestBuildIdeaGraphCanonical:
     def test_build_from_canonical_threads(self):
         """build_idea_graph should extract nodes from canonical threads dict."""
         import tempfile, os
-        from batch_p2_generator import build_idea_graph
+        from backfill_phase2 import build_idea_graph
 
         # Create a temp session dir with test data
         with tempfile.TemporaryDirectory() as tmpdir:

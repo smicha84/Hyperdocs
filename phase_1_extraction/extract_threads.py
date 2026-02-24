@@ -8,6 +8,10 @@ The USER_IDEA_ANNOTATIONS and NARRATIVE_ANNOTATIONS dicts only activate when
 processing that specific session. For all other sessions, extraction is purely
 pattern-based.
 """
+from tools.log_config import get_logger
+
+logger = get_logger("phase1.extract_threads")
+
 import json
 import re
 import os
@@ -561,13 +565,13 @@ def process_message(msg, session_id=""):
 
 def main():
     input_source = "Opus-classified" if "opus_priority" in INPUT_PATH else "Python tier-4"
-    print(f"Loading priority messages ({input_source})...")
-    print(f"  Source: {INPUT_PATH}")
+    logger.info(f"Loading priority messages ({input_source})...")
+    logger.info(f"  Source: {INPUT_PATH}")
     with open(INPUT_PATH) as f:
         data = json.load(f)
 
     messages = data['messages']
-    print(f"Processing {len(messages)} priority messages ({input_source})...")
+    logger.info(f"Processing {len(messages)} priority messages ({input_source})...")
 
     current_session_id = os.getenv("HYPERDOCS_SESSION_ID", "")
     extractions = []
@@ -575,7 +579,7 @@ def main():
         extraction = process_message(msg, session_id=current_session_id)
         extractions.append(extraction)
         if (i + 1) % 50 == 0:
-            print(f"  Processed {i+1}/{len(messages)}")
+            logger.info(f"  Processed {i+1}/{len(messages)}")
 
     # Post-processing: identify ignored gems by checking if next Claude message addressed the user's point
     for i in range(len(extractions) - 1):
@@ -739,7 +743,7 @@ def main():
         },
     }
 
-    print(f"\nWriting {len(extractions)} extractions to output...")
+    logger.info(f"\nWriting {len(extractions)} extractions to output...")
     with open(OUTPUT_PATH, 'w') as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
 
@@ -776,24 +780,24 @@ def main():
     # Annotated message count
     annotated = sum(1 for e in extractions if 'narrative_annotation' in e)
 
-    print(f"\n=== EXTRACTION SUMMARY ===")
-    print(f"Total messages analyzed: {len(extractions)}")
-    print(f"  User messages: {len(user_msgs)}")
-    print(f"  Assistant messages: {len(asst_msgs)}")
-    print(f"  Narrative annotations: {annotated}")
-    print(f"\nThread categories (canonical output):")
+    logger.info(f"\n=== EXTRACTION SUMMARY ===")
+    logger.info(f"Total messages analyzed: {len(extractions)}")
+    logger.info(f"  User messages: {len(user_msgs)}")
+    logger.info(f"  Assistant messages: {len(asst_msgs)}")
+    logger.info(f"  Narrative annotations: {annotated}")
+    logger.info(f"\nThread categories (canonical output):")
     for cat_name, cat_data in thread_categories.items():
-        print(f"  {cat_name}: {len(cat_data['entries'])} entries")
-    print(f"\nMarker counts:")
-    print(f"  Pivots: {pivots}")
-    print(f"  Failures: {failures}")
-    print(f"  Breakthroughs: {breakthroughs}")
-    print(f"  Ignored gems: {gems}")
-    print(f"  Deception detected: {deceptions}")
-    print(f"\nFrustration distribution: {dict(sorted(frust_dist.items()))}")
-    print(f"Claude quality distribution: {quality_dist}")
-    print(f"User reaction distribution: {reaction_dist}")
-    print(f"\nOutput written to: {OUTPUT_PATH}")
+        logger.info(f"  {cat_name}: {len(cat_data['entries'])} entries")
+    logger.info(f"\nMarker counts:")
+    logger.info(f"  Pivots: {pivots}")
+    logger.info(f"  Failures: {failures}")
+    logger.info(f"  Breakthroughs: {breakthroughs}")
+    logger.info(f"  Ignored gems: {gems}")
+    logger.info(f"  Deception detected: {deceptions}")
+    logger.info(f"\nFrustration distribution: {dict(sorted(frust_dist.items()))}")
+    logger.info(f"Claude quality distribution: {quality_dist}")
+    logger.info(f"User reaction distribution: {reaction_dist}")
+    logger.info(f"\nOutput written to: {OUTPUT_PATH}")
 
 if __name__ == '__main__':
     main()

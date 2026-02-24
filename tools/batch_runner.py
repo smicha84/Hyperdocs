@@ -23,6 +23,9 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from config import SESSIONS_STORE_DIR, INDEXES_DIR
+from tools.log_config import get_logger
+
+logger = get_logger("tools.batch_runner")
 
 CHECKPOINT_FILE = INDEXES_DIR / "batch_runner_checkpoint.json"
 
@@ -93,7 +96,7 @@ def main():
         sessions = discover_sessions()
 
     if not sessions:
-        print("No sessions found.")
+        logger.info("No sessions found.")
         return
 
     # Load checkpoint for resume
@@ -101,19 +104,19 @@ def main():
     if args.resume:
         completed = set(checkpoint.get("completed", []))
         sessions = [s for s in sessions if s not in completed]
-        print(f"Resuming: {len(completed)} already done, {len(sessions)} remaining")
+        logger.info(f"Resuming: {len(completed)} already done, {len(sessions)} remaining")
     else:
         checkpoint = {"completed": [], "failed": [], "in_progress": None,
                       "started_at": datetime.now(timezone.utc).isoformat()}
         save_checkpoint(checkpoint)
 
-    print(f"Batch Runner: {len(sessions)} sessions")
-    print(f"Checkpoint: {CHECKPOINT_FILE}")
-    print()
+    logger.info(f"Batch Runner: {len(sessions)} sessions")
+    logger.info(f"Checkpoint: {CHECKPOINT_FILE}")
+    logger.info()
 
     total_time = 0
     for i, sid in enumerate(sessions, 1):
-        print(f"[{i}/{len(sessions)}] {sid}")
+        logger.info(f"[{i}/{len(sessions)}] {sid}")
         checkpoint["in_progress"] = sid
         save_checkpoint(checkpoint)
 
@@ -123,22 +126,22 @@ def main():
         if ok:
             checkpoint["completed"].append(sid)
             checkpoint["in_progress"] = None
-            print(f"  OK ({elapsed:.1f}s)")
+            logger.info(f"  OK ({elapsed:.1f}s)")
         else:
             checkpoint["failed"].append({"session": sid, "duration": elapsed})
             checkpoint["in_progress"] = None
-            print(f"  FAILED ({elapsed:.1f}s)")
+            logger.error(f"  FAILED ({elapsed:.1f}s)")
 
         save_checkpoint(checkpoint)
 
     # Summary
     n_ok = len(checkpoint["completed"])
     n_fail = len(checkpoint["failed"])
-    print(f"\nBatch complete: {n_ok} succeeded, {n_fail} failed, {total_time:.0f}s total")
+    logger.error(f"\nBatch complete: {n_ok} succeeded, {n_fail} failed, {total_time:.0f}s total")
     if n_fail:
-        print("Failed sessions:")
+        logger.error("Failed sessions:")
         for f in checkpoint["failed"]:
-            print(f"  {f['session']} ({f['duration']:.1f}s)")
+            logger.info(f"  {f['session']} ({f['duration']:.1f}s)")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Batch Phase 0 Reprocessor — Re-runs deterministic_prep.py + prepare_agent_data.py
+Batch Phase 0 Reprocessor — Re-runs enrich_session.py + prepare_agent_data.py
 on ALL sessions with the 9 data quality fixes applied.
 
 $0 cost. Pure Python. Updates enriched_session.json and all derivative files
@@ -19,6 +19,11 @@ import subprocess
 import time
 from pathlib import Path
 from datetime import datetime, timezone
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.batch_phase0_reprocess")
 
 REPO = Path(__file__).resolve().parent.parent  # hyperdocs_3 root
 try:
@@ -89,19 +94,19 @@ def find_jsonl_for_session(session_dir_name):
 
 
 def run_phase0(session_id, jsonl_path, output_dir):
-    """Run deterministic_prep.py + prepare_agent_data.py for one session."""
+    """Run enrich_session.py + prepare_agent_data.py for one session."""
     env = os.environ.copy()
     env["HYPERDOCS_SESSION_ID"] = session_id
     env["HYPERDOCS_CHAT_HISTORY"] = str(jsonl_path)
     env["HYPERDOCS_OUTPUT_DIR"] = str(output_dir.parent)
 
-    # Run deterministic_prep.py
+    # Run enrich_session.py
     result = subprocess.run(
-        [sys.executable, str(REPO / "phase_0_prep" / "deterministic_prep.py")],
+        [sys.executable, str(REPO / "phase_0_prep" / "enrich_session.py")],
         env=env, capture_output=True, text=True, timeout=120
     )
     if result.returncode != 0:
-        return False, f"deterministic_prep failed: {result.stderr[:200]}"
+        return False, f"enrich_session failed: {result.stderr[:200]}"
 
     # Run prepare_agent_data.py
     result2 = subprocess.run(
@@ -116,10 +121,10 @@ def run_phase0(session_id, jsonl_path, output_dir):
 
 def main():
     start_time = time.time()
-    print("=" * 70)
-    print("Batch Phase 0 Reprocessor — All Sessions")
-    print(f"Started: {datetime.now(timezone.utc).isoformat()}")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("Batch Phase 0 Reprocessor — All Sessions")
+    logger.info(f"Started: {datetime.now(timezone.utc).isoformat()}")
+    logger.info("=" * 70)
 
     # Get all session directories that have enriched_session.json
     session_dirs = sorted(
@@ -127,8 +132,8 @@ def main():
         if d.is_dir() and d.name.startswith("session_") and (d / "enriched_session.json").exists()
     )
 
-    print(f"Sessions to reprocess: {len(session_dirs)}")
-    print()
+    logger.info(f"Sessions to reprocess: {len(session_dirs)}")
+    logger.info()
 
     success = 0
     failed = 0
@@ -173,19 +178,19 @@ def main():
                   f"({elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining)")
 
     # ── Run schema normalizer ──
-    print("\nRunning schema normalizer...")
+    logger.info("\nRunning schema normalizer...")
     subprocess.run(
         [sys.executable, str(REPO / "phase_0_prep" / "schema_normalizer.py")],
         capture_output=True, text=True, timeout=600
     )
 
     # ── Run completeness scanner ──
-    print("Running completeness scanner...")
+    logger.info("Running completeness scanner...")
     result = subprocess.run(
         [sys.executable, str(REPO / "phase_0_prep" / "completeness_scanner.py")],
         capture_output=True, text=True, timeout=300
     )
-    print(result.stdout[-500:] if result.stdout else "")
+    logger.info(result.stdout[-500:] if result.stdout else "")
 
     elapsed = time.time() - start_time
 
@@ -206,20 +211,20 @@ def main():
     with open(log_path, "w") as f:
         json.dump(log, f, indent=2)
 
-    print()
-    print("=" * 70)
-    print(f"Batch Phase 0 Reprocessor — Complete")
-    print(f"  Success: {success}/{len(session_dirs)}")
-    print(f"  Failed:  {failed}")
-    print(f"  Skipped: {skipped} (no source JSONL found)")
-    print(f"  Time:    {elapsed:.0f}s ({elapsed/60:.1f} min)")
-    print(f"  Log:     {log_path}")
-    print("=" * 70)
+    logger.info()
+    logger.info("=" * 70)
+    logger.info(f"Batch Phase 0 Reprocessor — Complete")
+    logger.info(f"  Success: {success}/{len(session_dirs)}")
+    logger.error(f"  Failed:  {failed}")
+    logger.warning(f"  Skipped: {skipped} (no source JSONL found)")
+    logger.info(f"  Time:    {elapsed:.0f}s ({elapsed/60:.1f} min)")
+    logger.info(f"  Log:     {log_path}")
+    logger.info("=" * 70)
 
     if errors:
-        print(f"\nErrors ({len(errors)}):")
+        logger.info(f"\nErrors ({len(errors)}):")
         for s, e in errors[:10]:
-            print(f"  {s}: {e}")
+            logger.info(f"  {s}: {e}")
 
 
 if __name__ == "__main__":

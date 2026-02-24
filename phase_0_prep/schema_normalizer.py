@@ -31,6 +31,11 @@ from pathlib import Path
 from datetime import datetime, timezone
 from collections import Counter
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.schema_normalizer")
+
 
 # ── Canonical field names ────────────────────────────────────────
 
@@ -750,16 +755,16 @@ def main():
     if args.session:
         target = sessions_dir / args.session
         if not target.exists():
-            print(f"Session not found: {target}")
+            logger.info(f"Session not found: {target}")
             sys.exit(1)
         session_dirs = [target]
     else:
         session_dirs = sorted(d for d in sessions_dir.iterdir() if d.is_dir())
 
-    print(f"{'DRY RUN — ' if args.dry_run else ''}Schema Normalizer")
-    print(f"Sessions: {len(session_dirs)}")
-    print(f"File types: {len(NORMALIZERS)}")
-    print()
+    logger.info(f"{'DRY RUN — ' if args.dry_run else ''}Schema Normalizer")
+    logger.info(f"Sessions: {len(session_dirs)}")
+    logger.info(f"File types: {len(NORMALIZERS)}")
+    logger.info()
 
     totals = Counter()
     per_file_totals = {fn: Counter() for fn in NORMALIZERS}
@@ -775,22 +780,22 @@ def main():
                 all_logs.append(f"  {sd.name}/{filename}: {status} — {'; '.join(result['log'])}")
 
     # Print summary
-    print("=" * 70)
-    print("RESULTS")
-    print("=" * 70)
-    print(f"\nOverall: {dict(totals)}")
-    print()
+    logger.info("=" * 70)
+    logger.info("RESULTS")
+    logger.info("=" * 70)
+    logger.info(f"\nOverall: {dict(totals)}")
+    logger.info()
     for filename in NORMALIZERS:
         counts = per_file_totals[filename]
-        print(f"  {filename:<36s}  {dict(counts)}")
+        logger.info(f"  {filename:<36s}  {dict(counts)}")
 
     # Print detailed logs (limited)
     if all_logs:
-        print(f"\nDetailed log ({len(all_logs)} entries):")
+        logger.info(f"\nDetailed log ({len(all_logs)} entries):")
         for line in all_logs[:50]:
-            print(line)
+            logger.info(line)
         if len(all_logs) > 50:
-            print(f"  ... and {len(all_logs) - 50} more")
+            logger.info(f"  ... and {len(all_logs) - 50} more")
 
     # Write full log to file
     log_path = sessions_dir.parent / "indexes" / "normalization_log.json"
@@ -805,7 +810,7 @@ def main():
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with open(log_path, "w") as f:
         json.dump(log_data, f, indent=2)
-    print(f"\nFull log: {log_path}")
+    logger.info(f"\nFull log: {log_path}")
 
 
 if __name__ == "__main__":

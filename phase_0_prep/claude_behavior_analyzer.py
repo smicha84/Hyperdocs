@@ -44,9 +44,16 @@ custom visualizations.
 
 import os
 import re
+import sys
+from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from collections import defaultdict
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.claude_behavior_analyzer")
 
 # Import Claude session reader
 try:
@@ -825,9 +832,9 @@ def main():
     """CLI for testing the behavior analyzer."""
     from pathlib import Path
 
-    print("=" * 70)
-    print("CLAUDE BEHAVIOR ANALYZER (v2 — 20 behaviors)")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("CLAUDE BEHAVIOR ANALYZER (v2 — 20 behaviors)")
+    logger.info("=" * 70)
 
     reader = ClaudeSessionReader(verbose=False)
     analyzer = ClaudeBehaviorAnalyzer()
@@ -836,15 +843,15 @@ def main():
     sessions = reader.load_project_sessions(project_name=project, limit=5)
 
     for session in list(sessions.values())[:2]:
-        print(f"\nSession: {session.session_id}")
+        logger.info(f"\nSession: {session.session_id}")
         analysis = analyzer.analyze_session(session)
 
-        print(f"  Assistant messages: {analysis['total_assistant_messages']}")
-        print(f"  Avg upset score: {analysis['avg_upset_score']}")
-        print(f"  High damage moments: {analysis['high_damage_moments']}")
-        print(f"  Pattern counts:")
+        logger.info(f"  Assistant messages: {analysis['total_assistant_messages']}")
+        logger.info(f"  Avg upset score: {analysis['avg_upset_score']}")
+        logger.info(f"  High damage moments: {analysis['high_damage_moments']}")
+        logger.info(f"  Pattern counts:")
         for k, v in sorted(analysis['pattern_counts'].items(), key=lambda x: -x[1]):
-            print(f"    {k}: {v}")
+            logger.info(f"    {k}: {v}")
 
 
 if __name__ == "__main__":

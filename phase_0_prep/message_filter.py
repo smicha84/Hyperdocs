@@ -22,6 +22,12 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional, Dict, Any
 from pathlib import Path
 from datetime import datetime
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.message_filter")
 
 
 # ============================================================================

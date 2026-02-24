@@ -23,7 +23,12 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-logger = logging.getLogger("hyperdocs.generate_dossiers")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.json_io import load_json as _load_json, save_json as _save_json
+
+from tools.log_config import get_logger
+
+logger = get_logger("phase3.generate_dossiers")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 # ── Evidence directive documentation ────────────────────────────
@@ -85,22 +90,22 @@ else:
 
 
 def load_json(filename):
+    """Load JSON from BASE_DIR, returning empty dict if missing or corrupt."""
     path = BASE_DIR / filename
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
+    if not path.exists():
         logger.warning(f"{filename} not found in {BASE_DIR}, returning empty dict")
         return {}
+    try:
+        return _load_json(path)
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
         logger.warning(f"{filename} is corrupt ({e}), returning empty dict")
         return {}
 
 
 def save_json(filename, data):
+    """Write data as JSON to BASE_DIR."""
     path = BASE_DIR / filename
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    _save_json(path, data)
     logger.info(f"  Wrote {path} ({os.path.getsize(path):,} bytes)")
 
 

@@ -16,6 +16,10 @@ Three detection signals:
 Input:  thread_extractions.json + idea_graph.json
 Output: file_genealogy.json
 """
+from tools.log_config import get_logger
+
+logger = get_logger("phase2.file_genealogy")
+
 import os
 import sys
 import json
@@ -25,6 +29,8 @@ from datetime import datetime
 from collections import defaultdict
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.json_io import load_json as _load_json
+
 try:
     from config import get_session_output_dir, SESSION_ID
 except ImportError:
@@ -36,11 +42,11 @@ except ImportError:
 
 
 def load_json(path):
+    """Load JSON from path, returning empty dict if missing."""
     if not path.exists():
-        print(f"  WARN: {path} not found")
+        logger.warning(f"  WARN: {path} not found")
         return {}
-    with open(path) as f:
-        return json.load(f)
+    return _load_json(path)
 
 
 def build_file_timelines(thread_data):
@@ -364,41 +370,41 @@ def cluster_into_families(all_links, timelines):
 def main():
     OUT_DIR = get_session_output_dir()
 
-    print("=" * 60)
-    print("File Genealogy Detector")
-    print("=" * 60)
-    print(f"Output dir: {OUT_DIR}")
-    print()
+    logger.info("=" * 60)
+    logger.info("File Genealogy Detector")
+    logger.info("=" * 60)
+    logger.info(f"Output dir: {OUT_DIR}")
+    logger.info()
 
     # Load data
     thread_data = load_json(OUT_DIR / "thread_extractions.json")
     idea_graph = load_json(OUT_DIR / "idea_graph.json")
 
     if not thread_data:
-        print("ERROR: thread_extractions.json required")
+        logger.error("ERROR: thread_extractions.json required")
         return
 
     # Step 1: Build file timelines
     timelines = build_file_timelines(thread_data)
-    print(f"Files with activity: {len(timelines)}")
+    logger.info(f"Files with activity: {len(timelines)}")
 
     # Step 2: Detect links from idea graph
     idea_files = build_idea_file_links(idea_graph) if idea_graph else {}
     idea_links = detect_idea_graph_lineage(idea_graph, idea_files) if idea_graph else []
-    print(f"Idea graph links: {len(idea_links)}")
+    logger.info(f"Idea graph links: {len(idea_links)}")
 
     # Step 3: Detect temporal succession
     temporal_links = detect_temporal_succession(timelines)
-    print(f"Temporal succession links: {len(temporal_links)}")
+    logger.info(f"Temporal succession links: {len(temporal_links)}")
 
     # Step 4: Detect name similarity
     name_links = detect_name_similarity(timelines)
-    print(f"Name similarity links: {len(name_links)}")
+    logger.info(f"Name similarity links: {len(name_links)}")
 
     # Step 5: Cluster into families
     all_links = idea_links + temporal_links + name_links
-    print(f"Total links: {len(all_links)}")
-    print()
+    logger.info(f"Total links: {len(all_links)}")
+    logger.info()
 
     families, standalone = cluster_into_families(all_links, timelines)
 
@@ -424,20 +430,20 @@ def main():
         json.dump(output, f, indent=2)
 
     # Print summary
-    print("=== FILE FAMILIES ===")
+    logger.info("=== FILE FAMILIES ===")
     for fam in families:
-        print(f"\n  [{fam['concept']}] ({fam['total_versions']} versions)")
+        logger.info(f"\n  [{fam['concept']}] ({fam['total_versions']} versions)")
         for v in fam["versions"]:
             icon = "*" if v["status"] == "current" else " "
-            print(f"    {icon} {v['file']} [{v['status']}] msgs {v['active_msgs']} ({v['events']} events)")
+            logger.info(f"    {icon} {v['file']} [{v['status']}] msgs {v['active_msgs']} ({v['events']} events)")
 
-    print(f"\n=== STANDALONE FILES ({len(standalone)}) ===")
+    logger.info(f"\n=== STANDALONE FILES ({len(standalone)}) ===")
     for f in standalone:
         first, last = get_file_active_range(timelines.get(f, []))
-        print(f"    {f} msgs {first}-{last}")
+        logger.info(f"    {f} msgs {first}-{last}")
 
-    print(f"\n{output['reduction']}")
-    print(f"Output: {out_path}")
+    logger.info(f"\n{output['reduction']}")
+    logger.info(f"Output: {out_path}")
 
 
 if __name__ == "__main__":

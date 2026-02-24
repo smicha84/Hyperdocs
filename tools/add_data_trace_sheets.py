@@ -17,6 +17,9 @@ from datetime import datetime
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from tools.log_config import get_logger
+
+logger = get_logger("tools.add_data_trace_sheets")
 
 H3 = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = H3 / "output"
@@ -36,6 +39,7 @@ THIN_BORDER = Border(bottom=Side(style="thin", color="636e72"))
 
 
 def style_header(ws, row, ncols):
+    """Apply dark header styling (white text, dark fill) to a row of cells."""
     for c in range(1, ncols + 1):
         cell = ws.cell(row=row, column=c)
         cell.font = HEADER_FONT
@@ -44,6 +48,7 @@ def style_header(ws, row, ncols):
 
 
 def stage_row(ws, row, ncols, text):
+    """Write a full-width stage separator row with blue fill and bold white text."""
     ws.cell(row=row, column=1, value=text)
     for c in range(1, ncols + 1):
         ws.cell(row=row, column=c).font = STAGE_FONT
@@ -52,6 +57,7 @@ def stage_row(ws, row, ncols, text):
 
 
 def add_row(ws, row, values, fill=None):
+    """Write a data row with optional background fill, text wrapping, and thin border."""
     for c, v in enumerate(values, 1):
         cell = ws.cell(row=row, column=c, value=v)
         cell.alignment = WRAP
@@ -61,11 +67,13 @@ def add_row(ws, row, values, fill=None):
 
 
 def load_safe(path):
+    """Load JSON from path, returning None if missing or corrupt."""
     if not path.exists():
         return None
     try:
-        return json.load(open(path, "r", encoding="utf-8"))
-    except:
+        from tools.json_io import load_json as _load_json
+        return _load_json(path)
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError):
         return None
 
 
@@ -512,29 +520,30 @@ def build_sheet_6_message_trace(wb):
 
 
 def main():
+    """Load the pipeline Excel workbook and add/replace the Message Data Trace sheet."""
     xlsx_path = H3 / "experiment" / "feedback_loop" / "output" / "pipeline_complete_anatomy.xlsx"
     if not xlsx_path.exists():
-        print(f"ERROR: {xlsx_path} not found. Run generate_pipeline_excel.py first.")
+        logger.error(f"ERROR: {xlsx_path} not found. Run generate_pipeline_excel.py first.")
         return
 
-    print("Loading existing workbook...")
+    logger.info("Loading existing workbook...")
     wb = openpyxl.load_workbook(xlsx_path)
 
     # Remove old data trace sheet if it exists
     if "Message Data Trace" in wb.sheetnames:
         del wb["Message Data Trace"]
 
-    print("Building Sheet 6: Message Data Trace (actual data at every stage)...")
+    logger.info("Building Sheet 6: Message Data Trace (actual data at every stage)...")
     build_sheet_6_message_trace(wb)
 
     wb.save(xlsx_path)
     size = xlsx_path.stat().st_size
-    print(f"\nUpdated: {xlsx_path}")
-    print(f"Size: {size:,} bytes")
-    print(f"Sheets: {wb.sheetnames}")
+    logger.info(f"\nUpdated: {xlsx_path}")
+    logger.info(f"Size: {size:,} bytes")
+    logger.info(f"Sheets: {wb.sheetnames}")
     for name in wb.sheetnames:
         ws = wb[name]
-        print(f"  {name}: {ws.max_row} rows × {ws.max_column} cols")
+        logger.info(f"  {name}: {ws.max_row} rows × {ws.max_column} cols")
 
 
 if __name__ == "__main__":

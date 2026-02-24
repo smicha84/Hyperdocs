@@ -18,6 +18,11 @@ import sys
 from pathlib import Path
 from datetime import datetime, timezone
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.completeness_scanner")
+
 # ── Expected files by phase ─────────────────────────────────────
 
 PHASE_0_FILES = [
@@ -388,10 +393,10 @@ def main():
     _store = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS")))
     sessions_dir = _store / "sessions"
     if not sessions_dir.exists():
-        print(f"Sessions directory not found: {sessions_dir}", file=sys.stderr)
+        logger.info(f"Sessions directory not found: {sessions_dir}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Scanning {sessions_dir}...")
+    logger.info(f"Scanning {sessions_dir}...")
     report = scan_all(sessions_dir)
 
     output_path = _store / "indexes" / "completeness_report.json"
@@ -401,26 +406,26 @@ def main():
 
     # Print summary
     n = report["sessions_scanned"]
-    print(f"\nScanned {n} sessions")
-    print(f"\nCompleteness by phase:")
+    logger.info(f"\nScanned {n} sessions")
+    logger.info(f"\nCompleteness by phase:")
     for phase, counts in report["completeness_by_phase"].items():
-        print(f"  {phase}: {counts['complete']} complete, {counts['partial']} partial, {counts['missing']} missing")
+        logger.info(f"  {phase}: {counts['complete']} complete, {counts['partial']} partial, {counts['missing']} missing")
 
-    print(f"\nCompleteness by file:")
+    logger.info(f"\nCompleteness by file:")
     for fname, counts in report["completeness_by_file"].items():
         if counts["missing"] > 0 or counts["stub"] > 0:
-            print(f"  {fname}: {counts['present']} present, {counts['missing']} missing, {counts['stub']} stub")
+            logger.info(f"  {fname}: {counts['present']} present, {counts['missing']} missing, {counts['stub']} stub")
 
     incomplete = report["incomplete_sessions"]
-    print(f"\nIncomplete sessions: {len(incomplete)}")
+    logger.info(f"\nIncomplete sessions: {len(incomplete)}")
     for s in incomplete[:5]:
         phases = s["phase_status"]
         missing_phases = [p for p, st in phases.items() if st != "complete"]
-        print(f"  {s['session_id']}: missing {', '.join(missing_phases)}")
+        logger.info(f"  {s['session_id']}: missing {', '.join(missing_phases)}")
     if len(incomplete) > 5:
-        print(f"  ... and {len(incomplete) - 5} more")
+        logger.info(f"  ... and {len(incomplete) - 5} more")
 
-    print(f"\nReport written to: {output_path}")
+    logger.info(f"\nReport written to: {output_path}")
 
 
 if __name__ == "__main__":

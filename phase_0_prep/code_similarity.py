@@ -47,6 +47,9 @@ from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
 from itertools import combinations
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.code_similarity")
 
 
 # ── File Fingerprint ──────────────────────────────────────────────────────
@@ -324,7 +327,7 @@ def scan_directory(source_dir: Path, threshold: float = 0.05) -> dict:
 
     # ── Step 1: Discover and fingerprint all files ──
     py_files = sorted(source_dir.glob("*.py"))
-    print(f"Found {len(py_files)} Python files in {source_dir}")
+    logger.info(f"Found {len(py_files)} Python files in {source_dir}")
 
     fingerprints = {}
     errors = []
@@ -334,14 +337,14 @@ def scan_directory(source_dir: Path, threshold: float = 0.05) -> dict:
         if fp.parse_error:
             errors.append(path.name)
         if (i + 1) % 50 == 0:
-            print(f"  Fingerprinted {i + 1}/{len(py_files)}...")
+            logger.info(f"  Fingerprinted {i + 1}/{len(py_files)}...")
 
-    print(f"Fingerprinted {len(fingerprints)} files ({len(errors)} with parse errors)")
+    logger.info(f"Fingerprinted {len(fingerprints)} files ({len(errors)} with parse errors)")
 
     # ── Step 2: Compare all pairs ──
     names = sorted(fingerprints.keys())
     total_pairs = len(names) * (len(names) - 1) // 2
-    print(f"Comparing {total_pairs:,} pairs...")
+    logger.info(f"Comparing {total_pairs:,} pairs...")
 
     matches = []
     text_comparisons = 0
@@ -370,9 +373,9 @@ def scan_directory(source_dir: Path, threshold: float = 0.05) -> dict:
                     })
 
         if (i + 1) % 50 == 0:
-            print(f"  Compared file {i + 1}/{len(names)} ({pair_count:,}/{total_pairs:,} pairs, {len(matches)} matches)...")
+            logger.info(f"  Compared file {i + 1}/{len(names)} ({pair_count:,}/{total_pairs:,} pairs, {len(matches)} matches)...")
 
-    print(f"Completed: {total_pairs:,} pairs, {text_comparisons:,} text comparisons, {len(matches)} non-trivial matches")
+    logger.info(f"Completed: {total_pairs:,} pairs, {text_comparisons:,} text comparisons, {len(matches)} non-trivial matches")
 
     # ── Step 3: Aggregate per-file statistics ──
     file_stats = {}
@@ -444,7 +447,7 @@ def main():
         )
 
     if not source_dir.exists():
-        print(f"ERROR: Source directory not found: {source_dir}")
+        logger.error(f"ERROR: Source directory not found: {source_dir}")
         sys.exit(1)
 
     # Default output
@@ -458,13 +461,13 @@ def main():
         except ImportError:
             output_path = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "indexes" / "code_similarity_index.json"
 
-    print("=" * 60)
-    print("CODE SIMILARITY ENGINE — Full Scan")
-    print("=" * 60)
-    print(f"Source:    {source_dir}")
-    print(f"Output:    {output_path}")
-    print(f"Threshold: {args.threshold}")
-    print()
+    logger.info("=" * 60)
+    logger.info("CODE SIMILARITY ENGINE — Full Scan")
+    logger.info("=" * 60)
+    logger.info(f"Source:    {source_dir}")
+    logger.info(f"Output:    {output_path}")
+    logger.info(f"Threshold: {args.threshold}")
+    logger.info()
 
     results = scan_directory(source_dir, threshold=args.threshold)
 
@@ -476,41 +479,41 @@ def main():
     file_size = output_path.stat().st_size / 1024
 
     # Print summary
-    print()
-    print("=" * 60)
-    print("RESULTS")
-    print("=" * 60)
-    print(f"Files scanned:     {results['total_files']}")
-    print(f"Pairs compared:    {results['total_pairs_compared']:,}")
-    print(f"Text comparisons:  {results['text_comparisons_performed']:,}")
-    print(f"Non-trivial:       {results['non_trivial_matches']}")
-    print(f"Parse errors:      {len(results['files_with_parse_errors'])}")
-    print()
-    print("Pattern distribution:")
+    logger.info()
+    logger.info("=" * 60)
+    logger.info("RESULTS")
+    logger.info("=" * 60)
+    logger.info(f"Files scanned:     {results['total_files']}")
+    logger.info(f"Pairs compared:    {results['total_pairs_compared']:,}")
+    logger.info(f"Text comparisons:  {results['text_comparisons_performed']:,}")
+    logger.info(f"Non-trivial:       {results['non_trivial_matches']}")
+    logger.info(f"Parse errors:      {len(results['files_with_parse_errors'])}")
+    logger.info()
+    logger.info("Pattern distribution:")
     for pattern, count in results['pattern_distribution'].items():
-        print(f"  {pattern:25s} {count:4d}")
-    print()
+        logger.info(f"  {pattern:25s} {count:4d}")
+    logger.info()
 
     # Top 10 strongest matches
-    print("Top 10 strongest matches:")
+    logger.info("Top 10 strongest matches:")
     for m in results['matches'][:10]:
         score = m['signals']['signal_score']
         text = m['signals']['text_similarity']
         patterns = ', '.join(m['patterns']) if m['patterns'] else 'unclassified'
-        print(f"  {score:5.2f} | text:{text:.2f} | {m['file_a']} ↔ {m['file_b']}")
-        print(f"        | {patterns}")
+        logger.info(f"  {score:5.2f} | text:{text:.2f} | {m['file_a']} ↔ {m['file_b']}")
+        logger.info(f"        | {patterns}")
 
     # Most isolated files (potential disconnects)
     isolated = sorted(
         results['file_stats'].items(),
         key=lambda x: -x[1]['isolation_score']
     )[:10]
-    print()
-    print("Most isolated files (potential disconnects):")
+    logger.info()
+    logger.info("Most isolated files (potential disconnects):")
     for name, stats in isolated:
-        print(f"  isolation:{stats['isolation_score']:.2f} | matches:{stats['total_matches']} | {name}")
+        logger.info(f"  isolation:{stats['isolation_score']:.2f} | matches:{stats['total_matches']} | {name}")
 
-    print(f"\nOutput: {output_path} ({file_size:.0f} KB)")
+    logger.info(f"\nOutput: {output_path} ({file_size:.0f} KB)")
 
 
 if __name__ == "__main__":

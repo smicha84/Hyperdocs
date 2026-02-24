@@ -44,10 +44,16 @@ import argparse
 import json
 import logging
 import os
+import sys
 from pathlib import Path
 from collections import defaultdict
 
-logger = logging.getLogger("hyperdocs.collect_evidence")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.json_io import load_json as _load_json
+
+from tools.log_config import get_logger
+
+logger = get_logger("phase3.collect_evidence")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", str(REPO_ROOT / "output")))
@@ -61,8 +67,7 @@ def load_json(filename, search_dirs):
         path = d / filename
         if path.exists():
             try:
-                with open(path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                return _load_json(path)
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
                 logger.warning(f"Failed to load {filename} from {d}: {e}")
                 continue
@@ -114,38 +119,39 @@ def get_all_target_files(session_metadata):
     return sorted(files)
 
 
-def find_mention_indices(target_file, threads_dict, geological_notes, perm_dossier):
-    """Find all message indices where a file is mentioned across data sources."""
-    mention_indices = set()
-
-    # From thread extractions (handle both dict and list schemas)
+def _search_threads_for_file(target_file, threads_dict):
+    """Search thread extractions for mentions of a file (handles dict and list schemas)."""
+    indices = set()
     if isinstance(threads_dict, dict):
-        for thread_key, thread_val in threads_dict.items():
+        for thread_val in threads_dict.values():
             if not isinstance(thread_val, dict):
                 continue
             for entry in thread_val.get("entries", []):
                 content = entry.get("content", "") if isinstance(entry, dict) else ""
                 if mentions_file(content, target_file):
-                    mention_indices.add(entry.get("msg_index", -1))
+                    indices.add(entry.get("msg_index", -1))
     elif isinstance(threads_dict, list):
         for ext in threads_dict:
             if not isinstance(ext, dict):
                 continue
             sw = ext.get("threads", {})
-            if isinstance(sw, dict):
-                for thread_key, entries in sw.items():
-                    if isinstance(entries, list):
-                        for entry_item in entries:
-                            if isinstance(entry_item, dict):
-                                if mentions_file(entry_item.get("content", ""), target_file):
-                                    mention_indices.add(entry_item.get("msg_index", -1))
-                            elif isinstance(entry_item, str) and mentions_file(entry_item, target_file):
-                                mention_indices.add(ext.get("msg_index", -1))
+            if not isinstance(sw, dict):
+                continue
+            for entries in sw.values():
+                if not isinstance(entries, list):
+                    continue
+                for entry_item in entries:
+                    if isinstance(entry_item, dict) and mentions_file(entry_item.get("content", ""), target_file):
+                        indices.add(entry_item.get("msg_index", -1))
+                    elif isinstance(entry_item, str) and mentions_file(entry_item, target_file):
+                        indices.add(ext.get("msg_index", -1))
+    return indices
 
-    # From dossiers (has first/last mention index)
-    # Handle both dict-keyed and list-based dossier schemas
+
+def _search_dossiers_for_file(target_file, perm_dossier):
+    """Search dossiers for mention indices of a file."""
+    indices = set()
     raw_dossiers = perm_dossier.get("dossiers", {})
-    dossier_items = []
     if isinstance(raw_dossiers, dict):
         dossier_items = list(raw_dossiers.items())
     elif isinstance(raw_dossiers, list):
@@ -153,6 +159,9 @@ def find_mention_indices(target_file, threads_dict, geological_notes, perm_dossi
             (item.get("file", item.get("filename", item.get("name", ""))), item)
             for item in raw_dossiers if isinstance(item, dict)
         ]
+    else:
+        return indices
+
     for k, v in dossier_items:
         if not isinstance(v, dict):
             continue
@@ -160,23 +169,35 @@ def find_mention_indices(target_file, threads_dict, geological_notes, perm_dossi
             for idx_key in ("first_mention_index", "last_mention_index"):
                 idx_val = v.get(idx_key)
                 if idx_val is not None and isinstance(idx_val, int):
-                    mention_indices.add(idx_val)
+                    indices.add(idx_val)
             for mi in v.get("mentioned_in", []):
                 if isinstance(mi, dict):
-                    mention_indices.add(mi.get("msg_index", -1))
+                    indices.add(mi.get("msg_index", -1))
                 elif isinstance(mi, int):
-                    mention_indices.add(mi)
+                    indices.add(mi)
             break
+    return indices
 
-    # From geological notes (check all zoom levels)
+
+def _search_geological_for_file(target_file, geological_notes):
+    """Search geological notes for observations mentioning a file."""
+    indices = set()
     for zoom in ["micro", "meso", "macro"]:
         for obs in geological_notes.get(zoom, []):
             text = obs.get("observation", "") if isinstance(obs, dict) else str(obs)
             if mentions_file(text, target_file):
                 msg_range = obs.get("message_range", []) if isinstance(obs, dict) else []
                 if isinstance(msg_range, list) and len(msg_range) == 2:
-                    mention_indices.update(range(msg_range[0], msg_range[1] + 1))
+                    indices.update(range(msg_range[0], msg_range[1] + 1))
+    return indices
 
+
+def find_mention_indices(target_file, threads_dict, geological_notes, perm_dossier):
+    """Find all message indices where a file is mentioned across data sources."""
+    mention_indices = set()
+    mention_indices.update(_search_threads_for_file(target_file, threads_dict))
+    mention_indices.update(_search_dossiers_for_file(target_file, perm_dossier))
+    mention_indices.update(_search_geological_for_file(target_file, geological_notes))
     mention_indices.discard(-1)
     return mention_indices
 

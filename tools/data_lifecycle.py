@@ -18,6 +18,9 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from config import SESSIONS_STORE_DIR, INDEXES_DIR, STORE_DIR
+from tools.log_config import get_logger
+
+logger = get_logger("tools.data_lifecycle")
 
 
 KNOWN_SESSION_FILES = {
@@ -116,53 +119,53 @@ def main():
             "sessions": backups,
         }
         if not args.json:
-            print(f"Backup directories: {len(backups)} ({total_backup_bytes:,} bytes)")
+            logger.info(f"Backup directories: {len(backups)} ({total_backup_bytes:,} bytes)")
             if backups:
                 for b in backups[:10]:
-                    print(f"  {b['session']}: {b['files']} files, {b['bytes']:,} bytes")
+                    logger.info(f"  {b['session']}: {b['files']} files, {b['bytes']:,} bytes")
                 if len(backups) > 10:
-                    print(f"  ... and {len(backups) - 10} more")
-            print()
+                    logger.info(f"  ... and {len(backups) - 10} more")
+            logger.info()
 
     if args.orphans or not (args.backups or args.orphans):
         orphans = scan_orphan_files()
         report["orphans"] = {"count": len(orphans), "files": orphans}
         if not args.json:
-            print(f"Orphan files (not in known schema): {len(orphans)}")
+            logger.info(f"Orphan files (not in known schema): {len(orphans)}")
             for o in orphans[:20]:
-                print(f"  {o['session']}/{o['file']} ({o['bytes']:,} bytes)")
+                logger.info(f"  {o['session']}/{o['file']} ({o['bytes']:,} bytes)")
             if len(orphans) > 20:
-                print(f"  ... and {len(orphans) - 20} more")
-            print()
+                logger.info(f"  ... and {len(orphans) - 20} more")
+            logger.info()
 
     if not (args.backups or args.orphans):
         large = scan_large_files()
         report["large_files"] = large
         if not args.json:
-            print(f"Large files (>10MB): {len(large)}")
+            logger.info(f"Large files (>10MB): {len(large)}")
             for l in large:
-                print(f"  {l['path']} ({l['bytes']:,} bytes)")
-            print()
+                logger.info(f"  {l['path']} ({l['bytes']:,} bytes)")
+            logger.info()
 
         empty = scan_empty_sessions()
         report["empty_sessions"] = empty
         if not args.json:
-            print(f"Empty session directories: {len(empty)}")
+            logger.info(f"Empty session directories: {len(empty)}")
             for e in empty:
-                print(f"  {e}")
-            print()
+                logger.info(f"  {e}")
+            logger.info()
 
         locks = scan_lock_files()
         report["lock_files"] = locks
         if not args.json:
             if locks:
-                print(f"Stale lock files: {len(locks)}")
+                logger.info(f"Stale lock files: {len(locks)}")
                 for l in locks:
-                    print(f"  {l}")
-                print()
+                    logger.info(f"  {l}")
+                logger.info()
 
     if args.json:
-        print(json.dumps(report, indent=2))
+        logger.info(json.dumps(report, indent=2))
 
 
 if __name__ == "__main__":

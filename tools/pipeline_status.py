@@ -20,6 +20,9 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from config import SESSIONS_STORE_DIR, INDEXES_DIR, OUTPUT_DIR
+from tools.log_config import get_logger
+
+logger = get_logger("tools.pipeline_status")
 
 
 def scan_sessions():
@@ -125,37 +128,37 @@ def main():
     }
 
     if args.json:
-        print(json.dumps(report, indent=2))
+        logger.info(json.dumps(report, indent=2))
         return
 
     if args.errors:
         if not error_logs:
-            print("No errors found in pipeline logs.")
+            logger.info("No errors found in pipeline logs.")
             return
         for e in error_logs:
-            print(f"  [{e.get('timestamp', '?')}] {e.get('_session_dir', '?')}: {e.get('message', '?')}")
+            logger.info(f"  [{e.get('timestamp', '?')}] {e.get('_session_dir', '?')}: {e.get('message', '?')}")
         return
 
     # Full report
-    print("=" * 60)
-    print("  Hyperdocs Pipeline Status Report")
-    print("=" * 60)
-    print(f"  Sessions: {report['total_sessions']}")
-    print(f"  Fully complete: {report['fully_complete']}")
-    print()
+    logger.info("=" * 60)
+    logger.info("  Hyperdocs Pipeline Status Report")
+    logger.info("=" * 60)
+    logger.info(f"  Sessions: {report['total_sessions']}")
+    logger.info(f"  Fully complete: {report['fully_complete']}")
+    logger.info()
     for phase in range(4):
         counts = report["phase_completeness"][f"phase_{phase}"]
         c = counts.get("complete", 0)
         p = counts.get("partial", 0)
         m = counts.get("missing", 0)
-        print(f"  Phase {phase}: {c} complete, {p} partial, {m} missing")
-    print()
+        logger.info(f"  Phase {phase}: {c} complete, {p} partial, {m} missing")
+    logger.info()
     if logs:
-        print(f"  Log entries: {report['log_entries']} ({report['successes']} OK, {report['failures']} failed, {report['errors']} errors)")
+        logger.error(f"  Log entries: {report['log_entries']} ({report['successes']} OK, {report['failures']} failed, {report['errors']} errors)")
     if checkpoint:
         print(f"  Batch checkpoint: {len(checkpoint.get('completed', []))} done, "
               f"{len(checkpoint.get('failed', []))} failed")
-    print()
+    logger.info()
 
 
 if __name__ == "__main__":

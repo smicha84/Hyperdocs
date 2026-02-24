@@ -22,9 +22,13 @@ Directive syntax:
 """
 import logging
 import re
+import sys
 from pathlib import Path
 
-logger = logging.getLogger("hyperdocs.evidence_resolver")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("phase3.evidence_resolver")
 
 # Import the renderer registry
 try:

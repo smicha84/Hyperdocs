@@ -21,6 +21,9 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from config import CHAT_HISTORY_DIR, SESSIONS_STORE_DIR, OUTPUT_DIR
+from tools.log_config import get_logger
+
+logger = get_logger("product.coverage_stats")
 
 # Default output location — wrecktangle-site public data directory
 DEFAULT_OUTPUT = Path.home() / "wrecktangle-site" / "public" / "data" / "coverage.json"
@@ -38,7 +41,7 @@ PHASE_FILES = {
 def count_total_sessions():
     """Count JSONL files in the canonical chat history directory."""
     if not CHAT_HISTORY_DIR.exists():
-        print(f"  WARNING: Chat history dir not found: {CHAT_HISTORY_DIR}")
+        logger.warning(f"  WARNING: Chat history dir not found: {CHAT_HISTORY_DIR}")
         return 0
     return len(list(CHAT_HISTORY_DIR.glob("*.jsonl")))
 
@@ -50,7 +53,7 @@ def scan_processed_sessions():
     where status is 'complete', 'partial', or 'missing'.
     """
     if not SESSIONS_STORE_DIR.exists():
-        print(f"  WARNING: Sessions store not found: {SESSIONS_STORE_DIR}")
+        logger.warning(f"  WARNING: Sessions store not found: {SESSIONS_STORE_DIR}")
         return {}
 
     sessions = {}
@@ -99,13 +102,13 @@ def detect_realtime_sessions():
 
 def generate_coverage(output_path):
     """Generate the coverage.json file."""
-    print("Counting total sessions...")
+    logger.info("Counting total sessions...")
     total = count_total_sessions()
-    print(f"  Total JSONL files: {total}")
+    logger.info(f"  Total JSONL files: {total}")
 
-    print("Scanning processed sessions...")
+    logger.info("Scanning processed sessions...")
     sessions = scan_processed_sessions()
-    print(f"  Processed directories: {len(sessions)}")
+    logger.info(f"  Processed directories: {len(sessions)}")
 
     # Phase breakdown
     phase_counts = {}
@@ -157,13 +160,13 @@ def generate_coverage(output_path):
     with open(output_path, "w") as f:
         json.dump(coverage, f, indent=2)
 
-    print(f"\nCoverage JSON written to: {output_path}")
-    print(f"  Total: {total}")
-    print(f"  Processed: {len(sessions)} ({len(sessions)/total*100:.1f}%)" if total > 0 else "  Processed: 0")
-    print(f"  Fully complete: {fully_complete}")
-    print(f"  In progress: {in_progress}")
-    print(f"  Realtime: {realtime_count}")
-    print(f"  Unprocessed: {coverage['unprocessed']}")
+    logger.info(f"\nCoverage JSON written to: {output_path}")
+    logger.info(f"  Total: {total}")
+    logger.info(f"  Processed: {len(sessions)} ({len(sessions)/total*100:.1f}%)" if total > 0 else "  Processed: 0")
+    logger.info(f"  Fully complete: {fully_complete}")
+    logger.info(f"  In progress: {in_progress}")
+    logger.info(f"  Realtime: {realtime_count}")
+    logger.info(f"  Unprocessed: {coverage['unprocessed']}")
 
     return coverage
 
@@ -174,9 +177,9 @@ def main():
                         help=f"Output path (default: {DEFAULT_OUTPUT})")
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("  Hyperdocs Coverage Stats Generator")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("  Hyperdocs Coverage Stats Generator")
+    logger.info("=" * 60)
 
     output_path = Path(args.output)
     generate_coverage(output_path)

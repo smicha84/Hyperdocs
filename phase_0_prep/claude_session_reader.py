@@ -27,6 +27,12 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 
 import tiktoken
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.claude_session_reader")
 _encoder = tiktoken.get_encoding("cl100k_base")
 
 def _count_tokens(text: str) -> int:
@@ -246,7 +252,7 @@ class ClaudeSessionReader:
                         continue
         except IOError as e:
             if self.verbose:
-                print(f"  [error] Could not read {file_path}: {e}")
+                logger.info(f"  [error] Could not read {file_path}: {e}")
             return None
 
         if not messages:
@@ -288,7 +294,7 @@ class ClaudeSessionReader:
             files = files[:limit]
 
         if self.verbose:
-            print(f"📂 Loading {len(files)} Claude Code session files")
+            logger.info(f"📂 Loading {len(files)} Claude Code session files")
 
         sessions = {}
         total_messages = 0
@@ -302,10 +308,10 @@ class ClaudeSessionReader:
                 total_tokens += session.total_input_tokens + session.total_output_tokens
 
                 if self.verbose:
-                    print(f"  📄 {file_path.name}: {len(session.messages)} msgs, {session.total_input_tokens + session.total_output_tokens:,} tokens")
+                    logger.info(f"  📄 {file_path.name}: {len(session.messages)} msgs, {session.total_input_tokens + session.total_output_tokens:,} tokens")
 
         if self.verbose:
-            print(f"✅ Loaded {len(sessions)} sessions, {total_messages} messages, {total_tokens:,} total tokens")
+            logger.info(f"✅ Loaded {len(sessions)} sessions, {total_messages} messages, {total_tokens:,} total tokens")
 
         return sessions
 
@@ -349,19 +355,19 @@ def main():
 
     # List projects
     projects = reader.discover_project_dirs()
-    print(f"\n📁 Found {len(projects)} projects")
+    logger.info(f"\n📁 Found {len(projects)} projects")
     for p in projects[:5]:
-        print(f"  - {p.name}")
+        logger.info(f"  - {p.name}")
     if len(projects) > 5:
-        print(f"  ... and {len(projects) - 5} more")
+        logger.info(f"  ... and {len(projects) - 5} more")
 
     # Load sessions
     sessions = reader.load_project_sessions(project_name=args.project, limit=args.limit)
 
     if args.stats:
-        print("\n" + "=" * 60)
-        print("TOKEN USAGE SUMMARY")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("TOKEN USAGE SUMMARY")
+        logger.info("=" * 60)
 
         total_input = 0
         total_output = 0
@@ -373,16 +379,16 @@ def main():
             total_output += summary["total_output_tokens"]
             total_thinking += summary["total_thinking_chars"]
 
-            print(f"\n{session.session_id[:8]}...")
-            print(f"  Messages: {summary['total_messages']} ({summary['assistant_messages']} from Claude)")
-            print(f"  Input tokens: {summary['total_input_tokens']:,}")
-            print(f"  Output tokens: {summary['total_output_tokens']:,}")
-            print(f"  Thinking chars: {summary['total_thinking_chars']:,}")
+            logger.info(f"\n{session.session_id[:8]}...")
+            logger.info(f"  Messages: {summary['total_messages']} ({summary['assistant_messages']} from Claude)")
+            logger.info(f"  Input tokens: {summary['total_input_tokens']:,}")
+            logger.info(f"  Output tokens: {summary['total_output_tokens']:,}")
+            logger.info(f"  Thinking chars: {summary['total_thinking_chars']:,}")
 
-        print("\n" + "-" * 60)
-        print(f"TOTAL INPUT TOKENS: {total_input:,}")
-        print(f"TOTAL OUTPUT TOKENS: {total_output:,}")
-        print(f"TOTAL THINKING CHARS: {total_thinking:,}")
+        logger.info("\n" + "-" * 60)
+        logger.info(f"TOTAL INPUT TOKENS: {total_input:,}")
+        logger.info(f"TOTAL OUTPUT TOKENS: {total_output:,}")
+        logger.info(f"TOTAL THINKING CHARS: {total_thinking:,}")
 
 
 if __name__ == "__main__":

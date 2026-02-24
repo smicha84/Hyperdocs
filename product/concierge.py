@@ -8,6 +8,10 @@ Modes:
   --status       Show current pipeline state
   --dashboard    Generate and open the dashboard
 """
+from tools.log_config import get_logger
+
+logger = get_logger("product.concierge")
+
 import argparse
 import json
 import os
@@ -54,7 +58,7 @@ def count_messages(jsonl_path):
 def discover():
     """Scan all Claude Code sessions, group by project."""
     if not CLAUDE_PROJECTS.exists():
-        print("ERROR: ~/.claude/projects/ not found. Is Claude Code installed?")
+        logger.error("ERROR: ~/.claude/projects/ not found. Is Claude Code installed?")
         return None
 
     projects = {}
@@ -120,26 +124,26 @@ def discover():
         json.dump(discovery, f, indent=2)
 
     # Print summary
-    print("=" * 60)
-    print("Hyperdocs — Session Discovery")
-    print("=" * 60)
-    print(f"Found {len(projects)} projects, {total_sessions} sessions, ~{total_messages:,} messages")
-    print()
+    logger.info("=" * 60)
+    logger.info("Hyperdocs — Session Discovery")
+    logger.info("=" * 60)
+    logger.info(f"Found {len(projects)} projects, {total_sessions} sessions, ~{total_messages:,} messages")
+    logger.info()
 
     for key, proj in projects.items():
-        print(f"PROJECT: {proj['readable_name']} ({proj['total_sessions']} sessions, {proj['total_messages']:,} messages)")
+        logger.info(f"PROJECT: {proj['readable_name']} ({proj['total_sessions']} sessions, {proj['total_messages']:,} messages)")
         # Show top 3 sessions
         for s in proj["sessions"][:3]:
             user_msgs = s["messages"]["user"]
             asst_msgs = s["messages"]["assistant"]
-            print(f"  {s['id'][:8]}  {s['modified_display']}  {format_size(s['size_bytes'])}  {user_msgs} user / {asst_msgs} assistant msgs")
+            logger.info(f"  {s['id'][:8]}  {s['modified_display']}  {format_size(s['size_bytes'])}  {user_msgs} user / {asst_msgs} assistant msgs")
         if len(proj["sessions"]) > 3:
-            print(f"  ... and {len(proj['sessions']) - 3} more sessions")
-        print()
+            logger.info(f"  ... and {len(proj['sessions']) - 3} more sessions")
+        logger.info()
 
-    print(f"Discovery saved to: {discovery_path}")
-    print()
-    print("Next: run 'python3 concierge.py --process SESSION_ID' to start Phase 0")
+    logger.info(f"Discovery saved to: {discovery_path}")
+    logger.info()
+    logger.info("Next: run 'python3 concierge.py --process SESSION_ID' to start Phase 0")
     return discovery
 
 
@@ -171,8 +175,8 @@ def process(session_id):
     """Run Phase 0 on a specific session."""
     session = find_session(session_id)
     if not session:
-        print(f"ERROR: Session '{session_id}' not found.")
-        print("Run 'python3 concierge.py --discover' first.")
+        logger.error(f"ERROR: Session '{session_id}' not found.")
+        logger.info("Run 'python3 concierge.py --discover' first.")
         return False
 
     full_id = session["id"]
@@ -181,13 +185,13 @@ def process(session_id):
     session_output = OUTPUT_BASE / f"session_{short_id}"
     session_output.mkdir(parents=True, exist_ok=True)
 
-    print("=" * 60)
-    print(f"Hyperdocs — Processing Session {short_id}")
-    print("=" * 60)
-    print(f"Session: {full_id}")
-    print(f"File:    {session_path}")
-    print(f"Output:  {session_output}")
-    print()
+    logger.info("=" * 60)
+    logger.info(f"Hyperdocs — Processing Session {short_id}")
+    logger.info("=" * 60)
+    logger.info(f"Session: {full_id}")
+    logger.info(f"File:    {session_path}")
+    logger.info(f"Output:  {session_output}")
+    logger.info()
 
     # Set environment for Phase 0 scripts
     env = os.environ.copy()
@@ -197,44 +201,44 @@ def process(session_id):
 
     phase0_dir = HYPERDOCS_ROOT / "phase_0_prep"
 
-    # Run deterministic_prep.py
-    print("--- Phase 0a: Deterministic Prep ---")
+    # Run enrich_session.py
+    logger.info("--- Phase 0a: Deterministic Prep ---")
     result = subprocess.run(
-        [sys.executable, str(phase0_dir / "deterministic_prep.py")],
+        [sys.executable, str(phase0_dir / "enrich_session.py")],
         env=env,
         cwd=str(phase0_dir),
     )
     if result.returncode != 0:
-        print("ERROR: deterministic_prep.py failed")
+        logger.error("ERROR: enrich_session.py failed")
         update_status(short_id, "phase_0", "FAILED")
         return False
 
     # Run prepare_agent_data.py
-    print()
-    print("--- Phase 0b: Prepare Agent Data ---")
+    logger.info()
+    logger.info("--- Phase 0b: Prepare Agent Data ---")
     result = subprocess.run(
         [sys.executable, str(phase0_dir / "prepare_agent_data.py")],
         env=env,
         cwd=str(phase0_dir),
     )
     if result.returncode != 0:
-        print("ERROR: prepare_agent_data.py failed")
+        logger.error("ERROR: prepare_agent_data.py failed")
         update_status(short_id, "phase_0", "FAILED")
         return False
 
     update_status(short_id, "phase_0", "COMPLETE")
 
-    print()
-    print("=" * 60)
-    print("Phase 0 complete. Data ready for agent extraction.")
-    print()
-    print("Next steps (run in Claude Code):")
-    print(f"  Phase 1: Launch 4 extraction agents (thread-analyst, geological-reader, primitives-tagger, free-explorer)")
-    print(f"  Phase 2: Launch 2 synthesis agents (idea-graph-builder, synthesizer) + file_genealogy.py")
-    print(f"  Phase 3: Launch file-mapper + 15 per-file hyperdoc-writer agents")
-    print(f"  Phase 4: python3 phase_4_insertion/insert_hyperdocs_v2.py")
-    print()
-    print(f"Check status: python3 concierge.py --status")
+    logger.info()
+    logger.info("=" * 60)
+    logger.info("Phase 0 complete. Data ready for agent extraction.")
+    logger.info()
+    logger.info("Next steps (run in Claude Code):")
+    logger.info(f"  Phase 1: Launch 4 extraction agents (thread-analyst, geological-reader, primitives-tagger, free-explorer)")
+    logger.info(f"  Phase 2: Launch 2 synthesis agents (idea-graph-builder, synthesizer) + file_genealogy.py")
+    logger.info(f"  Phase 3: Launch file-mapper + 15 per-file hyperdoc-writer agents")
+    logger.info(f"  Phase 4: python3 phase_4_insertion/insert_hyperdocs_3part.py")
+    logger.info()
+    logger.info(f"Check status: python3 concierge.py --status")
     return True
 
 
@@ -260,7 +264,7 @@ def show_status():
     """Show pipeline state for the most recent session."""
     # Find the most recently modified session output
     if not OUTPUT_BASE.exists():
-        print("No output directory found. Run --discover first.")
+        logger.info("No output directory found. Run --discover first.")
         return
 
     session_dirs = sorted(
@@ -270,15 +274,15 @@ def show_status():
     )
 
     if not session_dirs:
-        print("No sessions processed yet. Run --process first.")
+        logger.info("No sessions processed yet. Run --process first.")
         return
 
     latest = session_dirs[0]
     status_path = latest / "pipeline_status.json"
 
-    print("=" * 60)
-    print(f"Hyperdocs — Pipeline Status ({latest.name})")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info(f"Hyperdocs — Pipeline Status ({latest.name})")
+    logger.info("=" * 60)
 
     if status_path.exists():
         with open(status_path) as f:
@@ -311,14 +315,14 @@ def show_status():
         line = f"  [{icon}] {phase_name}"
         if updated:
             line += f"  ({updated[:16]})"
-        print(line)
+        logger.info(line)
 
     # Check what output files exist
-    print()
-    print("Output files:")
+    logger.info()
+    logger.info("Output files:")
     for f in sorted(latest.iterdir()):
         if f.is_file() and not f.name.startswith("."):
-            print(f"  {f.name} ({format_size(f.stat().st_size)})")
+            logger.info(f"  {f.name} ({format_size(f.stat().st_size)})")
 
 
 def open_dashboard():
@@ -327,7 +331,7 @@ def open_dashboard():
     if dashboard_script.exists():
         subprocess.run([sys.executable, str(dashboard_script)])
     else:
-        print("Dashboard not yet built. Coming soon.")
+        logger.info("Dashboard not yet built. Coming soon.")
 
 
 def main():

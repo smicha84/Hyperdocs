@@ -29,6 +29,12 @@ from dataclasses import dataclass, field
 
 # Load .env file — walk up from current location until we find one
 from dotenv import load_dotenv
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.geological_reader")
 _search = Path(__file__).resolve().parent
 for _ in range(10):
     if (_search / ".env").exists():
@@ -141,7 +147,7 @@ class GeologicalReader:
         # Note: Reading from real-time Claude history is now allowed (read-only operation)
         original_dir = Path.home() / ".claude" / "projects"
         if str(self.chat_dir.resolve()).startswith(str(original_dir)):
-            print(f"📖 Reading from real-time Claude chat history (read-only)")
+            logger.info(f"📖 Reading from real-time Claude chat history (read-only)")
         self._sessions: Dict[str, GeologicalSession] = {}
 
     def discover_jsonl_files(self) -> List[Path]:
@@ -247,39 +253,39 @@ class GeologicalReader:
         """DEPRECATED: Called Opus to summarize each session. No longer used."""
         raise NotImplementedError(
             "opus_analyze_session is deprecated. Session analysis is now handled by "
-            "Phase 1 agents (Thread Analyst, Geological Reader, etc.) via phase1_redo_orchestrator.py."
+            "Phase 1 agents (Thread Analyst, Geological Reader, etc.) via redo_all_phase1.py."
         )
 
     def load_all_sessions(self, limit: Optional[int] = None) -> Dict[str, GeologicalSession]:
         """DEPRECATED: Used opus_parse_message + opus_analyze_session. Do not call."""
         raise NotImplementedError(
             "load_all_sessions is deprecated. It called opus_parse_message per line and "
-            "opus_analyze_session per session. Use ClaudeSessionReader + deterministic_prep.py instead."
+            "opus_analyze_session per session. Use ClaudeSessionReader + enrich_session.py instead."
         )
 
     def opus_get_statistics(self) -> Dict[str, Any]:
         """DEPRECATED: Called Opus for statistics. Do not call."""
         raise NotImplementedError(
             "opus_get_statistics is deprecated. Statistics are now computed by "
-            "deterministic_prep.py (Phase 0) and the Explorer agent (Phase 1)."
+            "enrich_session.py (Phase 0) and the Explorer agent (Phase 1)."
         )
 
 
 def main():
     """Standalone test: load a session using pure Python parsing."""
-    print("=" * 60)
-    print("GEOLOGICAL READER (deterministic mode)")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("GEOLOGICAL READER (deterministic mode)")
+    logger.info("=" * 60)
 
     chat_dir = Path(__file__).parent / "chat_history_copy"
     if not chat_dir.exists():
-        print("Chat history copy not found. This file is used as a library by deterministic_prep.py.")
-        print("Run: python3 deterministic_prep.py")
+        logger.info("Chat history copy not found. This file is used as a library by enrich_session.py.")
+        logger.info("Run: python3 enrich_session.py")
         return
 
     reader = GeologicalReader(str(chat_dir))
     files = reader.discover_jsonl_files()
-    print(f"Found {len(files)} JSONL files")
+    logger.info(f"Found {len(files)} JSONL files")
 
     if files:
         # Parse first file using deterministic method
@@ -290,7 +296,7 @@ def main():
                     msg = reader.deterministic_parse_message(line, files[0].stem, line_idx)
                     if msg:
                         count += 1
-        print(f"Parsed {count} messages from {files[0].name} (deterministic, $0)")
+        logger.info(f"Parsed {count} messages from {files[0].name} (deterministic, $0)")
 
 if __name__ == "__main__":
     main()

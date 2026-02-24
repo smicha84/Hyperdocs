@@ -14,6 +14,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("product.install")
+
 HYPERDOCS_ROOT = Path(__file__).resolve().parent.parent  # hyperdocs_3 root
 PROJECT_ROOT = Path.cwd()
 
@@ -27,7 +32,7 @@ def install_slash_command():
     dst = commands_dir / "hyperdocs.md"
 
     if not src.exists():
-        print(f"  ERROR: Source command not found at {src}")
+        logger.error(f"  ERROR: Source command not found at {src}")
         return False
 
     # Read and replace $HYPERDOCS_PATH with actual path
@@ -35,7 +40,7 @@ def install_slash_command():
     content = content.replace("$HYPERDOCS_PATH", str(HYPERDOCS_ROOT))
 
     dst.write_text(content)
-    print(f"  Slash command installed: {dst}")
+    logger.info(f"  Slash command installed: {dst}")
     return True
 
 
@@ -50,7 +55,7 @@ def install_hook():
             with open(settings_path) as f:
                 settings = json.load(f)
         except json.JSONDecodeError:
-            print(f"  WARN: Could not parse {settings_path}, creating new")
+            logger.warning(f"  WARN: Could not parse {settings_path}, creating new")
 
     # Ensure hooks structure exists
     if "hooks" not in settings:
@@ -67,7 +72,7 @@ def install_hook():
     )
 
     if already_installed:
-        print("  Real-time hook already installed")
+        logger.info("  Real-time hook already installed")
     else:
         settings["hooks"]["PostToolUse"].append({
             "matcher": "Edit|Write",
@@ -81,7 +86,7 @@ def install_hook():
 
         with open(settings_path, "w") as f:
             json.dump(settings, f, indent=2)
-        print(f"  Real-time hook installed in: {settings_path}")
+        logger.info(f"  Real-time hook installed in: {settings_path}")
 
     return True
 
@@ -90,7 +95,7 @@ def set_env_hint():
     """Create a .env file with HYPERDOCS_PATH for the slash command."""
     env_path = PROJECT_ROOT / ".claude" / "hyperdocs.env"
     env_path.write_text(f"HYPERDOCS_PATH={HYPERDOCS_ROOT}\n")
-    print(f"  Environment hint: {env_path}")
+    logger.info(f"  Environment hint: {env_path}")
 
     # Also set it for the current shell session
     os.environ["HYPERDOCS_PATH"] = str(HYPERDOCS_ROOT)
@@ -98,46 +103,46 @@ def set_env_hint():
 
 def run_discovery():
     """Run the concierge discovery."""
-    print()
+    logger.info()
     subprocess.run([sys.executable, str(HYPERDOCS_ROOT / "product" / "concierge.py"), "--discover"])
 
 
 def main():
-    print("=" * 60)
-    print("Hyperdocs — Installation")
-    print("=" * 60)
-    print(f"Installing from: {HYPERDOCS_ROOT}")
-    print(f"Installing to:   {PROJECT_ROOT}")
-    print()
+    logger.info("=" * 60)
+    logger.info("Hyperdocs — Installation")
+    logger.info("=" * 60)
+    logger.info(f"Installing from: {HYPERDOCS_ROOT}")
+    logger.info(f"Installing to:   {PROJECT_ROOT}")
+    logger.info()
 
     # Step 1: Slash command
-    print("Step 1: Slash command")
+    logger.info("Step 1: Slash command")
     if not install_slash_command():
         return
 
     # Step 2: Real-time hook
-    print()
-    print("Step 2: Real-time hook")
+    logger.info()
+    logger.info("Step 2: Real-time hook")
     if not install_hook():
         return
 
     # Step 3: Environment
-    print()
-    print("Step 3: Environment")
+    logger.info()
+    logger.info("Step 3: Environment")
     set_env_hint()
 
     # Step 4: Discovery
-    print()
-    print("Step 4: Session discovery")
+    logger.info()
+    logger.info("Step 4: Session discovery")
     run_discovery()
 
-    print()
-    print("=" * 60)
-    print("Hyperdocs installed.")
-    print()
-    print("Type /hyperdocs in your next Claude Code session to start.")
-    print("Real-time capture is active — Edit/Write operations are being recorded.")
-    print("=" * 60)
+    logger.info()
+    logger.info("=" * 60)
+    logger.info("Hyperdocs installed.")
+    logger.info()
+    logger.info("Type /hyperdocs in your next Claude Code session to start.")
+    logger.info("Real-time capture is active — Edit/Write operations are being recorded.")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,11 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("tools.batch_phase3a")
+
 REPO = Path(__file__).resolve().parent.parent
 PHASE3_SCRIPT = REPO / "phase_3_hyperdoc_writing" / "collect_file_evidence.py"
 OUTPUT_DIR = REPO / "output"
@@ -90,17 +95,17 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="List sessions without processing")
     args = parser.parse_args()
 
-    print("=" * 60)
-    print(f"Batch Phase 3a: collect_file_evidence.py")
-    print(f"Target: {args.count} sessions")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info(f"Batch Phase 3a: collect_file_evidence.py")
+    logger.info(f"Target: {args.count} sessions")
+    logger.info("=" * 60)
 
     sessions = find_eligible_sessions(args.count)
-    print(f"Found {len(sessions)} eligible sessions (Phase 2 done, no file_evidence/)")
+    logger.info(f"Found {len(sessions)} eligible sessions (Phase 2 done, no file_evidence/)")
 
     if args.dry_run:
         for sid in sessions:
-            print(f"  Would process: {sid}")
+            logger.info(f"  Would process: {sid}")
         return
 
     total_files = 0
@@ -109,32 +114,32 @@ def main():
     t0 = time.time()
 
     for i, sid in enumerate(sessions):
-        print(f"\n[{i+1}/{len(sessions)}] Processing {sid}...", end=" ", flush=True)
+        logger.info(f"\n[{i+1}/{len(sessions)}] Processing {sid}...", end=" ", flush=True)
         try:
             ok, count, err = run_phase3a(sid)
             if ok:
                 successes += 1
                 total_files += count
-                print(f"{count} evidence files")
+                logger.info(f"{count} evidence files")
             else:
                 failures += 1
-                print(f"FAILED: {err[:100]}")
+                logger.error(f"FAILED: {err[:100]}")
         except subprocess.TimeoutExpired:
             failures += 1
-            print("TIMEOUT (>120s)")
+            logger.info("TIMEOUT (>120s)")
         except Exception as e:
             failures += 1
-            print(f"ERROR: {e}")
+            logger.error(f"ERROR: {e}")
 
     elapsed = time.time() - t0
-    print(f"\n{'=' * 60}")
-    print(f"Batch Phase 3a complete")
-    print(f"  Sessions processed: {successes + failures}")
-    print(f"  Successes: {successes}")
-    print(f"  Failures: {failures}")
-    print(f"  Total evidence files created: {total_files}")
-    print(f"  Time: {elapsed:.1f}s ({elapsed/max(len(sessions),1):.1f}s per session)")
-    print(f"{'=' * 60}")
+    logger.info(f"\n{'=' * 60}")
+    logger.info(f"Batch Phase 3a complete")
+    logger.info(f"  Sessions processed: {successes + failures}")
+    logger.info(f"  Successes: {successes}")
+    logger.info(f"  Failures: {failures}")
+    logger.info(f"  Total evidence files created: {total_files}")
+    logger.info(f"  Time: {elapsed:.1f}s ({elapsed/max(len(sessions),1):.1f}s per session)")
+    logger.info(f"{'=' * 60}")
 
 
 if __name__ == "__main__":

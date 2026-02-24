@@ -7,7 +7,7 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "phase_4_hyperdoc_writing"))
+sys.path.insert(0, str(PROJECT_ROOT / "phase_4a_aggregation"))
 
 from aggregate_dossiers import normalize_dict_format, normalize_list_format
 

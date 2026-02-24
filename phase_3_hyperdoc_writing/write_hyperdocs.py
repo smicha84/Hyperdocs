@@ -13,6 +13,12 @@ import sys
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
+from tools.log_config import get_logger
+
+logger = get_logger("phase3.write_hyperdocs")
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.json_io import load_json
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = SCRIPT_DIR / "hyperdoc_blocks"
@@ -29,11 +35,6 @@ TOP_5_FILES = [
     "story_marker_generator.py",
     "six_thread_extractor.py",
 ]
-
-
-def load_json(path: Path) -> dict:
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
 
 
 def normalize_markers(markers: dict) -> dict:
@@ -573,29 +574,29 @@ def _wrap_comment(text: str, max_width: int = 95, prefix: str = "#   ") -> list[
 
 
 def main():
-    print(f"[write_hyperdocs] Loading input files...")
+    logger.info(f"[write_hyperdocs] Loading input files...")
 
     dossiers = load_json(DOSSIERS_PATH)
     markers = normalize_markers(load_json(MARKERS_PATH))
     idea_graph = load_json(IDEA_GRAPH_PATH)
     claude_md = load_json(CLAUDE_MD_PATH)
 
-    print(f"[write_hyperdocs] Loaded {len(dossiers.get('files', []))} file dossiers")
-    print(f"[write_hyperdocs] Loaded {len(markers.get('warnings', []))} warnings, {len(markers.get('patterns', []))} patterns")
-    print(f"[write_hyperdocs] Loaded {len(idea_graph.get('nodes', []))} idea nodes, {len(idea_graph.get('edges', []))} edges")
+    logger.info(f"[write_hyperdocs] Loaded {len(dossiers.get('files', []))} file dossiers")
+    logger.info(f"[write_hyperdocs] Loaded {len(markers.get('warnings', []))} warnings, {len(markers.get('patterns', []))} patterns")
+    logger.info(f"[write_hyperdocs] Loaded {len(idea_graph.get('nodes', []))} idea nodes, {len(idea_graph.get('edges', []))} edges")
 
     # Create output directory
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"[write_hyperdocs] Output directory: {OUTPUT_DIR}")
+    logger.info(f"[write_hyperdocs] Output directory: {OUTPUT_DIR}")
 
     files_written = 0
 
     for filename in TOP_5_FILES:
-        print(f"\n[write_hyperdocs] Processing: {filename}")
+        logger.info(f"\n[write_hyperdocs] Processing: {filename}")
 
         dossier = get_dossier(dossiers, filename)
         if dossier is None:
-            print(f"  WARNING: No dossier found for {filename}, skipping.")
+            logger.warning(f"  WARNING: No dossier found for {filename}, skipping.")
             continue
 
         block = compose_hyperdoc_block(filename, dossier, markers, idea_graph, claude_md)
@@ -605,13 +606,13 @@ def main():
             f.write(block)
 
         line_count = block.count("\n")
-        print(f"  Written: {output_path.name} ({line_count} lines)")
+        logger.info(f"  Written: {output_path.name} ({line_count} lines)")
         files_written += 1
 
-    print(f"\n[write_hyperdocs] Done. {files_written} hyperdoc blocks written to {OUTPUT_DIR}")
+    logger.info(f"\n[write_hyperdocs] Done. {files_written} hyperdoc blocks written to {OUTPUT_DIR}")
 
     # Verification
-    print(f"\n[write_hyperdocs] Verification:")
+    logger.info(f"\n[write_hyperdocs] Verification:")
     for filename in TOP_5_FILES:
         out_name = f"{filename.replace('.py', '')}_hyperdoc.txt"
         out_path = OUTPUT_DIR / out_name
@@ -619,9 +620,9 @@ def main():
             size = out_path.stat().st_size
             with open(out_path, "r") as f:
                 lines = f.readlines()
-            print(f"  OK: {out_name} ({len(lines)} lines, {size} bytes)")
+            logger.info(f"  OK: {out_name} ({len(lines)} lines, {size} bytes)")
         else:
-            print(f"  MISSING: {out_name}")
+            logger.error(f"  MISSING: {out_name}")
 
     return 0
 

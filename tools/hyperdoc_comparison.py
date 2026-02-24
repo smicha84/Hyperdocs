@@ -11,7 +11,7 @@ Version B: code + hyperdoc markers
 Outputs an HTML visual showing both responses side by side.
 
 Usage:
-    python3 hyperdoc_comparison.py phase_0_prep/deterministic_prep.py
+    python3 hyperdoc_comparison.py phase_0_prep/enrich_session.py
     python3 hyperdoc_comparison.py --all   # Run on all 5 enhanced files
 
 Requires: ANTHROPIC_API_KEY environment variable
@@ -22,6 +22,11 @@ import sys
 import time
 from pathlib import Path
 from datetime import datetime
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("tools.hyperdoc_comparison")
 
 REPO = Path(__file__).resolve().parent.parent  # hyperdocs_3 root
 
@@ -211,25 +216,25 @@ def run_comparison(filepath):
     bare_markers = bare_text.count("@ctx:")
     full_markers = full_text.count("@ctx:")
 
-    print(f"File: {filename}")
-    print(f"  Bare: {bare_text.count(chr(10))} lines, {bare_markers} markers")
-    print(f"  Full: {full_text.count(chr(10))} lines, {full_markers} markers")
+    logger.info(f"File: {filename}")
+    logger.info(f"  Bare: {bare_text.count(chr(10))} lines, {bare_markers} markers")
+    logger.info(f"  Full: {full_text.count(chr(10))} lines, {full_markers} markers")
 
-    print(f"  Calling Opus (bare)...", end="", flush=True)
+    logger.info(f"  Calling Opus (bare)...", end="", flush=True)
     t0 = time.time()
     response_bare = call_opus(PROMPT.format(code=bare_text))
-    print(f" {time.time()-t0:.0f}s")
+    logger.info(f" {time.time()-t0:.0f}s")
 
-    print(f"  Calling Opus (enhanced)...", end="", flush=True)
+    logger.info(f"  Calling Opus (enhanced)...", end="", flush=True)
     t0 = time.time()
     response_enhanced = call_opus(PROMPT.format(code=full_text))
-    print(f" {time.time()-t0:.0f}s")
+    logger.info(f" {time.time()-t0:.0f}s")
 
     html = generate_html(filename, bare_text, full_text, response_bare, response_enhanced)
 
     out_path = REPO / "output" / f"comparison_{filepath.stem}.html"
     out_path.write_text(html)
-    print(f"  Output: {out_path}")
+    logger.info(f"  Output: {out_path}")
 
     # Also save raw responses
     raw_path = REPO / "output" / f"comparison_{filepath.stem}.json"
@@ -249,21 +254,21 @@ def run_comparison(filepath):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python3 hyperdoc_comparison.py <file_path>")
-        print("       python3 hyperdoc_comparison.py --all")
+        logger.info("Usage: python3 hyperdoc_comparison.py <file_path>")
+        logger.info("       python3 hyperdoc_comparison.py --all")
         sys.exit(1)
 
     if not os.getenv("ANTHROPIC_API_KEY"):
-        print("ERROR: ANTHROPIC_API_KEY not set")
-        print("  Set it in environment or in .env file")
+        logger.error("ERROR: ANTHROPIC_API_KEY not set")
+        logger.info("  Set it in environment or in .env file")
         sys.exit(1)
 
     if sys.argv[1] == "--all":
         # Run on all 5 enhanced files
         targets = [
             REPO / "config.py",
-            REPO / "phase_1_extraction" / "batch_orchestrator.py",
-            REPO / "phase_0_prep" / "deterministic_prep.py",
+            REPO / "phase_1_extraction" / "interactive_batch_runner.py",
+            REPO / "phase_0_prep" / "enrich_session.py",
             REPO / "phase_3_hyperdoc_writing" / "generate_viewer.py",
             REPO / "phase_0_prep" / "geological_reader.py",
         ]
@@ -271,13 +276,13 @@ def main():
             if t.exists() and "@ctx:" in t.read_text():
                 run_comparison(t)
             else:
-                print(f"SKIP {t.name}: no markers found")
+                logger.warning(f"SKIP {t.name}: no markers found")
     else:
         target = Path(sys.argv[1])
         if not target.is_absolute():
             target = REPO / target
         if not target.exists():
-            print(f"ERROR: File not found: {target}")
+            logger.error(f"ERROR: File not found: {target}")
             sys.exit(1)
         out = run_comparison(target)
         # Auto-open

@@ -28,6 +28,9 @@ import re
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, Tuple
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.llm_pass_runner")
 
 # ── Path setup ────────────────────────────────────────────────────────
 REPO = Path(__file__).resolve().parent.parent
@@ -310,19 +313,19 @@ def call_api(model: str, system_prompt: str, user_prompt: str,
             # Content policy violation — skip this batch, don't retry
             error_msg = str(e)
             if "content" in error_msg.lower() and "policy" in error_msg.lower():
-                print(f"    CONTENT POLICY: Batch {batch_num} blocked. Skipping. Error: {error_msg[:200]}")
+                logger.error(f"    CONTENT POLICY: Batch {batch_num} blocked. Skipping. Error: {error_msg[:200]}")
             else:
-                print(f"    BAD REQUEST: Batch {batch_num} rejected: {error_msg[:200]}")
+                logger.info(f"    BAD REQUEST: Batch {batch_num} rejected: {error_msg[:200]}")
             return [], usage
 
         except anthropic.APIError as e:
             usage["retries"] = attempt + 1
             if attempt < MAX_RETRIES - 1:
                 wait = RETRY_DELAY_BASE * (attempt + 1)
-                print(f"    API error: {e}. Retrying in {wait}s...")
+                logger.error(f"    API error: {e}. Retrying in {wait}s...")
                 time.sleep(wait)
             else:
-                print(f"    FAILED after {MAX_RETRIES} attempts: {e}")
+                logger.error(f"    FAILED after {MAX_RETRIES} attempts: {e}")
                 return [], usage
 
     return [], usage
@@ -349,15 +352,15 @@ def run_pass(pass_num: int, session_dir: Path, data: Dict,
     messages = data.get("messages", [])
     session_id = data.get("session_id", "unknown")
 
-    print(f"\n  Pass {pass_num}: {config['name']}")
-    print(f"    Model: {config['model']}")
+    logger.info(f"\n  Pass {pass_num}: {config['name']}")
+    logger.info(f"    Model: {config['model']}")
 
     # Filter messages
     filtered = filter_messages_for_pass(messages, pass_num, pass1_results)
-    print(f"    Messages to analyze: {len(filtered)} (of {len(messages)} total)")
+    logger.info(f"    Messages to analyze: {len(filtered)} (of {len(messages)} total)")
 
     if not filtered:
-        print(f"    No messages to analyze — skipping")
+        logger.warning(f"    No messages to analyze — skipping")
         return {
             "pass": pass_num,
             "session_id": session_id,
@@ -387,7 +390,7 @@ def run_pass(pass_num: int, session_dir: Path, data: Dict,
 
     # Batch messages
     batches = batch_messages(filtered, config["model"], config["system_prompt"])
-    print(f"    Batches: {len(batches)} (max {MAX_BATCH_SIZE} msgs/batch)")
+    logger.info(f"    Batches: {len(batches)} (max {MAX_BATCH_SIZE} msgs/batch)")
 
     # Process each batch
     all_results = []
@@ -421,7 +424,7 @@ def run_pass(pass_num: int, session_dir: Path, data: Dict,
         if i < len(batches) - 1:
             time.sleep(1)
 
-    print(f"    Total: {len(all_results)} results, ${total_usage['cost']:.4f}")
+    logger.info(f"    Total: {len(all_results)} results, ${total_usage['cost']:.4f}")
 
     # Build output
     output = {
@@ -440,7 +443,7 @@ def run_pass(pass_num: int, session_dir: Path, data: Dict,
     output_file = session_dir / config["output_file"]
     with open(output_file, "w") as f:
         json.dump(output, f, indent=2)
-    print(f"    Output: {output_file.name} ({output_file.stat().st_size / 1024:.1f} KB)")
+    logger.info(f"    Output: {output_file.name} ({output_file.stat().st_size / 1024:.1f} KB)")
 
     return output
 
@@ -461,12 +464,12 @@ def run_all_passes(session_dir: Path, dry_run: bool = False,
     data = load_enriched_session(session_dir)
     session_id = data.get("session_id", "unknown")
 
-    print(f"\n{'=' * 60}")
-    print(f"Phase 0 LLM Passes — Session {session_id}")
-    print(f"{'=' * 60}")
-    print(f"Session dir: {session_dir}")
-    print(f"Messages: {len(data.get('messages', []))}")
-    print(f"Passes to run: {passes}")
+    logger.info(f"\n{'=' * 60}")
+    logger.info(f"Phase 0 LLM Passes — Session {session_id}")
+    logger.info(f"{'=' * 60}")
+    logger.info(f"Session dir: {session_dir}")
+    logger.info(f"Messages: {len(data.get('messages', []))}")
+    logger.info(f"Passes to run: {passes}")
 
     results = {}
     total_cost = 0.0
@@ -482,7 +485,7 @@ def run_all_passes(session_dir: Path, dry_run: bool = False,
                 with open(p1_file) as f:
                     pass1_results = json.load(f)
             else:
-                print(f"\n  Pass 3 skipped: Pass 1 results not available")
+                logger.warning(f"\n  Pass 3 skipped: Pass 1 results not available")
                 continue
 
         result = run_pass(pass_num, session_dir, data,
@@ -494,12 +497,12 @@ def run_all_passes(session_dir: Path, dry_run: bool = False,
         if pass_num == 1:
             pass1_results = result
 
-    print(f"\n{'=' * 60}")
+    logger.info(f"\n{'=' * 60}")
     if dry_run:
-        print(f"DRY RUN COMPLETE — Estimated total cost: ${total_cost:.4f}")
+        logger.info(f"DRY RUN COMPLETE — Estimated total cost: ${total_cost:.4f}")
     else:
-        print(f"ALL PASSES COMPLETE — Total cost: ${total_cost:.4f}")
-    print(f"{'=' * 60}")
+        logger.info(f"ALL PASSES COMPLETE — Total cost: ${total_cost:.4f}")
+    logger.info(f"{'=' * 60}")
 
     return {
         "session_id": session_id,
@@ -527,9 +530,9 @@ def main():
     # Find session
     session_dir = find_session_dir(args.session)
     if not session_dir:
-        print(f"ERROR: Session not found: {args.session}")
-        print(f"Searched in: {DEFAULT_OUTPUT_DIR}")
-        print(f"             {Path(os.getenv('HYPERDOCS_STORE_DIR', str(Path.home() / 'PERMANENT_HYPERDOCS'))) / 'sessions'}")
+        logger.error(f"ERROR: Session not found: {args.session}")
+        logger.info(f"Searched in: {DEFAULT_OUTPUT_DIR}")
+        logger.info(f"             {Path(os.getenv('HYPERDOCS_STORE_DIR', str(Path.home() / 'PERMANENT_HYPERDOCS'))) / 'sessions'}")
         sys.exit(1)
 
     if args.pass_num == "all":
@@ -538,11 +541,11 @@ def main():
         try:
             pass_num = int(args.pass_num)
         except ValueError:
-            print(f"ERROR: Invalid pass number: {args.pass_num}")
+            logger.error(f"ERROR: Invalid pass number: {args.pass_num}")
             sys.exit(1)
 
         if pass_num not in PASS_CONFIGS:
-            print(f"ERROR: Pass {pass_num} not found. Valid: {list(PASS_CONFIGS.keys())}")
+            logger.error(f"ERROR: Pass {pass_num} not found. Valid: {list(PASS_CONFIGS.keys())}")
             sys.exit(1)
 
         data = load_enriched_session(session_dir)
@@ -555,7 +558,7 @@ def main():
                 with open(p1_file) as f:
                     pass1_results = json.load(f)
             else:
-                print("ERROR: Pass 3 requires Pass 1 results. Run Pass 1 first.")
+                logger.error("ERROR: Pass 3 requires Pass 1 results. Run Pass 1 first.")
                 sys.exit(1)
 
         run_pass(pass_num, session_dir, data, pass1_results=pass1_results,

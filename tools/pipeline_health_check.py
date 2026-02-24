@@ -29,6 +29,9 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
+from tools.log_config import get_logger
+
+logger = get_logger("tools.pipeline_health_check")
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
@@ -96,14 +99,14 @@ STAGE_CONTRACTS = {
 # What each consumer file reads from which JSON file.
 
 CONSUMER_EXPECTATIONS = {
-    "phase_2_synthesis/batch_phase2_processor.py": {
+    "phase_2_synthesis/build_phase2_outputs.py": {
         "thread_extractions.json": ["threads"],
         "semantic_primitives.json": ["tagged_messages"],
         "geological_notes.json": ["micro", "meso", "macro"],
         "explorer_notes.json": ["observations"],
         "session_metadata.json": ["session_stats"],
     },
-    "phase_2_synthesis/batch_p2_generator.py": {
+    "phase_2_synthesis/backfill_phase2.py": {
         "thread_extractions.json": ["threads"],
         "geological_notes.json": ["micro"],
         "session_metadata.json": ["session_stats"],
@@ -130,7 +133,7 @@ CONSUMER_EXPECTATIONS = {
     "phase_3_hyperdoc_writing/write_hyperdocs.py": {
         "grounded_markers.json": ["markers"],
     },
-    "phase_3_hyperdoc_writing/generate_remaining_hyperdocs.py": {
+    "phase_3_hyperdoc_writing/write_more_hyperdocs.py": {
         "grounded_markers.json": ["markers"],
     },
     "product/dashboard.py": {
@@ -143,7 +146,7 @@ CONSUMER_EXPECTATIONS = {
         "idea_graph.json": ["nodes", "edges"],
         "grounded_markers.json": ["markers"],
     },
-    "phase_1_extraction/batch_orchestrator.py": {
+    "phase_1_extraction/interactive_batch_runner.py": {
         "session_metadata.json": ["session_stats"],
     },
 }
@@ -326,10 +329,10 @@ class HealthCheck:
             for fname, data in minimal.items():
                 (sd / fname).write_text(json.dumps(data))
 
-            # Test batch_phase2_processor with empty data
+            # Test build_phase2_outputs with empty data
             try:
                 sys.path.insert(0, str(REPO / "output"))
-                from batch_phase2_processor import build_idea_graph, build_synthesis, build_markers
+                from build_phase2_outputs import build_idea_graph, build_synthesis, build_markers
                 ig = build_idea_graph("test", {}, {}, {}, {}, minimal["session_metadata.json"])
                 self._record(name, "phase2_empty_idea_graph", True, f"{len(ig.get('nodes', []))} nodes")
                 syn = build_synthesis("test", {}, {}, {}, {}, minimal["session_metadata.json"])
@@ -384,8 +387,8 @@ class HealthCheck:
                     link.unlink()
 
         # Test Phase 4 insertion scripts parse without error
-        for script in ["insert_hyperdocs.py", "insert_hyperdocs_v2.py", "insert_from_phase4b.py",
-                        "hyperdoc_layers.py", "hyperdoc_store_init.py"]:
+        for script in ["insert_hyperdocs.py", "insert_hyperdocs_3part.py", "insert_from_json.py",
+                        "hyperdoc_layers.py", "init_hyperdoc_store.py"]:
             spath = REPO / "phase_4_insertion" / script
             if spath.exists():
                 try:
@@ -436,7 +439,7 @@ class HealthCheck:
 
         # Re-run Phase 2
         result = subprocess.run(
-            [sys.executable, str(REPO / "phase_2_synthesis" / "batch_phase2_processor.py"),
+            [sys.executable, str(REPO / "phase_2_synthesis" / "build_phase2_outputs.py"),
              "--force", self.session_dir.name.replace("session_", "")],
             capture_output=True, text=True, timeout=30,
             cwd=str(REPO),
@@ -529,6 +532,55 @@ class HealthCheck:
             exists = (REPO / d).is_dir()
             self._record(name, f"dir:{d}/", exists)
 
+    def _validate_session_compat(self, name, sd):
+        """Validate a single session directory for backward compatibility."""
+        sid = sd.name[:16]
+
+        # Check thread_extractions readable
+        try:
+            data = json.loads((sd / "thread_extractions.json").read_text())
+            has_threads = bool(data.get("threads") or data.get("extractions"))
+            threads_val = data.get("threads")
+            if isinstance(threads_val, dict):
+                fmt = "dict"
+            elif isinstance(threads_val, list):
+                fmt = "list"
+            elif data.get("extractions"):
+                fmt = "extractions"
+            else:
+                fmt = "unknown"
+            self._record(name, f"threads:{sid}", has_threads, f"format={fmt}")
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
+            self._record(name, f"threads:{sid}", False, str(e)[:60])
+
+        # Check grounded_markers readable
+        gm_path = sd / "grounded_markers.json"
+        if gm_path.exists():
+            try:
+                gm = json.loads(gm_path.read_text())
+                readable = "markers" in gm or "warnings" in gm or "patterns" in gm
+                count = len(gm.get("markers", [])) + len(gm.get("warnings", [])) + len(gm.get("patterns", []))
+                fmt = "flat" if "markers" in gm else "structured"
+                self._record(name, f"markers:{sid}", readable, f"format={fmt}, {count} items")
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
+                self._record(name, f"markers:{sid}", False, str(e)[:60])
+
+        # Check semantic_primitives readable
+        sp_path = sd / "semantic_primitives.json"
+        if sp_path.exists():
+            try:
+                sp = json.loads(sp_path.read_text())
+                has_data = bool(sp.get("tagged_messages") or sp.get("primitives"))
+                if sp.get("tagged_messages"):
+                    fmt = "canonical"
+                elif sp.get("primitives"):
+                    fmt = "old"
+                else:
+                    fmt = "unknown"
+                self._record(name, f"primitives:{sid}", has_data, f"format={fmt}")
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
+                self._record(name, f"primitives:{sid}", False, str(e)[:60])
+
     # ── 8. Backward Compatibility ─────────────────────────────────────
     def check_backward_compat(self):
         """Verify old-format sessions can still be read by current consumers."""
@@ -554,42 +606,7 @@ class HealthCheck:
         sample = [all_sessions[i] for i in sorted(sample_indices)][:10]
 
         for sd in sample:
-            sid = sd.name[:16]
-            # Check thread_extractions readable (has threads or extractions)
-            try:
-                data = json.loads((sd / "thread_extractions.json").read_text())
-                has_threads = bool(data.get("threads") or data.get("extractions"))
-                fmt = "dict" if isinstance(data.get("threads"), dict) else (
-                    "list" if isinstance(data.get("threads"), list) else (
-                    "extractions" if data.get("extractions") else "unknown"))
-                self._record(name, f"threads:{sid}", has_threads, f"format={fmt}")
-            except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
-                self._record(name, f"threads:{sid}", False, str(e)[:60])
-
-            # Check grounded_markers readable (has markers or structured)
-            gm_path = sd / "grounded_markers.json"
-            if gm_path.exists():
-                try:
-                    gm = json.loads(gm_path.read_text())
-                    # Check format is readable (has known keys, even if empty)
-                    readable = "markers" in gm or "warnings" in gm or "patterns" in gm
-                    count = len(gm.get("markers", [])) + len(gm.get("warnings", [])) + len(gm.get("patterns", []))
-                    fmt = "flat" if "markers" in gm else "structured"
-                    self._record(name, f"markers:{sid}", readable, f"format={fmt}, {count} items")
-                except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
-                    self._record(name, f"markers:{sid}", False, str(e)[:60])
-
-            # Check semantic_primitives readable
-            sp_path = sd / "semantic_primitives.json"
-            if sp_path.exists():
-                try:
-                    sp = json.loads(sp_path.read_text())
-                    has_data = bool(sp.get("tagged_messages") or sp.get("primitives"))
-                    fmt = "canonical" if sp.get("tagged_messages") else (
-                        "old" if sp.get("primitives") else "unknown")
-                    self._record(name, f"primitives:{sid}", has_data, f"format={fmt}")
-                except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
-                    self._record(name, f"primitives:{sid}", False, str(e)[:60])
+            self._validate_session_compat(name, sd)
 
     # ── 9. Cross-Stage Contracts ──────────────────────────────────────
     def check_contracts(self):
@@ -679,48 +696,48 @@ class HealthCheck:
             ("10. Regression", self.check_regression),
         ]
 
-        print("=" * 70)
-        print("HYPERDOCS PIPELINE HEALTH CHECK")
-        print(f"Session: {self.session_dir}")
-        print(f"Time: {datetime.now().isoformat()}")
-        print("=" * 70)
+        logger.info("=" * 70)
+        logger.info("HYPERDOCS PIPELINE HEALTH CHECK")
+        logger.info(f"Session: {self.session_dir}")
+        logger.info(f"Time: {datetime.now().isoformat()}")
+        logger.info("=" * 70)
 
         for label, fn in checks:
-            print(f"\n{label}...")
+            logger.info(f"\n{label}...")
             try:
                 fn()
             except (json.JSONDecodeError, KeyError, TypeError, ValueError, FileNotFoundError, OSError) as e:
                 self._record(label, "CRASH", False, str(e)[:100])
 
         # Print results
-        print("\n" + "=" * 70)
-        print("RESULTS")
-        print("=" * 70)
+        logger.info("\n" + "=" * 70)
+        logger.info("RESULTS")
+        logger.info("=" * 70)
 
         for check_name, tests in self.results.items():
             passes = sum(1 for t in tests if t["status"] == "PASS")
             fails = sum(1 for t in tests if t["status"] == "FAIL")
             skips = sum(1 for t in tests if t["status"] == "SKIP")
             icon = "PASS" if fails == 0 else "FAIL"
-            print(f"\n  [{icon}] {check_name} ({passes}P {fails}F {skips}S)")
+            logger.warning(f"\n  [{icon}] {check_name} ({passes}P {fails}F {skips}S)")
             for t in tests:
                 if t["status"] == "FAIL":
-                    print(f"    FAIL: {t['test']} — {t['detail']}")
+                    logger.info(f"    FAIL: {t['test']} — {t['detail']}")
                 elif t["status"] == "SKIP":
-                    print(f"    SKIP: {t['test']} — {t['detail']}")
+                    logger.warning(f"    SKIP: {t['test']} — {t['detail']}")
 
-        print(f"\n{'=' * 70}")
-        print(f"TOTAL: {self.total_pass} passed, {self.total_fail} failed, {self.total_skip} skipped")
+        logger.info(f"\n{'=' * 70}")
+        logger.error(f"TOTAL: {self.total_pass} passed, {self.total_fail} failed, {self.total_skip} skipped")
         total = self.total_pass + self.total_fail
         pct = self.total_pass / total * 100 if total > 0 else 0
-        print(f"HEALTH: {pct:.0f}%")
+        logger.info(f"HEALTH: {pct:.0f}%")
         if self.total_fail > 0:
-            print(f"\n*** {self.total_fail} FAILURES REQUIRE ATTENTION ***")
+            logger.info(f"\n*** {self.total_fail} FAILURES REQUIRE ATTENTION ***")
             for check_name, tests in self.results.items():
                 for t in tests:
                     if t["status"] == "FAIL":
-                        print(f"  - [{check_name}] {t['test']}: {t['detail']}")
-        print("=" * 70)
+                        logger.info(f"  - [{check_name}] {t['test']}: {t['detail']}")
+        logger.info("=" * 70)
 
         # Write report
         report_path = REPO / "output" / "health_check_report.json"
@@ -735,7 +752,7 @@ class HealthCheck:
                 "health_pct": round(pct, 1),
                 "results": self.results,
             }, f, indent=2)
-        print(f"\nReport: {report_path}")
+        logger.info(f"\nReport: {report_path}")
 
         return self.total_fail == 0
 
@@ -760,9 +777,9 @@ class HealthCheck:
             for tests in self.results.values():
                 for t in tests:
                     icon = "PASS" if t["status"] == "PASS" else ("FAIL" if t["status"] == "FAIL" else "SKIP")
-                    print(f"  [{icon}] {t['test']}" + (f" — {t['detail']}" if t["detail"] else ""))
+                    logger.info(f"  [{icon}] {t['test']}" + (f" — {t['detail']}" if t["detail"] else ""))
         else:
-            print(f"Unknown check: {check_name}. Available: {list(check_map.keys())}")
+            logger.info(f"Unknown check: {check_name}. Available: {list(check_map.keys())}")
 
 
 def main():

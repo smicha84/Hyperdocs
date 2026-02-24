@@ -11,6 +11,10 @@ Reads pipeline outputs and generates a single HTML file showing:
 
 No server. Opens directly in browser.
 """
+from tools.log_config import get_logger
+
+logger = get_logger("product.dashboard")
+
 import json
 import os
 import subprocess
@@ -43,8 +47,8 @@ def load_json_safe(path):
     if not path.exists():
         return {"_data_missing": True, "_missing_file": path.name}
     try:
-        with open(path) as f:
-            return json.load(f)
+        from tools.json_io import load_json as _load_json
+        return _load_json(path)
     except (json.JSONDecodeError, OSError):
         return {"_data_missing": True, "_missing_file": path.name}
 
@@ -269,12 +273,12 @@ Hyperdocs 3 | {len(families)} file families | {len(standalone)} standalone | {bu
 def main():
     session_dir = find_latest_session()
     if not session_dir:
-        print("No session output found. Run 'python3 concierge.py --discover' first.")
+        logger.info("No session output found. Run 'python3 concierge.py --discover' first.")
         return
 
-    print(f"Generating dashboard for {session_dir.name}...")
+    logger.info(f"Generating dashboard for {session_dir.name}...")
     path = generate_dashboard(session_dir)
-    print(f"Dashboard: {path}")
+    logger.info(f"Dashboard: {path}")
 
     # Auto-open
     if sys.platform == "darwin":
@@ -282,7 +286,7 @@ def main():
     elif sys.platform == "linux":
         subprocess.run(["xdg-open", str(path)])
     else:
-        print(f"Open in browser: {path}")
+        logger.info(f"Open in browser: {path}")
 
 
 if __name__ == "__main__":

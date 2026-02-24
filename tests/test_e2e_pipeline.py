@@ -39,7 +39,7 @@ class TestPhase2E2E:
 
     def test_build_idea_graph_from_real_data(self, session_copy):
         """build_idea_graph should produce nodes and edges from real session data."""
-        from batch_p2_generator import build_idea_graph, read_json
+        from backfill_phase2 import build_idea_graph, read_json
 
         sdir = str(session_copy)
         summary = read_json(os.path.join(sdir, "session_metadata.json"))
@@ -60,7 +60,7 @@ class TestPhase2E2E:
 
     def test_build_synthesis_from_real_data(self, session_copy):
         """build_synthesis should produce a valid synthesis document."""
-        from batch_p2_generator import build_idea_graph, build_synthesis, read_json
+        from backfill_phase2 import build_idea_graph, build_synthesis, read_json
 
         sdir = str(session_copy)
         summary = read_json(os.path.join(sdir, "session_metadata.json"))
@@ -79,7 +79,7 @@ class TestPhase2E2E:
 
     def test_build_grounded_markers_from_real_data(self, session_copy):
         """build_grounded_markers should produce a markers list."""
-        from batch_p2_generator import (
+        from backfill_phase2 import (
             build_idea_graph, build_synthesis, build_grounded_markers, read_json
         )
 

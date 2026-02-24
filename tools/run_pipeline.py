@@ -3,9 +3,9 @@
 End-to-end pipeline runner for Hyperdocs.
 
 Runs a session through all deterministic phases (free, no API calls):
-  Phase 0: deterministic_prep.py → enriched_session.json
+  Phase 0: enrich_session.py → enriched_session.json
   Phase 0b: prepare_agent_data.py → session_metadata.json, tier files, safe files
-  Phase 2: batch_p2_generator.py (deterministic) → idea_graph.json, synthesis.json, grounded_markers.json
+  Phase 2: backfill_phase2.py (deterministic) → idea_graph.json, synthesis.json, grounded_markers.json
 
 Optional (requires ANTHROPIC_API_KEY):
   --full: Also runs Phase 1 (Opus extraction agents) and Phase 3 (dossiers, viewer)
@@ -34,40 +34,9 @@ PHASE_3_DIR = REPO_ROOT / "phase_3_hyperdoc_writing"
 OUTPUT_DIR = REPO_ROOT / "output"
 
 # ── Logging setup ─────────────────────────────────────────────────────
-logger = logging.getLogger("hyperdocs.pipeline")
+from tools.log_config import get_logger, setup_pipeline_logging
 
-def setup_logging(session_id):
-    """Configure logging with both console and file output."""
-    log_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_file = log_dir / "pipeline_run.log"
-
-    # JSON-structured file handler
-    file_handler = logging.FileHandler(log_file, mode="a")
-    file_handler.setLevel(logging.DEBUG)
-
-    class JsonFormatter(logging.Formatter):
-        def format(self, record):
-            entry = {
-                "timestamp": datetime.utcnow().isoformat() + "Z",
-                "level": record.levelname,
-                "phase": getattr(record, "phase", ""),
-                "session": getattr(record, "session", ""),
-                "message": record.getMessage(),
-            }
-            return json.dumps(entry)
-
-    file_handler.setFormatter(JsonFormatter())
-
-    # Console handler (simple format)
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(logging.Formatter("%(message)s"))
-
-    root = logging.getLogger("hyperdocs")
-    root.setLevel(logging.DEBUG)
-    root.addHandler(file_handler)
-    root.addHandler(console_handler)
+logger = get_logger("tools.run_pipeline")
 
 
 def run_script(script_path, session_id, extra_env=None, description="", pass_session_arg=False):
@@ -147,9 +116,9 @@ def run_phase_0(session_id, force=False):
     session_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
     session_dir.mkdir(parents=True, exist_ok=True)
 
-    # Step 1: deterministic_prep.py
+    # Step 1: enrich_session.py
     ok = run_script(
-        PHASE_0_DIR / "deterministic_prep.py",
+        PHASE_0_DIR / "enrich_session.py",
         session_id,
         description="Phase 0: Deterministic Prep (metadata extraction)",
     )
@@ -207,7 +176,7 @@ def run_opus_classifier(session_id, force=False):
 
     # Step 2: Build filtered files from Opus classifications
     ok = run_script(
-        PHASE_0_DIR / "build_opus_filtered.py",
+        PHASE_0_DIR / "build_opus_messages.py",
         session_id,
         description="Phase 0c: Build Opus-Filtered Priority Files",
         pass_session_arg=True,
@@ -252,10 +221,10 @@ def run_phase_2(session_id, force=False):
     # For a single session, we run its build functions directly.
     sys.path.insert(0, str(REPO_ROOT / "phase_2_synthesis"))
     try:
-        from batch_p2_generator import build_idea_graph, build_synthesis, build_grounded_markers, read_json
+        from backfill_phase2 import build_idea_graph, build_synthesis, build_grounded_markers, read_json
     except ImportError:
-        print("  ERROR: Cannot import batch_p2_generator.py")
-        print("  Expected at phase_2_synthesis/batch_p2_generator.py")
+        print("  ERROR: Cannot import backfill_phase2.py")
+        print("  Expected at phase_2_synthesis/backfill_phase2.py")
         return False
 
     sdir = str(session_dir)
@@ -405,7 +374,8 @@ Examples:
     session_id = args.session_id
     force = args.force
 
-    setup_logging(session_id)
+    log_dir = OUTPUT_DIR / f"session_{session_id[:8]}"
+    setup_pipeline_logging(session_id=session_id, log_dir=log_dir)
     logger.info(f"Hyperdocs Pipeline Runner — session={session_id} force={force}")
 
     import time as _time

@@ -26,6 +26,10 @@ Usage:
     # Compare Opus classifications to Python tier system
     python3 opus_classifier.py --session 0012ebed --compare
 """
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.opus_classifier")
+
 
 import json
 import os
@@ -326,21 +330,21 @@ def main():
     else:
         session_dir = get_session_output_dir()
 
-    print("=" * 60)
-    print("Opus Message Classifier")
-    print("=" * 60)
-    print(f"Session dir: {session_dir}")
+    logger.info("=" * 60)
+    logger.info("Opus Message Classifier")
+    logger.info("=" * 60)
+    logger.info(f"Session dir: {session_dir}")
 
     # Load enriched session (prefer v2 with LLM pass data when available)
     enriched_v2 = session_dir / "enriched_session_v2.json"
     enriched_path = enriched_v2 if enriched_v2.exists() else session_dir / "enriched_session.json"
     if not enriched_path.exists():
-        print(f"ERROR: enriched_session.json not found in {session_dir}")
+        logger.error(f"ERROR: enriched_session.json not found in {session_dir}")
         sys.exit(1)
 
     data = json.loads(enriched_path.read_text())
     messages = data.get("messages", [])
-    print(f"Total messages: {len(messages)}")
+    logger.info(f"Total messages: {len(messages)}")
 
     # Build batch
     if args.all:
@@ -348,53 +352,53 @@ def main():
     else:
         batch = build_classification_batch(messages, args.sample)
 
-    print(f"Batch size: {len(batch)}")
+    logger.info(f"Batch size: {len(batch)}")
 
     # Show tier distribution of the batch
     tier_dist = {}
     for msg in batch:
         t = msg.get("filter_tier", 0)
         tier_dist[t] = tier_dist.get(t, 0) + 1
-    print(f"Batch tier distribution: {json.dumps(tier_dist)}")
+    logger.info(f"Batch tier distribution: {json.dumps(tier_dist)}")
 
     # Count short user messages in batch
     short_user = sum(1 for m in batch if m.get("role") == "user" and m.get("content_length", 0) < 50)
-    print(f"Short user messages (< 50 chars): {short_user}")
-    print()
+    logger.info(f"Short user messages (< 50 chars): {short_user}")
+    logger.info()
 
     if args.dry_run:
-        print("=== DRY RUN — Messages that would be classified ===")
+        logger.info("=== DRY RUN — Messages that would be classified ===")
         for msg in batch:
             idx = msg.get("index", "?")
             role = msg.get("role", "?")
             tier = msg.get("filter_tier", "?")
             length = msg.get("content_length", 0)
             preview = str(msg.get("content", msg.get("content_preview", "")))[:80]
-            print(f"  [{idx:>4d}] tier={tier} {role:>9s} {length:>5d}ch  {preview}")
-        print(f"\nTo actually classify, remove --dry-run.")
-        print(f"Estimated cost: ~${len(batch) * 0.003:.2f} (batch of {len(batch)} messages)")
+            logger.info(f"  [{idx:>4d}] tier={tier} {role:>9s} {length:>5d}ch  {preview}")
+        logger.info(f"\nTo actually classify, remove --dry-run.")
+        logger.info(f"Estimated cost: ~${len(batch) * 0.003:.2f} (batch of {len(batch)} messages)")
         return
 
     # Call Opus — batch into chunks of 50 to avoid output truncation
     CHUNK_SIZE = 50
     results = []
     total_chunks = (len(batch) + CHUNK_SIZE - 1) // CHUNK_SIZE
-    print(f"Calling Opus for classification ({total_chunks} chunks of {CHUNK_SIZE})...")
+    logger.info(f"Calling Opus for classification ({total_chunks} chunks of {CHUNK_SIZE})...")
 
     for i in range(0, len(batch), CHUNK_SIZE):
         chunk = batch[i:i + CHUNK_SIZE]
         chunk_num = i // CHUNK_SIZE + 1
-        print(f"  Chunk {chunk_num}/{total_chunks}: {len(chunk)} messages...", end=" ", flush=True)
+        logger.info(f"  Chunk {chunk_num}/{total_chunks}: {len(chunk)} messages...", end=" ", flush=True)
         try:
             chunk_results = classify_with_opus(chunk)
             results.extend(chunk_results)
-            print(f"got {len(chunk_results)}")
+            logger.info(f"got {len(chunk_results)}")
         except json.JSONDecodeError as e:
-            print(f"JSON parse error: {e} — skipping chunk")
+            logger.error(f"JSON parse error: {e} — skipping chunk")
         except (KeyError, TypeError, ValueError, OSError) as e:
-            print(f"Error: {e} — skipping chunk")
+            logger.error(f"Error: {e} — skipping chunk")
 
-    print(f"Total classifications: {len(results)}")
+    logger.info(f"Total classifications: {len(results)}")
 
     # Save results
     output = {
@@ -409,28 +413,28 @@ def main():
     out_path = session_dir / "opus_classifications.json"
     with open(out_path, "w") as f:
         json.dump(output, f, indent=2, default=str)
-    print(f"Written: {out_path}")
+    logger.info(f"Written: {out_path}")
 
     # Compare if requested
     if args.compare:
         comparison = compare_classifications(batch, results)
-        print(f"\n=== COMPARISON: Opus vs Python ===")
-        print(f"Agreement rate: {comparison['agreement_rate']:.0%}")
-        print(f"Upgrades (Python skipped, Opus says important): {comparison['upgrade_count']}")
-        print(f"Downgrades (Python prioritized, Opus says noise): {comparison['downgrade_count']}")
+        logger.info(f"\n=== COMPARISON: Opus vs Python ===")
+        logger.info(f"Agreement rate: {comparison['agreement_rate']:.0%}")
+        logger.warning(f"Upgrades (Python skipped, Opus says important): {comparison['upgrade_count']}")
+        logger.info(f"Downgrades (Python prioritized, Opus says noise): {comparison['downgrade_count']}")
 
         if comparison['upgrades']:
-            print(f"\nMost significant upgrades:")
+            logger.info(f"\nMost significant upgrades:")
             for u in comparison['upgrades'][:5]:
-                print(f"  msg {u['msg_index']}: python_tier={u['python_tier']} → opus={u['opus_importance']}")
-                print(f"    {u['content_preview']}")
-                print(f"    Reason: {u['opus_reason']}")
-                print()
+                logger.info(f"  msg {u['msg_index']}: python_tier={u['python_tier']} → opus={u['opus_importance']}")
+                logger.info(f"    {u['content_preview']}")
+                logger.info(f"    Reason: {u['opus_reason']}")
+                logger.info()
 
         comp_path = session_dir / "opus_vs_python_comparison.json"
         with open(comp_path, "w") as f:
             json.dump(comparison, f, indent=2, default=str)
-        print(f"Comparison written: {comp_path}")
+        logger.info(f"Comparison written: {comp_path}")
 
 
 if __name__ == "__main__":

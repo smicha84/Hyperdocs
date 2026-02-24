@@ -22,12 +22,18 @@ This metadata feeds into Haiku with pre-enriched context.
 """
 
 import re
+import sys
 import json
 from pathlib import Path
 from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import Dict, List, Any, Optional, Set
 from dataclasses import dataclass, field
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.metadata_extractor")
 
 # Import geological reader (required)
 try:
@@ -876,7 +882,7 @@ def main():
 
     tracker = HyperdocTracker()
     if DisplayFormatAdapter is None:
-        print("ERROR: DisplayFormatAdapter not available. Install display_format_adapter module.")
+        logger.error("ERROR: DisplayFormatAdapter not available. Install display_format_adapter module.")
         sys.exit(1)
     adapter = DisplayFormatAdapter(tracker.archive_path)
     extractor = MetadataExtractor()
@@ -888,23 +894,23 @@ def main():
 
     results = []
     for filename in files:
-        print(f"\nProcessing: {filename}")
+        logger.info(f"\nProcessing: {filename}")
         session = adapter.load_single_file(filename)
 
         if session:
             meta = extractor.extract_session_metadata(session, filename)
             results.append(meta.to_dict())
 
-            print("\n" + "=" * 60)
-            print("HAIKU CONTEXT:")
-            print("=" * 60)
-            print(meta.to_haiku_context())
-            print("=" * 60)
+            logger.info("\n" + "=" * 60)
+            logger.info("HAIKU CONTEXT:")
+            logger.info("=" * 60)
+            logger.info(meta.to_haiku_context())
+            logger.info("=" * 60)
 
     if args.output:
         with open(args.output, 'w') as f:
             json.dump(results, f, indent=2)
-        print(f"\nSaved to {args.output}")
+        logger.info(f"\nSaved to {args.output}")
 
 
 if __name__ == "__main__":

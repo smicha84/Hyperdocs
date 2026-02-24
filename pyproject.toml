@@ -28,7 +28,7 @@ dev = [
 hyperdocs-pipeline = "tools.run_pipeline:main"
 hyperdocs-normalize = "phase_0_prep.schema_normalizer:main"
 hyperdocs-health = "tools.pipeline_health_check:main"
-hyperdocs-aggregate = "phase_4_hyperdoc_writing.aggregate_dossiers:main"
+hyperdocs-aggregate = "phase_4a_aggregation.aggregate_dossiers:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -40,7 +40,7 @@ include = [
     "phase_1_extraction*",
     "phase_2_synthesis*",
     "phase_3_hyperdoc_writing*",
-    "phase_4_hyperdoc_writing*",
+    "phase_4a_aggregation*",
     "phase_4_insertion*",
     "tools*",
     "product*",

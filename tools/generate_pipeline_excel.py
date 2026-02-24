@@ -21,6 +21,9 @@ from collections import defaultdict, OrderedDict
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from tools.log_config import get_logger
+
+logger = get_logger("tools.generate_pipeline_excel")
 
 # ── Paths ──────────────────────────────────────────────────────
 H3 = Path(__file__).resolve().parent.parent
@@ -120,9 +123,12 @@ def flatten_json_fields(data, prefix="", depth=0, max_depth=4):
 
 
 def load_json_safe(path):
+    """Load JSON from path, returning None if missing or corrupt."""
+    if not Path(path).exists():
+        return None
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        from tools.json_io import load_json as _load_json
+        return _load_json(path)
     except (json.JSONDecodeError, UnicodeDecodeError, OSError):
         return None
 
@@ -131,71 +137,71 @@ def load_json_safe(path):
 
 PIPELINE_STEPS = [
     # (phase, step_id, script, operation, reads, writes, api, detail)
-    ("Phase 0", "0.1", "deterministic_prep.py", "Load session JSONL",
+    ("Phase 0", "0.1", "enrich_session.py", "Load session JSONL",
      "{session_id}.jsonl", "", "None ($0)",
      "ClaudeSessionReader.load_session_file() — parses each JSONL line into a ClaudeMessage object with: role, content, timestamp, uuid, model, thinking, tool_calls. Handles Claude Code streaming format where messages are split across multiple JSON lines."),
 
-    ("Phase 0", "0.2", "deterministic_prep.py", "Initialize 3 extractors",
+    ("Phase 0", "0.2", "enrich_session.py", "Initialize 3 extractors",
      "", "", "None ($0)",
      "MetadataExtractor() — 50+ signal types per message. MessageFilter(verbose=False) — 4-tier classification (skip/basic/standard/priority). ClaudeBehaviorAnalyzer() — context damage, rushing, overconfidence detection."),
 
-    ("Phase 0", "0.3", "deterministic_prep.py", "Detect subagent session",
+    ("Phase 0", "0.3", "enrich_session.py", "Detect subagent session",
      "", "", "None ($0)",
      "detect_subagent_session() — 3 strategies: (1) session ID contains '_agent-' prefix, (2) JSONL filename contains '_agent-', (3) first 5 messages contain 'Hello memory agent' or '<observed_from_primary'. Tags as memory_agent, observer_agent, or task_agent."),
 
-    ("Phase 0", "0.4a", "deterministic_prep.py", "PER MESSAGE: Protocol detection (raw)",
+    ("Phase 0", "0.4a", "enrich_session.py", "PER MESSAGE: Protocol detection (raw)",
      "", "", "None ($0)",
      "detect_protocol_message() — checks for: empty/whitespace wrappers, 8 XML protocol tag patterns (system-reminder, command-name, command-message, command-args, command-stdout, command-stderr, local-command-caveat, task-notification), /clear continuation boilerplate (3 marker strings), skill injection (.claude/skills/ content), subagent relay markers ('Hello memory agent', 'PROGRESS SUMMARY CHECKPOINT', '<observed_from_primary'). Returns {is_protocol: bool, protocol_type: string}."),
 
-    ("Phase 0", "0.4b", "deterministic_prep.py", "PER MESSAGE: Char-per-line collapse",
+    ("Phase 0", "0.4b", "enrich_session.py", "PER MESSAGE: Char-per-line collapse",
      "", "", "None ($0)",
      "collapse_char_per_line() — detects content where each character is on its own line (e.g., 'I\\nm\\np\\nl\\ne\\nm\\ne\\nn\\nt'). If >70% of lines are single characters AND >6 lines total: joins all lines into one string. Returns (collapsed_content, was_encoded). Fixes content_length, caps_ratio, file detection, and profanity detection that would otherwise fail on encoded content."),
 
-    ("Phase 0", "0.4c", "deterministic_prep.py", "PER MESSAGE: Protocol re-check (collapsed)",
+    ("Phase 0", "0.4c", "enrich_session.py", "PER MESSAGE: Protocol re-check (collapsed)",
      "", "", "None ($0)",
      "Re-runs detect_protocol_message() on collapsed content. Catches /clear continuation markers that were char-per-line encoded and invisible in raw form. Only runs if was_char_encoded=true AND first check was is_protocol=false."),
 
-    ("Phase 0", "0.4d", "deterministic_prep.py", "PER MESSAGE: Metadata extraction (50+ signals)",
+    ("Phase 0", "0.4d", "enrich_session.py", "PER MESSAGE: Metadata extraction (50+ signals)",
      "", "", "None ($0)",
      "claude_to_geological() adapter converts ClaudeMessage → GeologicalMessage. MetadataExtractor.extract_message_metadata(geo_msg, idx) extracts: files (mentioned filenames via regex), files_create (new files), files_edit (modified files), files_open (opened files), error (bool), error_type, caps_ratio (float 0-1), profanity (bool), exclamations (count), emergency_intervention (bool), emergency_reason (string), repeat_count (int), code_blocks (count), tool_calls (list), model (string), content_length (int)."),
 
-    ("Phase 0", "0.4e", "deterministic_prep.py", "PER MESSAGE: Tool failure detection",
+    ("Phase 0", "0.4e", "enrich_session.py", "PER MESSAGE: Tool failure detection",
      "", "", "None ($0)",
      "For assistant messages with model='<synthetic>' and 'error' in content: marks is_synthetic_error=true, increments session-level tool_failure_count. Synthetic messages are tool result wrappers inserted by Claude Code."),
 
-    ("Phase 0", "0.4f", "deterministic_prep.py", "PER MESSAGE: Message filtering (4-tier classification)",
+    ("Phase 0", "0.4f", "enrich_session.py", "PER MESSAGE: Message filtering (4-tier classification)",
      "", "", "None ($0)",
      "MessageFilter.classify(analysis_content) — scores content against signal patterns: failure (error keywords), frustration (emotional keywords), breakthrough (success keywords), pivot (direction change), architecture (design discussion), plan (task/checklist). Produces: tier (1=skip, 2=basic, 3=standard, 4=priority), tier_name, score (int), signals (list of 'signal:count' strings)."),
 
-    ("Phase 0", "0.4g", "deterministic_prep.py", "PER MESSAGE: Protocol signal suppression",
+    ("Phase 0", "0.4g", "enrich_session.py", "PER MESSAGE: Protocol signal suppression",
      "", "", "None ($0)",
      "If is_protocol=true: force tier=1 (skip) regardless of content richness. Suppress error=false, profanity=false, caps_ratio=0, emergency_intervention=false, emergency_reason=''. Reason: continuation summaries contain quoted content from prior sessions — signals from that text belong to those sessions, not this one. Tags error_context='protocol_recap' if error was true."),
 
-    ("Phase 0", "0.4h", "deterministic_prep.py", "PER MESSAGE: Content-referential detection",
+    ("Phase 0", "0.4h", "enrich_session.py", "PER MESSAGE: Content-referential detection",
      "", "", "None ($0)",
      "detect_content_referential_signals() — 3 strategies: (1) analytical indicators on assistant messages >500 chars with 2+ analysis keywords (problem, failure mode, gate, enforcer, etc.), (2) signal density anomaly: >20 failure or >10 frustration signals on >1000 char messages, (3) moderate failure+architecture signals on >500 char messages. Also: positive tone + failure signals on assistant messages >300 chars. Returns bool: is this message DISCUSSING errors or EXPERIENCING errors?"),
 
-    ("Phase 0", "0.4i", "deterministic_prep.py", "PER MESSAGE: Error context tagging",
+    ("Phase 0", "0.4i", "enrich_session.py", "PER MESSAGE: Error context tagging",
      "", "", "None ($0)",
      "If error=true AND (is_content_referential=true OR content >500 chars) AND model != '<synthetic>': set error_context='mentioned_not_encountered' and error=false. Separates errors the session TALKS about (in analysis reports, code reviews) from errors the session EXPERIENCES (actual runtime failures)."),
 
-    ("Phase 0", "0.4j", "deterministic_prep.py", "PER MESSAGE: Behavior analysis (assistant only)",
+    ("Phase 0", "0.4j", "enrich_session.py", "PER MESSAGE: Behavior analysis (assistant only)",
      "", "", "None ($0)",
      "ClaudeBehaviorAnalyzer.analyze_message(msg, prev_5_msgs) — detects: overconfident (bool), rushing (bool), ignores_context (bool), confusion (bool), damage_score (0-5). Uses rolling window of last 5-10 assistant messages for temporal context. Skipped entirely for protocol messages (empty wrappers get spurious confusion/damage flags)."),
 
-    ("Phase 0", "0.4k", "deterministic_prep.py", "PER MESSAGE: Build enriched record",
+    ("Phase 0", "0.4k", "enrich_session.py", "PER MESSAGE: Build enriched record",
      "", "", "None ($0)",
      "Assembles ONE JSON object per message with 18 fields: index (int), role (str), content (str, FULL — never truncated), content_length (int, corrected for char-per-line), content_length_raw (int, original), content_hash (str, sha256 first 16 chars), timestamp (ISO string), uuid (str), model (str), has_thinking (bool), thinking_length (int), metadata (dict, 50+ signals), filter_tier (int 1-4), filter_tier_name (str), filter_score (int), filter_signals (list of strings), filter_signals_content_referential (bool), behavior_flags (dict or null), is_protocol (bool), protocol_type (str or null), was_char_encoded (bool), llm_behavior (null — populated by optional LLM passes)."),
 
-    ("Phase 0", "0.4l", "deterministic_prep.py", "PER MESSAGE: Accumulate session stats",
+    ("Phase 0", "0.4l", "enrich_session.py", "PER MESSAGE: Accumulate session stats",
      "", "", "None ($0)",
      "Updates running accumulators: tier_distribution (4 counters), frustration_peaks (list of {index, caps_ratio, profanity, content_preview} — only user messages, not protocol, with caps>0.3 or profanity=true), emergency_interventions (list of {index, reason, content_preview} — not protocol), file_mention_counts (dict of filename → count), error_count (int)."),
 
-    ("Phase 0", "0.5", "deterministic_prep.py", "False positive file removal",
+    ("Phase 0", "0.5", "enrich_session.py", "False positive file removal",
      "", "", "None ($0)",
      "Two strategies: (1) blocklist of 17 generic filenames (file.py, test.py, config.py, setup.py, main.py, app.py, utils.py, helper.py, module.py, script.py, run.py, index.js, index.html, style.css, styles.css, file.txt, data.json, output.json). (2) Substring elimination: if a short filename (base ≤12 chars) is a substring of a longer detected filename, remove the short one. Cleans both session_stats.file_mention_counts and per-message metadata.files arrays."),
 
-    ("Phase 0", "0.6", "deterministic_prep.py", "Write enriched_session.json",
+    ("Phase 0", "0.6", "enrich_session.py", "Write enriched_session.json",
      "", "enriched_session.json", "None ($0)",
      "One JSON file containing: session_id (str), source_file (str), generated_at (ISO str), generator ('deterministic_prep.py (Phase 0)'), session_stats (dict with 20+ fields: total_messages, user_messages, assistant_messages, human_messages, protocol_messages, tier_distribution, frustration_peaks, file_mention_counts, error_count, tool_failure_count, emergency_interventions, total_input_tokens, total_output_tokens, total_thinking_chars, is_subagent, agent_id, agent_type, char_per_line_messages, top_files, false_positive_files_removed), messages (array of enriched records). Typical size: 2-8 MB."),
 
@@ -351,31 +357,31 @@ PIPELINE_STEPS = [
      "", "thread_extractions.json", "None ($0)",
      "Output: {session_id: str, threads: {ideas: {description, entries}, reactions: {description, entries}, software: {description, entries}, code: {description, entries}, plans: {description, entries}, behavior: {description, entries}}, _extra: {total_analyzed: int, extraction_method: 'deterministic_pattern_matching', extractions: [full per-message data]}}. Typically 50-500 KB."),
 
-    ("Phase 1+", "1+.1", "batch_orchestrator.py", "Opus agent: Thread Analyst",
+    ("Phase 1+", "1+.1", "interactive_batch_runner.py", "Opus agent: Thread Analyst",
      "safe_condensed.json", "thread_extractions.json (LLM version)", "Opus 4.6",
      "LLM-based thread extraction. Richer semantic analysis than the deterministic version — can understand context, sarcasm, implicit meaning. Produces same canonical format. OPTIONAL — only runs in --full mode."),
 
-    ("Phase 1+", "1+.2", "batch_orchestrator.py", "Opus agent: Primitives Tagger",
+    ("Phase 1+", "1+.2", "interactive_batch_runner.py", "Opus agent: Primitives Tagger",
      "safe_condensed.json", "semantic_primitives.json", "Opus 4.6",
      "Tags each message with 7 semantic primitives: action_vector (building/investigating/defending/recovering/...), confidence_signal (working/stable/fragile/tentative/proven), emotional_tenor (frustrated/curious/relieved/focused/...), intent_marker (exploring/correcting/demanding/teaching/...), friction_log (text description of friction), decision_trace (what was decided and why), disclosure_pointer (what was revealed about the human-AI dynamic). Plus session-level distributions and summary. OPTIONAL."),
 
-    ("Phase 1+", "1+.3", "batch_orchestrator.py", "Opus agent: Geological Reader",
+    ("Phase 1+", "1+.3", "interactive_batch_runner.py", "Opus agent: Geological Reader",
      "safe_condensed.json", "geological_notes.json", "Opus 4.6",
      "Multi-resolution reading at 3 zoom levels: micro (individual messages — specific moments, line-level observations), meso (5-message windows — patterns forming, interactions between steps), macro (15-20 message arcs — narrative structures, emotional trajectories, phase transitions). Also: geological_metaphor (session as geological formation), session_character. OPTIONAL."),
 
-    ("Phase 1+", "1+.4", "batch_orchestrator.py", "Opus agent: Free Explorer",
+    ("Phase 1+", "1+.4", "interactive_batch_runner.py", "Opus agent: Free Explorer",
      "safe_condensed.json", "explorer_notes.json", "Opus 4.6",
      "Unconstrained observation agent — no structured output format required. Can note: patterns, anomalies, abandoned ideas, cross-session connections, unanswered questions, emotional dynamics, what matters most, data quality issues. The explorer's value is in noticing what structured extractors miss. OPTIONAL."),
 
-    ("Phase 2", "2.1", "batch_p2_generator.py", "Build idea graph",
+    ("Phase 2", "2.1", "backfill_phase2.py", "Build idea graph",
      "session_metadata.json + thread_extractions.json + geological_notes.json + semantic_primitives.json + explorer_notes.json", "idea_graph.json", "None ($0)",
      "Extracts idea nodes from thread entries (canonical format: categories with entries). Each node: {id, name (first 80 chars of content), description (full content), first_appearance (msg_index), confidence, emotional_context, trigger}. Edges between sequential nodes: {from_id, to_id, transition_type='evolved', trigger_message, evidence}. Handles both canonical and old extraction formats. Output: {nodes: [], edges: [], metadata: {}}. Typically 20-200 KB."),
 
-    ("Phase 2", "2.2", "batch_p2_generator.py", "Build synthesis",
+    ("Phase 2", "2.2", "backfill_phase2.py", "Build synthesis",
      "Same 5 inputs + idea_graph.json", "synthesis.json", "None ($0)",
      "Multi-pass synthesis — conceptually 6 passes at increasing 'temperatures': factual (0.3), patterns (0.5), vertical structures (0.7), creative synthesis (0.9), wild connections (1.0), grounding (0.0). Each pass builds on prior passes. Session character summary. Output: {session_id, passes: {}, key_findings: [], session_character: str, cross_session_links: []}. Typically 10-100 KB."),
 
-    ("Phase 2", "2.3", "batch_p2_generator.py", "Build grounded markers",
+    ("Phase 2", "2.3", "backfill_phase2.py", "Build grounded markers",
      "Same 5 inputs + idea_graph.json + synthesis.json", "grounded_markers.json", "None ($0)",
      "Generates verifiable markers: warnings (W01-W12), recommendations (R01-R12), behavioral patterns (B01-B08), iron rules. Each marker: {marker_id, category, claim (verifiable statement), confidence (0-1), evidence (specific reference), source (session:msg_index), severity}. Output: {markers: [], total_markers: int}. Typically 10-100 KB."),
 
@@ -836,7 +842,7 @@ def build_sheet_5_data_flow(wb):
     style_header_row(ws, 1, len(headers))
 
     flows = [
-        ("deterministic_prep.py", "{session_id}.jsonl", "enriched_session.json", "Raw JSONL → enriched messages with 18 fields per message"),
+        ("enrich_session.py", "{session_id}.jsonl", "enriched_session.json", "Raw JSONL → enriched messages with 18 fields per message"),
         ("prepare_agent_data.py", "enriched_session.json (or v2)", "session_metadata.json", "Strip messages array, keep stats only"),
         ("prepare_agent_data.py", "enriched_session.json (or v2)", "tier2plus_messages.json", "Filter: keep messages where filter_tier >= 2"),
         ("prepare_agent_data.py", "enriched_session.json (or v2)", "tier4_priority_messages.json", "Filter: keep messages where filter_tier == 4"),
@@ -865,9 +871,9 @@ def build_sheet_5_data_flow(wb):
         ("Opus agent (Primitives Tagger)", "safe_condensed.json", "semantic_primitives.json", "7 semantic primitives per message"),
         ("Opus agent (Geological Reader)", "safe_condensed.json", "geological_notes.json", "Multi-resolution observations"),
         ("Opus agent (Free Explorer)", "safe_condensed.json", "explorer_notes.json", "Free-form observations and anomalies"),
-        ("batch_p2_generator.py", "session_metadata + thread_extractions + geological_notes + semantic_primitives + explorer_notes", "idea_graph.json", "Ideas as nodes, transitions as edges"),
-        ("batch_p2_generator.py", "Same 5 inputs + idea_graph", "synthesis.json", "6-pass multi-temperature synthesis"),
-        ("batch_p2_generator.py", "Same 5 inputs + idea_graph + synthesis", "grounded_markers.json", "Verifiable markers: warnings, recommendations"),
+        ("backfill_phase2.py", "session_metadata + thread_extractions + geological_notes + semantic_primitives + explorer_notes", "idea_graph.json", "Ideas as nodes, transitions as edges"),
+        ("backfill_phase2.py", "Same 5 inputs + idea_graph", "synthesis.json", "6-pass multi-temperature synthesis"),
+        ("backfill_phase2.py", "Same 5 inputs + idea_graph + synthesis", "grounded_markers.json", "Verifiable markers: warnings, recommendations"),
         ("collect_file_evidence.py", "11 data sources (metadata, threads, geo, prims, explorer, genealogy, idea_graph, markers, synthesis, claude_md, dossiers)", "file_evidence/*_evidence.json", "11 evidence sections per file, ±10 msg time window"),
         ("generate_dossiers.py", "session_metadata + markers + threads + idea_graph", "file_dossiers.json", "Top 15 files: full behavioral/structural profiles"),
         ("generate_dossiers.py", "Same inputs", "claude_md_analysis.json", "How CLAUDE.md gates affected this session"),
@@ -906,28 +912,28 @@ def build_sheet_5_data_flow(wb):
 
 
 def main():
-    print("=" * 60)
-    print("Generating Exhaustive Pipeline Excel")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Generating Exhaustive Pipeline Excel")
+    logger.info("=" * 60)
 
     wb = openpyxl.Workbook()
     # Remove default sheet
     wb.remove(wb.active)
 
-    print("Sheet 1: Pipeline Steps (every micro-operation)...")
+    logger.info("Sheet 1: Pipeline Steps (every micro-operation)...")
     build_sheet_1_pipeline_steps(wb)
-    print(f"  {len(PIPELINE_STEPS)} steps documented")
+    logger.info(f"  {len(PIPELINE_STEPS)} steps documented")
 
-    print("Sheet 2: File Schemas (field-level detail from real data)...")
+    logger.info("Sheet 2: File Schemas (field-level detail from real data)...")
     build_sheet_2_file_schemas(wb)
 
-    print("Sheet 3: Session Inventory (all 292 sessions)...")
+    logger.info("Sheet 3: Session Inventory (all 292 sessions)...")
     build_sheet_3_session_inventory(wb)
 
-    print("Sheet 4: Cross-Session Top Files (from index)...")
+    logger.info("Sheet 4: Cross-Session Top Files (from index)...")
     build_sheet_4_cross_session_top_files(wb)
 
-    print("Sheet 5: Data Flow (complete dependency graph)...")
+    logger.info("Sheet 5: Data Flow (complete dependency graph)...")
     build_sheet_5_data_flow(wb)
 
     # Save
@@ -936,12 +942,12 @@ def main():
     wb.save(out_path)
 
     size = out_path.stat().st_size
-    print(f"\nOutput: {out_path}")
-    print(f"Size: {size:,} bytes")
-    print(f"Sheets: {len(wb.sheetnames)}")
+    logger.info(f"\nOutput: {out_path}")
+    logger.info(f"Size: {size:,} bytes")
+    logger.info(f"Sheets: {len(wb.sheetnames)}")
     for name in wb.sheetnames:
         ws = wb[name]
-        print(f"  {name}: {ws.max_row} rows × {ws.max_column} cols")
+        logger.info(f"  {name}: {ws.max_row} rows × {ws.max_column} cols")
 
 
 if __name__ == "__main__":

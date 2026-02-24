@@ -10,6 +10,9 @@ import os
 import sys
 import json
 from pathlib import Path
+from tools.log_config import get_logger
+
+logger = get_logger("phase0.prepare_agent_data")
 
 
 def _collapse_preview(text: str) -> str:
@@ -37,7 +40,7 @@ INPUT_V2 = OUT_DIR / "enriched_session_v2.json"
 INPUT_V1 = OUT_DIR / "enriched_session.json"
 INPUT = INPUT_V2 if INPUT_V2.exists() else INPUT_V1
 
-print(f"Reading {INPUT} {'(v2 with LLM enrichment)' if 'v2' in INPUT.name else '(v1 base)'}...")
+logger.info(f"Reading {INPUT} {'(v2 with LLM enrichment)' if 'v2' in INPUT.name else '(v1 base)'}...")
 with open(INPUT) as f:
     data = json.load(f)
 
@@ -49,7 +52,7 @@ summary = {k: v for k, v in data.items() if k != "messages"}
 summary_file = OUT_DIR / "session_metadata.json"
 with open(summary_file, "w") as f:
     json.dump(summary, f, indent=2, default=str)
-print(f"  session_metadata.json: {summary_file.stat().st_size / 1024:.0f} KB")
+logger.info(f"  session_metadata.json: {summary_file.stat().st_size / 1024:.0f} KB")
 
 # ── 2. Tier 2+ messages — full content for deep analysis ─────────────
 tier2plus = [m for m in messages if m["filter_tier"] >= 2]
@@ -127,7 +130,7 @@ emerg_file = OUT_DIR / "emergency_contexts.json"
 with open(emerg_file, "w") as f:
     json.dump({"count": len(emergency_windows), "windows": emergency_windows},
               f, indent=2, default=str)
-print(f"  emergency_contexts.json: {len(emergency_windows)} windows")
+logger.info(f"  emergency_contexts.json: {len(emergency_windows)} windows")
 
 # ── 7. Batch files for per-message processing ────────────────────────
 # Split tier 2+ into batches of 30 messages for agents that need per-message analysis
@@ -145,7 +148,7 @@ for i in range(0, len(tier2plus), batch_size):
                     "messages": batch}, f, indent=2, default=str)
 
 n_batches = (len(tier2plus) + batch_size - 1) // batch_size
-print(f"  batches/: {n_batches} batch files of ~{batch_size} messages each")
+logger.info(f"  batches/: {n_batches} batch files of ~{batch_size} messages each")
 
 # ── 8. Sanitize profanity in all output files + in-memory data ────────
 # Two-pass sanitization:
@@ -185,7 +188,7 @@ for json_file in OUT_DIR.glob("**/*.json"):
         sanitized_count += 1
 
 if sanitized_count:
-    print(f"  sanitized: {sanitized_count} files on disk")
+    logger.info(f"  sanitized: {sanitized_count} files on disk")
 
 # Pass 2: Sanitize in-memory data (tier4, condensed) so safe files get clean content
 for m in tier4:
@@ -219,7 +222,7 @@ for m in tier4:
 safe_t4_file = OUT_DIR / "safe_tier4.json"
 with open(safe_t4_file, "w") as f:
     json.dump({"count": len(safe_tier4), "messages": safe_tier4}, f, indent=2, default=str)
-print(f"  safe_tier4.json: {len(safe_tier4)} msgs (full sanitized content)")
+logger.info(f"  safe_tier4.json: {len(safe_tier4)} msgs (full sanitized content)")
 
 safe_condensed = []
 for m in condensed:
@@ -243,9 +246,9 @@ for m in condensed:
 safe_cond_file = OUT_DIR / "safe_condensed.json"
 with open(safe_cond_file, "w") as f:
     json.dump({"count": len(safe_condensed), "messages": safe_condensed}, f, indent=2, default=str)
-print(f"  safe_condensed.json: {len(safe_condensed)} msgs (full sanitized content)")
+logger.info(f"  safe_condensed.json: {len(safe_condensed)} msgs (full sanitized content)")
 
-print(f"\nDone. All files in: {OUT_DIR}")
+logger.info(f"\nDone. All files in: {OUT_DIR}")
 
 # ── 10. Opus-filtered files (if classifications exist) ─────────────────
 # When opus_classifications.json exists (from opus_classifier.py), build
@@ -253,9 +256,9 @@ print(f"\nDone. All files in: {OUT_DIR}")
 # Python tier-filtered files.
 opus_cls_path = OUT_DIR / "opus_classifications.json"
 if opus_cls_path.exists():
-    print("\n── Opus classifications detected — building filtered files ──")
+    logger.info("\n── Opus classifications detected — building filtered files ──")
     try:
-        from build_opus_filtered import build_opus_filtered
+        from build_opus_messages import build_opus_filtered
         result = build_opus_filtered(OUT_DIR)
         if result:
             print(f"  Opus priority: {result['priority_count']} msgs "
@@ -263,10 +266,10 @@ if opus_cls_path.exists():
             print(f"  Delta: +{result['new_messages']} new, "
                   f"-{result['lost_messages']} dropped")
     except ImportError:
-        # build_opus_filtered.py not available — skip silently
+        # build_opus_messages.py not available — skip silently
         pass
     except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
-        print(f"  Warning: Opus filtering failed: {e}")
+        logger.error(f"  Warning: Opus filtering failed: {e}")
 
     print("\nIMPORTANT: Agents should read safe_opus_priority.json and "
           "opus_priority_messages.json\n"

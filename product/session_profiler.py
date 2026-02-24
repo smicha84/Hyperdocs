@@ -19,6 +19,9 @@ import sys
 from pathlib import Path
 from datetime import datetime, timezone
 from collections import defaultdict
+from tools.log_config import get_logger
+
+logger = get_logger("product.session_profiler")
 
 HYPERDOCS_ROOT = Path(__file__).resolve().parent.parent
 
@@ -146,7 +149,7 @@ def profile_all_sessions(chat_dir):
     total = len(files)
     for i, f in enumerate(files):
         if (i + 1) % 100 == 0:
-            print(f"  Profiling {i+1}/{total}...", flush=True)
+            logger.info(f"  Profiling {i+1}/{total}...", flush=True)
         sessions.append(profile_session(f))
 
     # Sort by start_time (or modified date)
@@ -570,9 +573,9 @@ def main():
     parser.add_argument("--output", default="", help="Output HTML path")
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("Hyperdocs Session Profiler")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Hyperdocs Session Profiler")
+    logger.info("=" * 60)
 
     # Find chat history
     if args.chat_dir:
@@ -580,19 +583,19 @@ def main():
     else:
         chat_dir = find_chat_history()
         if not chat_dir:
-            print("ERROR: Could not find Claude Code chat history.")
-            print("  Checked: ~/PERMANENT_CHAT_HISTORY/sessions/, ~/.claude/projects/")
+            logger.error("ERROR: Could not find Claude Code chat history.")
+            logger.info("  Checked: ~/PERMANENT_CHAT_HISTORY/sessions/, ~/.claude/projects/")
             sys.exit(1)
 
-    print(f"Chat directory: {chat_dir}")
+    logger.info(f"Chat directory: {chat_dir}")
     files = list(chat_dir.glob("*.jsonl"))
-    print(f"Sessions found: {len(files)}")
-    print()
+    logger.info(f"Sessions found: {len(files)}")
+    logger.info()
 
     # Profile all sessions
-    print("Profiling sessions...")
+    logger.info("Profiling sessions...")
     sessions = profile_all_sessions(chat_dir)
-    print(f"  Profiled: {len(sessions)}")
+    logger.info(f"  Profiled: {len(sessions)}")
 
     # Generate visualization
     if args.output:
@@ -603,8 +606,8 @@ def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
     generate_html(sessions, output_path)
 
-    print(f"\nVisualization: {output_path}")
-    print(f"  Size: {output_path.stat().st_size // 1024} KB")
+    logger.info(f"\nVisualization: {output_path}")
+    logger.info(f"  Size: {output_path.stat().st_size // 1024} KB")
 
     # Auto-open
     os.system(f'open "{output_path}"')
@@ -618,7 +621,7 @@ def main():
             "total_sessions": len(sessions),
             "sessions": sessions,
         }, f, indent=2, default=str)
-    print(f"  Profile data: {profile_path}")
+    logger.info(f"  Profile data: {profile_path}")
 
 
 if __name__ == "__main__":
