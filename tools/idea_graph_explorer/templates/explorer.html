@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Idea Graph Explorer</title>
+<script src="https://unpkg.com/cytoscape@3/dist/cytoscape.min.js"></script>
+<script src="https://unpkg.com/cytoscape-fcose@2/cytoscape-fcose.js"></script>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  background: #0a0a10;
+  color: #c8c8d4;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ───────────────────────────────────────────────── */
+#header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #10101a, #16213e);
+  border-bottom: 1px solid #1e1e30;
+  flex-shrink: 0;
+}
+#header h1 { font-size: 16px; color: #e94560; white-space: nowrap; }
+#header select, #header button, #header input {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  color: #c8c8d4;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 11px;
+}
+#header select:focus, #header button:focus, #header input:focus { outline: 1px solid #53a8b6; }
+#header button:hover { background: #252540; }
+#header .stats { margin-left: auto; color: #888; font-size: 11px; }
+
+/* ── Main layout ──────────────────────────────────────────── */
+#main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Left sidebar ─────────────────────────────────────────── */
+#left {
+  width: 280px;
+  min-width: 280px;
+  border-right: 1px solid #1e1e30;
+  overflow-y: auto;
+  padding: 8px;
+  flex-shrink: 0;
+}
+.panel-section {
+  margin-bottom: 12px;
+}
+.panel-section h3 {
+  font-size: 11px;
+  color: #53a8b6;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #1e1e30;
+  padding-bottom: 4px;
+}
+.filter-group { margin-bottom: 8px; }
+.filter-group label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 0;
+  cursor: pointer;
+  font-size: 11px;
+}
+.filter-group label:hover { color: #eee; }
+.filter-group input[type="checkbox"] { accent-color: #53a8b6; }
+.color-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.edge-line {
+  display: inline-block;
+  width: 16px;
+  height: 2px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.edge-line.dashed { border-top: 2px dashed; height: 0; }
+.edge-line.dotted { border-top: 2px dotted; height: 0; }
+.edge-line.solid { height: 2px; }
+#search-input {
+  width: 100%;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  color: #c8c8d4;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 11px;
+}
+.maturity-category {
+  cursor: pointer;
+  user-select: none;
+}
+.maturity-category:hover { color: #eee; }
+.maturity-sub { padding-left: 16px; display: none; }
+.maturity-sub.open { display: block; }
+.subgraph-item {
+  padding: 4px 6px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 11px;
+}
+.subgraph-item:hover { background: #1a1a2e; }
+.subgraph-item.active { background: #1e2d4a; color: #53a8b6; }
+
+/* ── Center (Cytoscape canvas) ────────────────────────────── */
+#center { flex: 1; position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+#cy { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+#loading-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(10, 10, 16, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #53a8b6;
+  z-index: 10;
+}
+
+/* ── Right sidebar ────────────────────────────────────────── */
+#right {
+  width: 320px;
+  min-width: 320px;
+  border-left: 1px solid #1e1e30;
+  overflow-y: auto;
+  padding: 8px;
+  flex-shrink: 0;
+}
+.detail-card {
+  background: #111118;
+  border: 1px solid #1e1e30;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.detail-card h4 {
+  font-size: 12px;
+  color: #e94560;
+  margin-bottom: 6px;
+}
+.detail-row { display: flex; gap: 8px; margin-bottom: 3px; font-size: 11px; }
+.detail-label { color: #888; min-width: 80px; flex-shrink: 0; }
+.detail-value { color: #c8c8d4; word-break: break-word; }
+.analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.analytics-table th {
+  text-align: left;
+  color: #888;
+  padding: 3px 4px;
+  border-bottom: 1px solid #1e1e30;
+}
+.analytics-table td {
+  padding: 3px 4px;
+  cursor: pointer;
+}
+.analytics-table tr:hover { background: #1a1a2e; }
+.analytics-table .bar-cell {
+  position: relative;
+}
+.analytics-bar {
+  height: 10px;
+  background: #53a8b6;
+  border-radius: 2px;
+  opacity: 0.6;
+}
+.metric-radio { margin-right: 4px; accent-color: #53a8b6; }
+.graph-stat { display: flex; justify-content: space-between; padding: 2px 0; font-size: 11px; }
+.graph-stat .stat-label { color: #888; }
+.graph-stat .stat-value { color: #4ecca3; }
+
+/* ── Bottom bar ───────────────────────────────────────────── */
+#bottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px;
+  background: #10101a;
+  border-top: 1px solid #1e1e30;
+  flex-shrink: 0;
+}
+#timeline-slider {
+  flex: 1;
+  accent-color: #53a8b6;
+}
+#timeline-label { font-size: 11px; color: #888; min-width: 80px; }
+.speed-btn {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  color: #888;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.speed-btn.active { color: #53a8b6; border-color: #53a8b6; }
+#layout-picker {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  color: #c8c8d4;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+/* ── Opus panel ───────────────────────────────────────────── */
+#opus-panel {
+  border-top: 1px solid #1e1e30;
+  background: #0c0c14;
+  flex-shrink: 0;
+}
+#opus-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  cursor: pointer;
+}
+#opus-header:hover { background: #10101a; }
+#opus-toggle { color: #e94560; font-size: 12px; }
+#opus-content {
+  display: none;
+  padding: 8px 16px 12px;
+}
+#opus-content.open { display: block; }
+#opus-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+#opus-question {
+  flex: 1;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  color: #c8c8d4;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+}
+#opus-send {
+  background: #e94560;
+  border: none;
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+#opus-send:hover { background: #d63550; }
+#opus-send:disabled { opacity: 0.5; cursor: not-allowed; }
+#opus-context-toggle {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 8px;
+}
+#opus-context-toggle label { cursor: pointer; margin-right: 12px; }
+#opus-response {
+  background: #111118;
+  border: 1px solid #1e1e30;
+  border-radius: 6px;
+  padding: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+#opus-response .node-ref {
+  color: #53a8b6;
+  cursor: pointer;
+  text-decoration: underline;
+}
+#opus-response .node-ref:hover { color: #4ecca3; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
+<div id="header">
+  <h1>Idea Graph Explorer</h1>
+  <select id="session-picker"><option value="">Loading sessions...</option></select>
+  <button id="btn-all-sessions">All Sessions</button>
+  <input type="text" id="search-input-header" placeholder="Search nodes..." style="width:160px">
+  <span class="stats" id="header-stats"></span>
+</div>
+
+<!-- ═══════════════════════ MAIN ═══════════════════════── -->
+<div id="main">
+
+  <!-- LEFT SIDEBAR -->
+  <div id="left">
+    <!-- Subgraphs -->
+    <div class="panel-section" id="subgraph-section" style="display:none">
+      <h3>Subgraphs</h3>
+      <div id="subgraph-list"></div>
+    </div>
+
+    <!-- Confidence filter -->
+    <div class="panel-section">
+      <h3>Confidence</h3>
+      <div class="filter-group" id="confidence-filters"></div>
+    </div>
+
+    <!-- Edge type filter -->
+    <div class="panel-section">
+      <h3>Edge Types</h3>
+      <div class="filter-group" id="edge-filters"></div>
+    </div>
+
+    <!-- Maturity filter -->
+    <div class="panel-section">
+      <h3>Maturity</h3>
+      <div class="filter-group" id="maturity-filters"></div>
+    </div>
+  </div>
+
+  <!-- CENTER (Cytoscape) -->
+  <div id="center">
+    <div id="cy"></div>
+    <div id="loading-overlay">Loading graph data...</div>
+  </div>
+
+  <!-- RIGHT SIDEBAR -->
+  <div id="right">
+    <div class="detail-card" id="node-detail" style="display:none">
+      <h4 id="node-detail-title">Node Detail</h4>
+      <div id="node-detail-body"></div>
+    </div>
+    <div class="detail-card" id="edge-detail" style="display:none">
+      <h4>Edge Detail</h4>
+      <div id="edge-detail-body"></div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="detail-card">
+      <h4>Analytics</h4>
+      <div style="margin-bottom: 6px;">
+        <label class="metric-label"><input type="radio" name="metric" value="pagerank" class="metric-radio" checked> PageRank</label>
+        <label class="metric-label"><input type="radio" name="metric" value="betweenness" class="metric-radio"> Betweenness</label>
+        <label class="metric-label"><input type="radio" name="metric" value="degree" class="metric-radio"> Degree</label>
+      </div>
+      <div style="margin-bottom: 6px;">
+        <label style="font-size:11px;color:#888;cursor:pointer">
+          <input type="checkbox" id="map-to-size" style="accent-color:#53a8b6"> Map to size
+        </label>
+      </div>
+      <div id="analytics-table-container" style="max-height:200px;overflow-y:auto"></div>
+    </div>
+
+    <!-- Graph metrics -->
+    <div class="detail-card">
+      <h4>Graph Metrics</h4>
+      <div id="graph-metrics"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ BOTTOM BAR ═══════════════════ -->
+<div id="bottom">
+  <span id="timeline-label">msg: 0</span>
+  <input type="range" id="timeline-slider" min="0" max="100" value="100">
+  <button class="speed-btn" id="btn-play">&#9654;</button>
+  <button class="speed-btn" data-speed="0.5">0.5x</button>
+  <button class="speed-btn active" data-speed="1">1x</button>
+  <button class="speed-btn" data-speed="2">2x</button>
+  <select id="layout-picker">
+    <option value="fcose">fcose (force)</option>
+    <option value="breadthfirst">breadthfirst</option>
+    <option value="circle">circle</option>
+    <option value="grid">grid</option>
+    <option value="concentric">concentric</option>
+  </select>
+</div>
+
+<!-- ═══════════════════════ OPUS PANEL ═══════════════════ -->
+<div id="opus-panel">
+  <div id="opus-header">
+    <span id="opus-toggle">&#9654;</span>
+    <span style="font-size:12px;color:#e94560;">Ask Opus about this graph</span>
+  </div>
+  <div id="opus-content">
+    <div id="opus-context-toggle">
+      <label><input type="radio" name="opus-ctx" value="full" checked> Full graph</label>
+      <label><input type="radio" name="opus-ctx" value="selected"> Selected nodes only</label>
+    </div>
+    <div id="opus-input-row">
+      <input type="text" id="opus-question" placeholder="Ask about this graph...">
+      <button id="opus-send">Send</button>
+    </div>
+    <div id="opus-response" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// Idea Graph Explorer — Client-side logic
+// ═══════════════════════════════════════════════════════════════
+
+// ── Color maps ─────────────────────────────────────────────────
+const CONFIDENCE_COLORS = {
+  proven:       '#22c55e',
+  stable:       '#34d399',
+  working:      '#60a5fa',
+  tentative:    '#e0af68',
+  experimental: '#f472b6',
+  fragile:      '#ef4444',
+  unknown:      '#555555',
+};
+
+const EDGE_STYLES = {
+  evolved:      { color: '#60a5fa', style: 'solid' },
+  concretized:  { color: '#22c55e', style: 'solid' },
+  split:        { color: '#e0af68', style: 'dashed' },
+  merged:       { color: '#a855f7', style: 'solid' },
+  abandoned:    { color: '#ef4444', style: 'dotted' },
+  pivoted:      { color: '#f472b6', style: 'dashed' },
+  resurrected:  { color: '#34d399', style: 'dashed' },
+  constrained:  { color: '#f97316', style: 'dotted' },
+  expanded:     { color: '#818cf8', style: 'solid' },
+  abstracted:   { color: '#c084fc', style: 'dashed' },
+  unknown:      { color: '#555555', style: 'solid' },
+};
+
+// ── State ──────────────────────────────────────────────────────
+let cy = null;
+let currentData = null;
+let currentSessionId = '';
+let sessions = [];
+let playing = false;
+let playInterval = null;
+let playSpeed = 1;
+let selectedNodes = [];
+
+// ── Initialize Cytoscape ───────────────────────────────────────
+function initCytoscape() {
+  cy = cytoscape({
+    container: document.getElementById('cy'),
+    style: [
+      {
+        selector: 'node',
+        style: {
+          'label': 'data(label)',
+          'background-color': 'data(color)',
+          'width': 'data(size)',
+          'height': 'data(size)',
+          'font-size': 'data(fontSize)',
+          'color': '#c8c8d4',
+          'text-outline-color': '#0a0a10',
+          'text-outline-width': 1.5,
+          'text-valign': 'bottom',
+          'text-margin-y': 4,
+          'text-max-width': '120px',
+          'text-wrap': 'ellipsis',
+          'border-width': 0,
+          'opacity': 1,
+          'text-opacity': 'data(labelOpacity)',
+        },
+      },
+      {
+        selector: 'node:selected',
+        style: {
+          'border-width': 3,
+          'border-color': '#e94560',
+          'text-opacity': 1,
+        },
+      },
+      {
+        selector: 'node.dimmed',
+        style: { 'opacity': 0.15, 'text-opacity': 0 },
+      },
+      {
+        selector: 'node.highlighted',
+        style: { 'border-width': 3, 'border-color': '#ffd369' },
+      },
+      {
+        selector: 'edge',
+        style: {
+          'width': 1.5,
+          'line-color': 'data(color)',
+          'target-arrow-color': 'data(color)',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'arrow-scale': 0.8,
+          'opacity': 0.7,
+          'line-style': 'data(lineStyle)',
+        },
+      },
+      {
+        selector: 'edge.dimmed',
+        style: { 'opacity': 0.05 },
+      },
+      {
+        selector: 'edge:selected',
+        style: { 'width': 3, 'opacity': 1 },
+      },
+    ],
+    layout: { name: 'grid' },
+    minZoom: 0.1,
+    maxZoom: 4,
+  });
+
+  // Click handlers
+  cy.on('tap', 'node', function(e) {
+    const data = e.target.data();
+    showNodeDetail(data);
+    selectedNodes = [data.id.replace(/^.*_/, '')];
+  });
+  cy.on('tap', 'edge', function(e) {
+    showEdgeDetail(e.target.data());
+  });
+  cy.on('tap', function(e) {
+    if (e.target === cy) {
+      hideDetails();
+      selectedNodes = [];
+    }
+  });
+
+  // Show labels on hover (registered once)
+  cy.on('mouseover', 'node', function(e) {
+    e.target.style('text-opacity', 1);
+  });
+  cy.on('mouseout', 'node', function(e) {
+    const nd = e.target.data();
+    if (!e.target.selected()) {
+      e.target.style('text-opacity', nd.labelOpacity);
+    }
+  });
+}
+
+// ── Load sessions list ─────────────────────────────────────────
+async function loadSessions() {
+  const resp = await fetch('/api/sessions');
+  const data = await resp.json();
+  sessions = data.sessions;
+
+  const picker = document.getElementById('session-picker');
+  picker.innerHTML = '<option value="">Select session...</option>';
+  for (const s of sessions) {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${s.id} (${s.node_count}n/${s.edge_count}e)`;
+    picker.appendChild(opt);
+  }
+
+  document.getElementById('header-stats').textContent =
+    `${sessions.length} sessions | ${data.total_nodes} nodes | ${data.total_edges} edges`;
+
+  // Load first session with reasonable size
+  const good = sessions.find(s => s.node_count >= 10 && s.node_count <= 30) || sessions[0];
+  if (good) {
+    picker.value = good.id;
+    loadGraph(good.id);
+  }
+}
+
+// ── Load graph for a session ───────────────────────────────────
+async function loadGraph(sessionId) {
+  showLoading(true);
+  currentSessionId = sessionId;
+
+  try {
+    const url = sessionId === 'all' ? '/api/graph/all' : `/api/graph/${sessionId}`;
+    const resp = await fetch(url);
+    currentData = await resp.json();
+
+    // Hide loading BEFORE render so Cytoscape can measure its container
+    showLoading(false);
+
+    renderGraph(currentData);
+    updateFilters(currentData);
+    updateAnalytics(currentData);
+    updateGraphMetrics(currentData);
+    updateTimeline(currentData);
+    updateSubgraphs(currentData);
+  } catch (err) {
+    console.error('loadGraph error:', err);
+    document.getElementById('loading-overlay').textContent = 'Error: ' + err.message;
+    return;
+  }
+}
+
+// ── Render graph in Cytoscape ──────────────────────────────────
+function renderGraph(data) {
+  cy.elements().remove();
+
+  const analytics = data.analytics || {};
+  const degree = analytics.degree || {};
+  const pagerank = analytics.pagerank || {};
+
+  // Compute max degree for scaling
+  let maxDeg = 1;
+  for (const d of Object.values(degree)) {
+    if (d.total > maxDeg) maxDeg = d.total;
+  }
+
+  // Compute top-10 by degree for label visibility
+  const degSorted = Object.entries(degree).sort((a, b) => b[1].total - a[1].total);
+  const topLabels = new Set(degSorted.slice(0, 10).map(x => x[0]));
+
+  // Add nodes
+  for (const node of data.nodes) {
+    const deg = degree[node.id] || { total: 1 };
+    const size = 20 + (deg.total / maxDeg) * 40;
+    const fontSize = Math.max(8, Math.min(14, size * 0.3));
+    const color = CONFIDENCE_COLORS[node.confidence] || CONFIDENCE_COLORS.unknown;
+
+    cy.add({
+      group: 'nodes',
+      data: {
+        id: node.id,
+        label: node.label || node.id,
+        color: color,
+        size: size,
+        fontSize: fontSize,
+        labelOpacity: topLabels.has(node.id) ? 1 : 0,
+        // Store all node data for detail panel
+        _raw: node,
+      },
+    });
+  }
+
+  // Add edges (skip edges with missing endpoints)
+  const nodeSet = new Set(data.nodes.map(n => n.id));
+  for (let i = 0; i < data.edges.length; i++) {
+    const edge = data.edges[i];
+    if (!nodeSet.has(edge.from) || !nodeSet.has(edge.to)) continue;
+    const style = EDGE_STYLES[edge.type] || EDGE_STYLES.unknown;
+    const lineStyle = style.style === 'dashed' ? 'dashed' : style.style === 'dotted' ? 'dotted' : 'solid';
+
+    cy.add({
+      group: 'edges',
+      data: {
+        id: `e${i}`,
+        source: edge.from,
+        target: edge.to,
+        color: style.color,
+        lineStyle: lineStyle,
+        _raw: edge,
+      },
+    });
+  }
+
+  runLayout();
+}
+
+// ── Run layout ─────────────────────────────────────────────────
+function runLayout() {
+  // Check if fcose is available, fall back to cose if not
+  let name = document.getElementById('layout-picker').value;
+  if (name === 'fcose' && !cytoscape.prototype._private) {
+    // fcose registers itself — check via layout existence
+    try { cy.layout({ name: 'fcose' }); } catch(e) { name = 'cose'; }
+  }
+
+  let opts = { name: name, animate: false }; // no animation for faster fit
+
+  if (name === 'fcose') {
+    opts.nodeRepulsion = function() { return 8000; };
+    opts.idealEdgeLength = function() { return 120; };
+    opts.edgeElasticity = function() { return 0.45; };
+    opts.numIter = 2500;
+    opts.randomize = true;
+    opts.quality = 'default';
+    opts.nodeSeparation = 75;
+  } else if (name === 'cose') {
+    opts.nodeRepulsion = function() { return 8000; };
+    opts.idealEdgeLength = function() { return 120; };
+    opts.edgeElasticity = function() { return 0.45; };
+    opts.numIter = 1000;
+    opts.randomize = true;
+  } else if (name === 'concentric') {
+    const confRank = { proven: 1, stable: 2, working: 3, tentative: 4, experimental: 5, fragile: 6, unknown: 7 };
+    opts.concentric = function(n) {
+      const raw = n.data('_raw');
+      return 8 - (confRank[raw?.confidence] || 7);
+    };
+    opts.levelWidth = function() { return 1; };
+    opts.minNodeSpacing = 50;
+  } else if (name === 'breadthfirst') {
+    opts.directed = true;
+    opts.spacingFactor = 1.2;
+  }
+
+  // Ensure container dimensions are known
+  cy.resize();
+
+  opts.stop = function() {
+    // Fit after layout completes
+    setTimeout(function() {
+      cy.resize();
+      cy.fit(undefined, 40);
+    }, 100);
+  };
+
+  cy.layout(opts).run();
+}
+
+// ── Filters ────────────────────────────────────────────────────
+function updateFilters(data) {
+  // Confidence filters
+  const confDiv = document.getElementById('confidence-filters');
+  confDiv.innerHTML = '';
+  for (const [conf, color] of Object.entries(CONFIDENCE_COLORS)) {
+    const count = data.nodes.filter(n => n.confidence === conf).length;
+    if (count === 0) continue;
+    const lbl = document.createElement('label');
+    lbl.innerHTML = `<input type="checkbox" checked data-filter="confidence" data-value="${conf}">
+      <span class="color-dot" style="background:${color}"></span> ${conf} (${count})`;
+    confDiv.appendChild(lbl);
+  }
+
+  // Edge type filters
+  const edgeDiv = document.getElementById('edge-filters');
+  edgeDiv.innerHTML = '';
+  const edgeTypes = {};
+  for (const e of data.edges) {
+    edgeTypes[e.type] = (edgeTypes[e.type] || 0) + 1;
+  }
+  for (const [etype, count] of Object.entries(edgeTypes).sort((a, b) => b[1] - a[1])) {
+    const style = EDGE_STYLES[etype] || EDGE_STYLES.unknown;
+    const lineClass = style.style;
+    const lbl = document.createElement('label');
+    lbl.innerHTML = `<input type="checkbox" checked data-filter="edge" data-value="${etype}">
+      <span class="edge-line ${lineClass}" style="background:${style.color};border-color:${style.color}"></span> ${etype} (${count})`;
+    edgeDiv.appendChild(lbl);
+  }
+
+  // Maturity filters (grouped)
+  const matDiv = document.getElementById('maturity-filters');
+  matDiv.innerHTML = '';
+  const matGroups = { Early: {}, Active: {}, Terminal: {}, Unknown: {} };
+  for (const n of data.nodes) {
+    const g = n.maturity_group || 'Unknown';
+    const m = n.maturity || 'unknown';
+    if (!matGroups[g]) matGroups[g] = {};
+    matGroups[g][m] = (matGroups[g][m] || 0) + 1;
+  }
+  for (const [group, mats] of Object.entries(matGroups)) {
+    const total = Object.values(mats).reduce((a, b) => a + b, 0);
+    if (total === 0) continue;
+
+    const wrapper = document.createElement('div');
+    const catLabel = document.createElement('label');
+    catLabel.className = 'maturity-category';
+    catLabel.innerHTML = `<input type="checkbox" checked data-filter="maturity-group" data-value="${group}"> ${group} (${total})`;
+    wrapper.appendChild(catLabel);
+
+    const sub = document.createElement('div');
+    sub.className = 'maturity-sub';
+    for (const [m, c] of Object.entries(mats).sort((a, b) => b[1] - a[1])) {
+      const ml = document.createElement('label');
+      ml.innerHTML = `<input type="checkbox" checked data-filter="maturity" data-value="${m}"> ${m} (${c})`;
+      sub.appendChild(ml);
+    }
+    wrapper.appendChild(sub);
+    matDiv.appendChild(wrapper);
+
+    // Toggle sub-list on category click (not checkbox)
+    catLabel.addEventListener('click', function(e) {
+      if (e.target.tagName !== 'INPUT') {
+        sub.classList.toggle('open');
+      }
+    });
+  }
+
+  // Bind all filter checkboxes
+  document.querySelectorAll('[data-filter]').forEach(cb => {
+    cb.addEventListener('change', applyFilters);
+  });
+}
+
+function applyFilters() {
+  if (!currentData) return;
+
+  // Collect active confidence values
+  const activeConf = new Set();
+  document.querySelectorAll('[data-filter="confidence"]:checked').forEach(cb => {
+    activeConf.add(cb.dataset.value);
+  });
+
+  // Collect active edge types
+  const activeEdge = new Set();
+  document.querySelectorAll('[data-filter="edge"]:checked').forEach(cb => {
+    activeEdge.add(cb.dataset.value);
+  });
+
+  // Collect active maturity groups and individual maturities
+  const activeMatGroup = new Set();
+  document.querySelectorAll('[data-filter="maturity-group"]:checked').forEach(cb => {
+    activeMatGroup.add(cb.dataset.value);
+  });
+  const activeMat = new Set();
+  document.querySelectorAll('[data-filter="maturity"]:checked').forEach(cb => {
+    activeMat.add(cb.dataset.value);
+  });
+
+  // Timeline value
+  const sliderVal = parseInt(document.getElementById('timeline-slider').value);
+
+  // Apply to nodes
+  cy.nodes().forEach(node => {
+    const raw = node.data('_raw');
+    const confOk = activeConf.has(raw.confidence);
+    const matOk = activeMatGroup.has(raw.maturity_group) && activeMat.has(raw.maturity);
+    const timeOk = (raw.message_index || 0) <= sliderVal;
+    const searchOk = isSearchMatch(raw);
+
+    if (confOk && matOk && timeOk && searchOk) {
+      node.style('display', 'element');
+    } else {
+      node.style('display', 'none');
+    }
+  });
+
+  // Apply to edges
+  cy.edges().forEach(edge => {
+    const raw = edge.data('_raw');
+    const typeOk = activeEdge.has(raw.type);
+    const srcVisible = edge.source().style('display') === 'element';
+    const tgtVisible = edge.target().style('display') === 'element';
+
+    if (typeOk && srcVisible && tgtVisible) {
+      edge.style('display', 'element');
+    } else {
+      edge.style('display', 'none');
+    }
+  });
+}
+
+// ── Search ─────────────────────────────────────────────────────
+let searchTerm = '';
+function isSearchMatch(raw) {
+  if (!searchTerm) return true;
+  const s = searchTerm.toLowerCase();
+  return (raw.label || '').toLowerCase().includes(s) ||
+         (raw.description || '').toLowerCase().includes(s) ||
+         (raw.id || '').toLowerCase().includes(s);
+}
+
+document.getElementById('search-input-header').addEventListener('input', function(e) {
+  searchTerm = e.target.value;
+  applyFilters();
+});
+
+// ── Analytics panel ────────────────────────────────────────────
+function updateAnalytics(data) {
+  const analytics = data.analytics || {};
+  buildAnalyticsTable('pagerank', analytics);
+}
+
+function buildAnalyticsTable(metric, analytics) {
+  const container = document.getElementById('analytics-table-container');
+  container.innerHTML = '';
+
+  let entries = [];
+  if (metric === 'pagerank') {
+    entries = Object.entries(analytics.pagerank || {});
+  } else if (metric === 'betweenness') {
+    entries = Object.entries(analytics.betweenness || {});
+  } else if (metric === 'degree') {
+    entries = Object.entries(analytics.degree || {}).map(([k, v]) => [k, v.total]);
+  }
+
+  entries.sort((a, b) => b[1] - a[1]);
+  const maxVal = entries.length > 0 ? entries[0][1] : 1;
+
+  const table = document.createElement('table');
+  table.className = 'analytics-table';
+  table.innerHTML = '<tr><th>Node</th><th>Score</th><th style="width:60px"></th></tr>';
+
+  for (const [nid, score] of entries.slice(0, 20)) {
+    const node = currentData.nodes.find(n => n.id === nid);
+    const label = node ? node.label : nid;
+    const displayScore = typeof score === 'number' ? score.toFixed(4) : score;
+    const pct = maxVal > 0 ? (score / maxVal) * 100 : 0;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td title="${label}">${nid}</td>
+      <td>${displayScore}</td>
+      <td class="bar-cell"><div class="analytics-bar" style="width:${pct}%"></div></td>`;
+    tr.addEventListener('click', () => {
+      const cyNode = cy.getElementById(nid);
+      if (cyNode.length) {
+        cy.animate({ center: { eles: cyNode }, zoom: 2 }, { duration: 300 });
+        cyNode.select();
+        showNodeDetail(cyNode.data());
+      }
+    });
+    table.appendChild(tr);
+  }
+  container.appendChild(table);
+}
+
+// Metric radio buttons
+document.querySelectorAll('[name="metric"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    if (currentData) buildAnalyticsTable(this.value, currentData.analytics || {});
+  });
+});
+
+// Map-to-size toggle
+document.getElementById('map-to-size').addEventListener('change', function() {
+  if (!currentData) return;
+  const metric = document.querySelector('[name="metric"]:checked').value;
+  const analytics = currentData.analytics || {};
+
+  if (this.checked) {
+    let values = {};
+    if (metric === 'pagerank') values = analytics.pagerank || {};
+    else if (metric === 'betweenness') values = analytics.betweenness || {};
+    else if (metric === 'degree') {
+      for (const [k, v] of Object.entries(analytics.degree || {})) values[k] = v.total;
+    }
+    const maxVal = Math.max(...Object.values(values), 0.001);
+
+    cy.nodes().forEach(node => {
+      const val = values[node.id()] || 0;
+      const size = 20 + (val / maxVal) * 40;
+      node.data('size', size);
+      node.data('fontSize', Math.max(8, Math.min(14, size * 0.3)));
+    });
+  } else {
+    // Restore degree-based sizing
+    const degree = analytics.degree || {};
+    let maxDeg = 1;
+    for (const d of Object.values(degree)) {
+      if (d.total > maxDeg) maxDeg = d.total;
+    }
+    cy.nodes().forEach(node => {
+      const d = degree[node.id()] || { total: 1 };
+      const size = 20 + (d.total / maxDeg) * 40;
+      node.data('size', size);
+      node.data('fontSize', Math.max(8, Math.min(14, size * 0.3)));
+    });
+  }
+});
+
+// ── Graph metrics ──────────────────────────────────────────────
+function updateGraphMetrics(data) {
+  const a = data.analytics || {};
+  const div = document.getElementById('graph-metrics');
+  div.innerHTML = '';
+  const stats = [
+    ['Nodes', a.node_count || 0],
+    ['Edges', a.edge_count || 0],
+    ['Density', (a.density || 0).toFixed(4)],
+    ['Components', a.component_count || 0],
+    ['Subgraphs', (data.subgraphs || []).length],
+  ];
+  for (const [label, val] of stats) {
+    const row = document.createElement('div');
+    row.className = 'graph-stat';
+    row.innerHTML = `<span class="stat-label">${label}</span><span class="stat-value">${val}</span>`;
+    div.appendChild(row);
+  }
+}
+
+// ── Detail panels ──────────────────────────────────────────────
+function showNodeDetail(data) {
+  const raw = data._raw || data;
+  const div = document.getElementById('node-detail');
+  const body = document.getElementById('node-detail-body');
+  div.style.display = 'block';
+  document.getElementById('node-detail-title').textContent = raw.label || raw.id;
+
+  const fields = [
+    ['ID', raw.id],
+    ['Confidence', raw.confidence],
+    ['Maturity', `${raw.maturity} (${raw.maturity_group})`],
+    ['Message Index', raw.message_index],
+    ['Source', raw.source],
+    ['Emotion', raw.emotional_context],
+    ['Description', raw.description],
+  ];
+  body.innerHTML = fields
+    .filter(([, v]) => v !== undefined && v !== '' && v !== null)
+    .map(([k, v]) => `<div class="detail-row"><span class="detail-label">${k}</span><span class="detail-value">${v}</span></div>`)
+    .join('');
+
+  // Show extra fields if present
+  if (raw._extra) {
+    for (const [k, v] of Object.entries(raw._extra)) {
+      if (k.startsWith('_')) continue;
+      const display = typeof v === 'object' ? JSON.stringify(v, null, 1) : v;
+      body.innerHTML += `<div class="detail-row"><span class="detail-label">${k}</span><span class="detail-value">${display}</span></div>`;
+    }
+  }
+}
+
+function showEdgeDetail(data) {
+  const raw = data._raw || data;
+  const div = document.getElementById('edge-detail');
+  const body = document.getElementById('edge-detail-body');
+  div.style.display = 'block';
+
+  const fields = [
+    ['From', raw.from],
+    ['To', raw.to],
+    ['Type', raw.type],
+    ['Label', raw.label],
+    ['Evidence', raw.evidence],
+  ];
+  body.innerHTML = fields
+    .filter(([, v]) => v !== undefined && v !== '' && v !== null)
+    .map(([k, v]) => `<div class="detail-row"><span class="detail-label">${k}</span><span class="detail-value">${v}</span></div>`)
+    .join('');
+}
+
+function hideDetails() {
+  document.getElementById('node-detail').style.display = 'none';
+  document.getElementById('edge-detail').style.display = 'none';
+}
+
+// ── Subgraphs ──────────────────────────────────────────────────
+function updateSubgraphs(data) {
+  const section = document.getElementById('subgraph-section');
+  const list = document.getElementById('subgraph-list');
+  list.innerHTML = '';
+
+  if (!data.subgraphs || data.subgraphs.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+
+  // "Show All" option
+  const allItem = document.createElement('div');
+  allItem.className = 'subgraph-item active';
+  allItem.textContent = 'Show All';
+  allItem.addEventListener('click', () => {
+    cy.nodes().removeClass('dimmed');
+    cy.edges().removeClass('dimmed');
+    list.querySelectorAll('.subgraph-item').forEach(el => el.classList.remove('active'));
+    allItem.classList.add('active');
+  });
+  list.appendChild(allItem);
+
+  for (const sg of data.subgraphs) {
+    const item = document.createElement('div');
+    item.className = 'subgraph-item';
+    item.textContent = `${sg.name} (${sg.node_ids.length}n)`;
+    item.title = sg.description;
+    item.addEventListener('click', () => {
+      const nodeSet = new Set(sg.node_ids);
+      cy.nodes().forEach(n => {
+        if (nodeSet.has(n.id())) {
+          n.removeClass('dimmed');
+        } else {
+          n.addClass('dimmed');
+        }
+      });
+      cy.edges().forEach(e => {
+        if (nodeSet.has(e.source().id()) && nodeSet.has(e.target().id())) {
+          e.removeClass('dimmed');
+        } else {
+          e.addClass('dimmed');
+        }
+      });
+      list.querySelectorAll('.subgraph-item').forEach(el => el.classList.remove('active'));
+      item.classList.add('active');
+    });
+    list.appendChild(item);
+  }
+}
+
+// ── Timeline ───────────────────────────────────────────────────
+function updateTimeline(data) {
+  let maxMsg = 0;
+  for (const n of data.nodes) {
+    if ((n.message_index || 0) > maxMsg) maxMsg = n.message_index;
+  }
+  const slider = document.getElementById('timeline-slider');
+  slider.max = maxMsg || 100;
+  slider.value = maxMsg || 100;
+  document.getElementById('timeline-label').textContent = `msg: ${slider.value}`;
+  stopPlayback();
+}
+
+document.getElementById('timeline-slider').addEventListener('input', function() {
+  document.getElementById('timeline-label').textContent = `msg: ${this.value}`;
+  applyFilters();
+});
+
+// Play/Pause
+document.getElementById('btn-play').addEventListener('click', function() {
+  if (playing) {
+    stopPlayback();
+  } else {
+    startPlayback();
+  }
+});
+
+function startPlayback() {
+  playing = true;
+  document.getElementById('btn-play').textContent = '\u275A\u275A';
+  document.getElementById('btn-play').classList.add('active');
+  const slider = document.getElementById('timeline-slider');
+  slider.value = 0;
+  applyFilters();
+
+  const step = Math.max(1, Math.floor(parseInt(slider.max) / 100));
+  playInterval = setInterval(() => {
+    let val = parseInt(slider.value) + step;
+    if (val > parseInt(slider.max)) {
+      stopPlayback();
+      val = parseInt(slider.max);
+    }
+    slider.value = val;
+    document.getElementById('timeline-label').textContent = `msg: ${val}`;
+    applyFilters();
+  }, 100 / playSpeed);
+}
+
+function stopPlayback() {
+  playing = false;
+  clearInterval(playInterval);
+  document.getElementById('btn-play').textContent = '\u25B6';
+  document.getElementById('btn-play').classList.remove('active');
+}
+
+// Speed buttons
+document.querySelectorAll('[data-speed]').forEach(btn => {
+  btn.addEventListener('click', function() {
+    playSpeed = parseFloat(this.dataset.speed);
+    document.querySelectorAll('[data-speed]').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    if (playing) {
+      clearInterval(playInterval);
+      const slider = document.getElementById('timeline-slider');
+      const step = Math.max(1, Math.floor(parseInt(slider.max) / 100));
+      playInterval = setInterval(() => {
+        let val = parseInt(slider.value) + step;
+        if (val > parseInt(slider.max)) {
+          stopPlayback();
+          val = parseInt(slider.max);
+        }
+        slider.value = val;
+        document.getElementById('timeline-label').textContent = `msg: ${val}`;
+        applyFilters();
+      }, 100 / playSpeed);
+    }
+  });
+});
+
+// Layout picker
+document.getElementById('layout-picker').addEventListener('change', runLayout);
+
+// ── Opus panel ─────────────────────────────────────────────────
+document.getElementById('opus-header').addEventListener('click', function() {
+  const content = document.getElementById('opus-content');
+  const toggle = document.getElementById('opus-toggle');
+  content.classList.toggle('open');
+  toggle.textContent = content.classList.contains('open') ? '\u25BC' : '\u25B6';
+});
+
+document.getElementById('opus-send').addEventListener('click', sendOpusQuestion);
+document.getElementById('opus-question').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') sendOpusQuestion();
+});
+
+async function sendOpusQuestion() {
+  const question = document.getElementById('opus-question').value.trim();
+  if (!question) return;
+
+  const btn = document.getElementById('opus-send');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  const respDiv = document.getElementById('opus-response');
+  respDiv.style.display = 'block';
+  respDiv.textContent = 'Thinking...';
+
+  const ctxMode = document.querySelector('[name="opus-ctx"]:checked').value;
+
+  try {
+    const resp = await fetch('/api/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: question,
+        session_id: currentSessionId,
+        selected_nodes: ctxMode === 'selected' ? selectedNodes : [],
+      }),
+    });
+    const data = await resp.json();
+
+    // Render response with clickable node references
+    let html = escapeHtml(data.explanation || 'No response.');
+    // Make node IDs clickable
+    html = html.replace(/\[?(N\d+)\]?/g, function(match, nid) {
+      return `<span class="node-ref" data-nid="${nid}">${match}</span>`;
+    });
+    respDiv.innerHTML = html;
+
+    // Highlight referenced nodes
+    cy.nodes().removeClass('highlighted');
+    for (const nid of (data.referenced_nodes || [])) {
+      const cyNode = cy.getElementById(nid);
+      if (cyNode.length) cyNode.addClass('highlighted');
+      // Also try prefixed version for all-sessions view
+      if (currentSessionId !== 'all') {
+        const prefixed = cy.getElementById(`${currentSessionId}_${nid}`);
+        if (prefixed.length) prefixed.addClass('highlighted');
+      }
+    }
+
+    // Make node refs clickable
+    respDiv.querySelectorAll('.node-ref').forEach(el => {
+      el.addEventListener('click', () => {
+        const nid = el.dataset.nid;
+        let cyNode = cy.getElementById(nid);
+        if (!cyNode.length && currentSessionId) {
+          cyNode = cy.getElementById(`${currentSessionId}_${nid}`);
+        }
+        if (cyNode.length) {
+          cy.animate({ center: { eles: cyNode }, zoom: 2 }, { duration: 300 });
+          cyNode.select();
+          showNodeDetail(cyNode.data());
+        }
+      });
+    });
+  } catch (err) {
+    respDiv.textContent = `Error: ${err.message}`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Send';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ── Loading overlay ────────────────────────────────────────────
+function showLoading(show) {
+  document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+}
+
+// ── Session picker ─────────────────────────────────────────────
+document.getElementById('session-picker').addEventListener('change', function() {
+  if (this.value) loadGraph(this.value);
+});
+
+document.getElementById('btn-all-sessions').addEventListener('click', function() {
+  document.getElementById('session-picker').value = '';
+  loadGraph('all');
+});
+
+// ── Boot ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  initCytoscape();
+  loadSessions();
+});
+</script>
+</body>
+</html>

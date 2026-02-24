@@ -248,10 +248,10 @@ flowchart TD
       <tr><td>5</td><td><strong>Premature completion</strong></td><td><code>30:1</code> evolution-to-abandonment across 1,675 idea transitions.</td><td>Idea Evolution Analysis</td></tr>
       <tr><td>6</td><td><strong>33-gate enforcement failure</strong></td><td>582-line CLAUDE.md of adversarial rules. Claude hacked around every gate. Enforcement breeds evasion.</td><td>CLAUDE.md + session history</td></tr>
       <tr><td>7</td><td><strong>Unreadable chat history</strong></td><td>Protocol boilerplate, profanity triggers API content policy, char-per-line encoding (<code>A\nL\nW\nA\nY\nS</code>).</td><td><code>deterministic_prep.py</code> PROTOCOL_PATTERNS</td></tr>
-      <tr><td>8</td><td><strong>No ground truth</strong></td><td>"Did tests pass?" vs "Claude said tests passed." Gap was unmeasurable before Phase 5.</td><td><code>ground_truth_verifier.py</code></td></tr>
+      <tr><td>8</td><td><strong>No ground truth</strong></td><td>"Did tests pass?" vs "Claude said tests passed." Gap was unmeasurable without independent verification.</td><td>Verification methodology development</td></tr>
       <tr><td>9</td><td><strong>Cost of LLM analysis</strong></td><td><code>$4,800+</code> all-Opus. <code>geological_reader.py</code> called Opus PER LINE at $0.05/line.</td><td>Session 3b7084d5</td></tr>
       <tr><td>10</td><td><strong>Tier system blind spots</strong></td><td>"ONLY OPUS" = 11 chars &rarr; tier 1 &rarr; SKIPPED. "sure" (pivotal agreement) also skipped.</td><td><code>message_filter.py</code> tier logic</td></tr>
-      <tr><td>11</td><td><strong>No end-to-end automation</strong></td><td>No single command for all 6 phases. Each phase has its own orchestrator.</td><td>Batch orchestrator files</td></tr>
+      <tr><td>11</td><td><strong>No end-to-end automation</strong></td><td>No single command for all phases. Each phase has its own orchestrator.</td><td>Batch orchestrator files</td></tr>
       <tr><td>12</td><td><strong>Documentation rot</strong></td><td>37 factually wrong claims in 6 docs. All rendered fine at a glance. Nobody checked.</td><td>Feb 10, 2026 audit</td></tr>
       <tr><td>13</td><td><strong>Schema drift</strong></td><td>886 JSON schema variants across 269 sessions. 798 data fields invisible to downstream consumers.</td><td>Schema normalization audit</td></tr>
       <tr style="background:var(--cyan-dim)"><td>14</td><td><strong>Multi-account session blindness</strong> <span class="tag emergent">NEW</span></td><td>Switching API accounts wipes <code>~/.claude/projects/</code>. 564 sessions invisible to current account.</td><td>Desktop backup analysis</td></tr>
@@ -408,7 +408,7 @@ flowchart TD
       <tr><td>Phase 0 complete</td><td style="color:var(--green)"><code>292/298</code></td><td><code>completeness_report.json</code></td></tr>
       <tr><td>Phase 1 complete</td><td style="color:var(--green)"><code>297/298</code></td><td><code>completeness_report.json</code></td></tr>
       <tr><td>Phase 2 complete</td><td style="color:var(--green)"><code>291/298</code></td><td><code>completeness_report.json</code></td></tr>
-      <tr><td>Phase 5 (ground truth)</td><td style="color:var(--amber)"><code>274/298</code></td><td><code>completeness_report.json</code></td></tr>
+      <tr><td>Phase 3 complete</td><td style="color:var(--green)"><code>274/298</code></td><td><code>completeness_report.json</code></td></tr>
       <tr><td>File genealogy families</td><td style="color:var(--green)"><code>18</code></td><td><code>cross_session_genealogy.json</code></td></tr>
       <tr><td>Processing cost (all-Opus)</td><td style="color:var(--red)"><code>$4,800+</code></td><td>261 sessions batch estimate</td></tr>
       <tr><td>Hardcoded parameters</td><td style="color:var(--amber)"><code>150+</code></td><td>limits_audit.html</td></tr>

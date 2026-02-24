@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperdocs System — Complete File Analysis</title>
+<style>
+:root {
+    --bg: #fafafa;
+    --surface: #fff;
+    --text: #1a1a2e;
+    --muted: #555;
+    --accent: #2d5be3;
+    --accent2: #0d7377;
+    --green: #1a8a5a;
+    --red: #c0392b;
+    --orange: #d35400;
+    --border: #dde;
+    --code-bg: #f4f4f8;
+    --highlight: #fff3cd;
+    --stage-bg: #eef2ff;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.85; padding: 40px 20px;
+    font-size: 17px;
+  }
+  .container { max-width: 780px; margin: 0 auto; }
+  h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 8px; font-family: 'Segoe UI', system-ui, sans-serif; }
+  .byline { color: var(--muted); font-size: 0.95rem; margin-bottom: 40px; border-bottom: 2px solid var(--border); padding-bottom: 20px; font-style: italic; }
+  h2 {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 1.4rem; color: var(--accent);
+    margin: 48px 0 16px; padding-bottom: 6px;
+    border-bottom: 2px solid var(--accent);
+  }
+  h3 {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 1.15rem; color: var(--accent2);
+    margin: 32px 0 12px;
+  }
+  p { margin-bottom: 16px; }
+  .stage-label {
+    display: inline-block; font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--accent); background: var(--stage-bg);
+    padding: 3px 12px; border-radius: 4px; margin-bottom: 8px;
+  }
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.88em; background: var(--code-bg);
+    padding: 2px 6px; border-radius: 3px;
+  }
+  .data-box {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; margin: 16px 0;
+    font-family: 'SF Mono', monospace; font-size: 0.85rem;
+    line-height: 1.6; white-space: pre-wrap; overflow-x: auto;
+  }
+  .data-box .label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px; }
+  .data-box .field { color: var(--accent2); font-weight: 600; }
+  .data-box .value { color: var(--text); }
+  .data-box .changed { color: var(--red); font-weight: 600; }
+  .data-box .added { color: var(--green); font-weight: 600; }
+  blockquote {
+    border-left: 4px solid var(--accent);
+    padding: 12px 20px; margin: 16px 0;
+    background: var(--stage-bg); font-style: italic;
+    border-radius: 0 6px 6px 0;
+  }
+  .callout {
+    background: var(--highlight); border: 1px solid #e0d090;
+    border-radius: 8px; padding: 16px 20px; margin: 20px 0;
+  }
+  .callout.red { background: #fde8e8; border-color: #e8a0a0; }
+  .callout.green { background: #e8fde8; border-color: #a0e8a0; }
+  .opinion { background: #f0ecff; border: 2px solid var(--accent); border-radius: 10px; padding: 24px; margin: 40px 0; }
+  .opinion h2 { color: var(--accent); border-bottom-color: var(--accent); }
+  em.file { font-style: normal; font-family: 'SF Mono', monospace; font-size: 0.9em; color: var(--accent2); }
+  footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; }
+  .toc { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin: 24px 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li { margin-bottom: 6px; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 0.95rem; }
+  .toc li.indent { padding-left: 20px; font-size: 0.88rem; color: var(--muted); }
+  .rating { display: inline-block; font-family: 'Segoe UI', system-ui, sans-serif; font-weight: 700; font-size: 0.85rem; padding: 2px 10px; border-radius: 4px; }
+  .rating.strong { background: #d4edda; color: #155724; }
+  .rating.solid { background: #d1ecf1; color: #0c5460; }
+  .rating.adequate { background: #fff3cd; color: #856404; }
+  .rating.needs-work { background: #f8d7da; color: #721c24; }
+  .rating.fragile { background: #f5c6cb; color: #721c24; }
+  .stats-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-family: 'SF Mono', monospace; font-size: 0.88rem; }
+  .stats-table th, .stats-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .stats-table th { font-family: 'Segoe UI', system-ui, sans-serif; font-weight: 600; color: var(--accent2); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Hyperdocs System — Complete File Analysis</h1>
+<p class="byline">Generated February 24, 2026. 87 files analyzed, 37,759 total lines. Analysis method: local deterministic. Re-run with --llm for LLM-powered analysis.</p>
+
+<h2>Executive Summary</h2>
+<p>The Hyperdocs pipeline is a multi-phase system that transforms raw Claude Code chat history (JSONL) into structured, cross-session annotations embedded in source files. It processes ~285 sessions containing ~264,000 messages through deterministic enrichment (Phase 0), LLM-powered extraction (Phase 1), synthesis (Phase 2), evidence collection and dossier generation (Phase 3), cross-session aggregation (Phase 4a), and source-file insertion (Phase 4b).</p>
+
+<table class="stats-table"><tr><th>Phase</th><th>Files</th><th>Lines</th><th>Ratings</th></tr>
+<tr><td>Root Config</td><td>1</td><td>419</td><td>Solid: 1</td></tr>
+<tr><td>Phase 0: Deterministic Prep</td><td>23</td><td>11,218</td><td>Adequate: 2, Solid: 1, Strong: 20</td></tr>
+<tr><td>Phase 1: Extraction</td><td>9</td><td>5,848</td><td>Adequate: 2, Solid: 2, Strong: 5</td></tr>
+<tr><td>Phase 2: Synthesis</td><td>6</td><td>3,317</td><td>Adequate: 2, Solid: 1, Strong: 3</td></tr>
+<tr><td>Phase 3: Hyperdoc Writing</td><td>7</td><td>4,557</td><td>Solid: 2, Strong: 5</td></tr>
+<tr><td>Phase 3: Evidence Collectors</td><td>8</td><td>1,091</td><td>Adequate: 2, Solid: 2, Strong: 4</td></tr>
+<tr><td>Phase 4a: Aggregation</td><td>1</td><td>765</td><td>Strong: 1</td></tr>
+<tr><td>Phase 4b: Insertion</td><td>8</td><td>2,697</td><td>Strong: 8</td></tr>
+<tr><td>Product</td><td>6</td><td>1,745</td><td>Strong: 6</td></tr>
+<tr><td>Tools</td><td>18</td><td>6,102</td><td>Solid: 4, Strong: 14</td></tr>
+</table>
+<p><strong>Overall rating distribution:</strong> 
+<span class="rating strong">Strong: 66</span> 
+<span class="rating solid">Solid: 13</span> 
+<span class="rating adequate">Adequate: 8</span> 
+</p>
+<div class="toc"><strong>Table of Contents</strong><ul>
+<li><a href="#root-config">Root Config</a></li>
+<li class="indent"><a href="#root-config-config-py">config.py</a></li>
+<li><a href="#phase-0-deterministic-prep">Phase 0: Deterministic Prep</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-batch-llm-orchestrator-py">batch_llm_orchestrator.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-batch-p0-llm-py">batch_p0_llm.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-batch-phase0-reprocess-py">batch_phase0_reprocess.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-build-opus-filtered-py">build_opus_filtered.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-build-opus-messages-py">build_opus_messages.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-claude-behavior-analyzer-py">claude_behavior_analyzer.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-claude-session-reader-py">claude_session_reader.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-code-similarity-py">code_similarity.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-completeness-scanner-py">completeness_scanner.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-deterministic-prep-py">deterministic_prep.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-enrich-session-py">enrich_session.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-geological-reader-py">geological_reader.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-llm-pass-runner-py">llm_pass_runner.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-merge-llm-results-py">merge_llm_results.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-message-filter-py">message_filter.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-metadata-extractor-py">metadata_extractor.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-normalize-agent-output-py">normalize_agent_output.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-opus-classifier-py">opus_classifier.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-post-agent-normalize-py">post_agent_normalize.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-prepare-agent-data-py">prepare_agent_data.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-prompts-py">prompts.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-schema-normalizer-py">schema_normalizer.py</a></li>
+<li class="indent"><a href="#phase-0-deterministic-prep-schema-validator-py">schema_validator.py</a></li>
+<li><a href="#phase-1-extraction">Phase 1: Extraction</a></li>
+<li class="indent"><a href="#phase-1-extraction-batch-llm-orchestrator-py">batch_llm_orchestrator.py</a></li>
+<li class="indent"><a href="#phase-1-extraction-batch-orchestrator-py">batch_orchestrator.py</a></li>
+<li class="indent"><a href="#phase-1-extraction-batch-p1-llm-py">batch_p1_llm.py</a></li>
+<li class="indent"><a href="#phase-1-extraction-extract-threads-py">extract_threads.py</a></li>
+<li class="indent"><a href="#phase-1-extraction-interactive-batch-runner-py">interactive_batch_runner.py</a></li>
+<li class="indent"><a href="#phase-1-extraction-phase1-redo-orchestrator-py">phase1_redo_orchestrator.py</a></li>
+<li class="indent"><a href="#phase-1-extraction-redo-all-phase1-py">redo_all_phase1.py</a></li>
+<li class="indent"><a href="#phase-1-extraction-tag-primitives-py">tag_primitives.py</a></li>
+<li class="indent"><a href="#phase-1-extraction-tag-semantic-primitives-py">tag_semantic_primitives.py</a></li>
+<li><a href="#phase-2-synthesis">Phase 2: Synthesis</a></li>
+<li class="indent"><a href="#phase-2-synthesis-backfill-phase2-py">backfill_phase2.py</a></li>
+<li class="indent"><a href="#phase-2-synthesis-batch-p2-generator-py">batch_p2_generator.py</a></li>
+<li class="indent"><a href="#phase-2-synthesis-batch-phase2-processor-py">batch_phase2_processor.py</a></li>
+<li class="indent"><a href="#phase-2-synthesis-build-phase2-outputs-py">build_phase2_outputs.py</a></li>
+<li class="indent"><a href="#phase-2-synthesis-code-similarity-py">code_similarity.py</a></li>
+<li class="indent"><a href="#phase-2-synthesis-file-genealogy-py">file_genealogy.py</a></li>
+<li><a href="#phase-3-hyperdoc-writing">Phase 3: Hyperdoc Writing</a></li>
+<li class="indent"><a href="#phase-3-hyperdoc-writing-collect-file-evidence-py">collect_file_evidence.py</a></li>
+<li class="indent"><a href="#phase-3-hyperdoc-writing-evidence-resolver-py">evidence_resolver.py</a></li>
+<li class="indent"><a href="#phase-3-hyperdoc-writing-generate-dossiers-py">generate_dossiers.py</a></li>
+<li class="indent"><a href="#phase-3-hyperdoc-writing-generate-remaining-hyperdocs-py">generate_remaining_hyperdocs.py</a></li>
+<li class="indent"><a href="#phase-3-hyperdoc-writing-generate-viewer-py">generate_viewer.py</a></li>
+<li class="indent"><a href="#phase-3-hyperdoc-writing-write-hyperdocs-py">write_hyperdocs.py</a></li>
+<li class="indent"><a href="#phase-3-hyperdoc-writing-write-more-hyperdocs-py">write_more_hyperdocs.py</a></li>
+<li><a href="#phase-3-evidence-collectors">Phase 3: Evidence Collectors</a></li>
+<li class="indent"><a href="#phase-3-evidence-collectors-base-py">base.py</a></li>
+<li class="indent"><a href="#phase-3-evidence-collectors-debug-sequence-py">debug_sequence.py</a></li>
+<li class="indent"><a href="#phase-3-evidence-collectors-decision-trace-py">decision_trace.py</a></li>
+<li class="indent"><a href="#phase-3-evidence-collectors-emotional-arc-py">emotional_arc.py</a></li>
+<li class="indent"><a href="#phase-3-evidence-collectors-file-timeline-py">file_timeline.py</a></li>
+<li class="indent"><a href="#phase-3-evidence-collectors-geological-event-py">geological_event.py</a></li>
+<li class="indent"><a href="#phase-3-evidence-collectors-idea-transition-py">idea_transition.py</a></li>
+<li class="indent"><a href="#phase-3-evidence-collectors-reaction-log-py">reaction_log.py</a></li>
+<li><a href="#phase-4a-aggregation">Phase 4a: Aggregation</a></li>
+<li class="indent"><a href="#phase-4a-aggregation-aggregate-dossiers-py">aggregate_dossiers.py</a></li>
+<li><a href="#phase-4b-insertion">Phase 4b: Insertion</a></li>
+<li class="indent"><a href="#phase-4b-insertion-hyperdoc-layers-py">hyperdoc_layers.py</a></li>
+<li class="indent"><a href="#phase-4b-insertion-hyperdoc-store-init-py">hyperdoc_store_init.py</a></li>
+<li class="indent"><a href="#phase-4b-insertion-init-hyperdoc-store-py">init_hyperdoc_store.py</a></li>
+<li class="indent"><a href="#phase-4b-insertion-insert-from-json-py">insert_from_json.py</a></li>
+<li class="indent"><a href="#phase-4b-insertion-insert-from-phase4b-py">insert_from_phase4b.py</a></li>
+<li class="indent"><a href="#phase-4b-insertion-insert-hyperdocs-py">insert_hyperdocs.py</a></li>
+<li class="indent"><a href="#phase-4b-insertion-insert-hyperdocs-3part-py">insert_hyperdocs_3part.py</a></li>
+<li class="indent"><a href="#phase-4b-insertion-insert-hyperdocs-v2-py">insert_hyperdocs_v2.py</a></li>
+<li><a href="#product">Product</a></li>
+<li class="indent"><a href="#product-concierge-py">concierge.py</a></li>
+<li class="indent"><a href="#product-coverage-stats-py">coverage_stats.py</a></li>
+<li class="indent"><a href="#product-dashboard-py">dashboard.py</a></li>
+<li class="indent"><a href="#product-install-py">install.py</a></li>
+<li class="indent"><a href="#product-realtime-hook-py">realtime_hook.py</a></li>
+<li class="indent"><a href="#product-session-profiler-py">session_profiler.py</a></li>
+<li><a href="#tools">Tools</a></li>
+<li class="indent"><a href="#tools-add-data-trace-sheets-py">add_data_trace_sheets.py</a></li>
+<li class="indent"><a href="#tools-analyze-data-flow-py">analyze_data_flow.py</a></li>
+<li class="indent"><a href="#tools-batch-phase3a-py">batch_phase3a.py</a></li>
+<li class="indent"><a href="#tools-batch-runner-py">batch_runner.py</a></li>
+<li class="indent"><a href="#tools-data-lifecycle-py">data_lifecycle.py</a></li>
+<li class="indent"><a href="#tools-extract-dashboard-data-py">extract_dashboard_data.py</a></li>
+<li class="indent"><a href="#tools-extract-viz-data-py">extract_viz_data.py</a></li>
+<li class="indent"><a href="#tools-file-lock-py">file_lock.py</a></li>
+<li class="indent"><a href="#tools-generate-pipeline-excel-py">generate_pipeline_excel.py</a></li>
+<li class="indent"><a href="#tools-hyperdoc-comparison-py">hyperdoc_comparison.py</a></li>
+<li class="indent"><a href="#tools-json-io-py">json_io.py</a></li>
+<li class="indent"><a href="#tools-log-config-py">log_config.py</a></li>
+<li class="indent"><a href="#tools-pipeline-health-check-py">pipeline_health_check.py</a></li>
+<li class="indent"><a href="#tools-pipeline-status-py">pipeline_status.py</a></li>
+<li class="indent"><a href="#tools-positioning-analyzer-py">positioning_analyzer.py</a></li>
+<li class="indent"><a href="#tools-run-pipeline-py">run_pipeline.py</a></li>
+<li class="indent"><a href="#tools-schema-contracts-py">schema_contracts.py</a></li>
+<li class="indent"><a href="#tools-verify-data-locations-py">verify_data_locations.py</a></li>
+<li><a href="#cross-cutting">Cross-Cutting Analysis</a></li>
+</ul></div>
+
+<h2 id="root-config">Root Config</h2>
+<h3 id="root-config-config-py">config.py</h3>
+<div class="stage-label">Root Config &middot; 419 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Hyperdocs Configuration — Central settings for all phases.</p>
+<div class="data-box"><span class="label">Data Flow</span>No significant file I/O detected</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">get_session_file</span>: <span class="value">Find the JSONL chat history file.</span><br><span class="field">_find_jsonl</span>: <span class="value">Find a JSONL file by exact name or prefix match in a directory.</span><br><span class="field">get_session_output_dir</span>: <span class="value">Get or create the output directory for the current session.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (3/3 functions documented)</li><li>Maintains readable nesting depth despite file size</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>config.py is a 419-line module with 3 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+
+<h2 id="phase-0-deterministic-prep">Phase 0: Deterministic Prep</h2>
+<h3 id="phase-0-deterministic-prep-batch-llm-orchestrator-py">batch_llm_orchestrator.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 499 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Phase 0.5 LLM Batch Orchestrator ====================================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config
+External packages: llm_pass_runner, merge_llm_results, prompts
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">run_batch_pass</span>: <span class="value">Run a single pass across all sessions with concurrent processing.
+
+Args:
+    sessions: List of session directory Paths
+    pass_num: Which pass to ...</span><br><span class="field">main</span>: <span class="value">function at line 394</span><br><span class="field">show_status</span>: <span class="value">Display current batch processing status.</span><br><span class="field">_run_pass_worker</span>: <span class="value">Run a single pass on a single session. Called from ThreadPoolExecutor.
+
+Suppresses stdout from run_pass() to avoid garbled concurrent output.
+Retur...</span><br><span class="field">run_batch_merge</span>: <span class="value">Run merge on all sessions that have at least one pass output.
+
+Merges pass results into enriched_session_v2.json for each session.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (10/11 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>batch_llm_orchestrator.py is a 499-line module with 11 functions and 0 classes. Documentation coverage is good (91%).</blockquote>
+<h3 id="phase-0-deterministic-prep-batch-p0-llm-py">batch_p0_llm.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 503 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Phase 0.5 LLM Batch Orchestrator ====================================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+External packages: llm_pass_runner, merge_llm_results, prompts
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">run_batch_pass</span>: <span class="value">Run a single pass across all sessions with concurrent processing.
+
+Args:
+    sessions: List of session directory Paths
+    pass_num: Which pass to ...</span><br><span class="field">main</span>: <span class="value">function at line 398</span><br><span class="field">show_status</span>: <span class="value">Display current batch processing status.</span><br><span class="field">_run_pass_worker</span>: <span class="value">Run a single pass on a single session. Called from ThreadPoolExecutor.
+
+Suppresses stdout from run_pass() to avoid garbled concurrent output.
+Retur...</span><br><span class="field">run_batch_merge</span>: <span class="value">Run merge on all sessions that have at least one pass output.
+
+Merges pass results into enriched_session_v2.json for each session.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (10/11 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>batch_p0_llm.py is a 503-line module with 11 functions and 0 classes. Documentation coverage is good (91%).</blockquote>
+<h3 id="phase-0-deterministic-prep-batch-phase0-reprocess-py">batch_phase0_reprocess.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 231 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Batch Phase 0 Reprocessor — Re-runs enrich_session.py + prepare_agent_data.py on ALL sessions with the 9 data quality fixes applied.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 122</span><br><span class="field">_build_duplicate_set</span>: <span class="value">Identify duplicate session directories that process the same conversation.
+
+The chat history archive often has two JSONL files for the same convers...</span><br><span class="field">run_phase0</span>: <span class="value">Run enrich_session.py + prepare_agent_data.py for one session.</span><br><span class="field">find_jsonl_for_session</span>: <span class="value">Find the source JSONL file for a session directory.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (3/4 functions documented)</li><li>Proper error handling with specific exception types</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>batch_phase0_reprocess.py is a 231-line module with 4 functions and 0 classes. Documentation coverage is good (75%).</blockquote>
+<h3 id="phase-0-deterministic-prep-build-opus-filtered-py">build_opus_filtered.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 257 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Build Opus-Filtered Message Files</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">build_opus_filtered</span>: <span class="value">Build Opus-filtered message files from classifications + enriched session.</span><br><span class="field">main</span>: <span class="value">function at line 224</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>build_opus_filtered.py is a 257-line module with 3 functions and 0 classes.</blockquote>
+<h3 id="phase-0-deterministic-prep-build-opus-messages-py">build_opus_messages.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 261 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Build Opus-Filtered Message Files</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">build_opus_filtered</span>: <span class="value">Build Opus-filtered message files from classifications + enriched session.</span><br><span class="field">main</span>: <span class="value">function at line 228</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>build_opus_messages.py is a 261-line module with 3 functions and 0 classes.</blockquote>
+<h3 id="phase-0-deterministic-prep-claude-behavior-analyzer-py">claude_behavior_analyzer.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 858 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Claude Behavior Analyzer ========================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+External packages: , claude_session_reader</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">ClaudeBehaviorAnalyzer</span>: <span class="value">Analyzes Claude's responses and thinking to detect behavioral patterns.
+
+Uses all previous assistant messages as context (falls back to 10 if
+proce...</span><br><span class="field">ClaudeBehaviorAnalyzer.analyze_message</span>: <span class="value">Analyze a single Claude message for all 20 behavioral patterns.
+
+Uses all previous messages by default for cross-message patterns.
+Falls back to la...</span><br><span class="field">PreventionSystem</span>: <span class="value">Combines user frustration metadata + Claude behavior analysis
+to generate prevention alerts before context damage cascades.</span><br><span class="field">ClaudeBehaviorFlags</span>: <span class="value">Flags indicating Claude's behavioral state in a response.</span><br><span class="field">PreventionSystem.generate_alert</span>: <span class="value">method at line 751</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (11/10 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Deep nesting (max indent depth 11) — consider extracting helper functions</li><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>claude_behavior_analyzer.py is a 858-line module with 10 functions and 4 classes. Documentation coverage is good (110%).</blockquote>
+<h3 id="phase-0-deterministic-prep-claude-session-reader-py">claude_session_reader.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 395 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Claude Session Reader =====================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+External packages: claude_session_reader, tiktoken
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">ClaudeSessionReader</span>: <span class="value">Reads Claude Code session files to extract token usage and thinking content.
+
+Data source: ~/.claude/projects/{project-path}/*.jsonl</span><br><span class="field">ClaudeSessionReader.parse_message_record</span>: <span class="value">Parse a single message record from JSONL.</span><br><span class="field">main</span>: <span class="value">CLI for testing the Claude session reader.</span><br><span class="field">ClaudeSessionReader.load_session_file</span>: <span class="value">Load a single session file.</span><br><span class="field">ClaudeSessionReader.load_project_sessions</span>: <span class="value">Load sessions from a project.
+
+Args:
+    project_name: Specific project directory name (or None for all)
+    limit: Maximum number of sessions to l...</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (13/13 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>claude_session_reader.py is a 395-line module with 13 functions and 4 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="phase-0-deterministic-prep-code-similarity-py">code_similarity.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 520 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Code Similarity Engine — Full Scan Mode ========================================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">FileFingerprint</span>: <span class="value">All extractable signals from a single Python file.</span><br><span class="field">scan_directory</span>: <span class="value">Full scan: compare all Python files against all others.</span><br><span class="field">main</span>: <span class="value">function at line 424</span><br><span class="field">FileFingerprint._extract</span>: <span class="value">Parse file and extract all signals.</span><br><span class="field">compare_pair</span>: <span class="value">Compare two file fingerprints and return similarity signals.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (8/10 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>code_similarity.py is a 520-line module with 10 functions and 1 classes. Documentation coverage is good (80%).</blockquote>
+<h3 id="phase-0-deterministic-prep-completeness-scanner-py">completeness_scanner.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 432 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Data Completeness Scanner — Scans every session directory and reports field-level completeness for the entire Hyperdocs pipeline output.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">scan_all</span>: <span class="value">Scan all session directories and produce aggregate report.</span><br><span class="field">scan_session</span>: <span class="value">Scan a single session directory and return completeness data.</span><br><span class="field">main</span>: <span class="value">function at line 392</span><br><span class="field">check_enriched_session</span>: <span class="value">Check key fields in enriched_session.json.</span><br><span class="field">check_thread_extractions</span>: <span class="value">Check thread_extractions.json has content beyond headers.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (11/12 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>completeness_scanner.py is a 432-line module with 12 functions and 0 classes. Documentation coverage is good (92%).</blockquote>
+<h3 id="phase-0-deterministic-prep-deterministic-prep-py">deterministic_prep.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 919 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Phase 0: Deterministic Prep ============================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, phase_0_prep.claude_behavior_analyzer, phase_0_prep.claude_session_reader, phase_0_prep.geological_reader, phase_0_prep.message_filter, phase_0_prep.metadata_extractor
+External packages: claude_behavior_analyzer, claude_session_reader, geological_reader, message_filter, metadata_extractor
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 279</span><br><span class="field">detect_content_referential_signals</span>: <span class="value">Detect if filter signals are about analyzed content, not session dynamics.
+Returns True if signals are likely content-referential.
+
+Two detection s...</span><br><span class="field">detect_subagent_session</span>: <span class="value">Detect if this is a subagent session.
+
+Three detection strategies:
+1. Session ID pattern: '_agent-' or 'agent-' prefix
+2. Source filename pattern: ...</span><br><span class="field">detect_protocol_message</span>: <span class="value">Detect if a message is system-generated protocol, not human content.
+
+Checks (in order):
+1. Empty/zero-length messages → tool result wrappers
+2. XM...</span><br><span class="field">collapse_char_per_line</span>: <span class="value">Fix character-per-line encoding: A\nL\nW\nA\nY\nS → ALWAYS.
+Returns (collapsed_content, was_encoded).</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (6/7 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>deterministic_prep.py is a 919-line module with 7 functions and 0 classes. Documentation coverage is good (86%).</blockquote>
+<h3 id="phase-0-deterministic-prep-enrich-session-py">enrich_session.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 922 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Phase 0: Deterministic Prep ============================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, phase_0_prep.claude_behavior_analyzer, phase_0_prep.claude_session_reader, phase_0_prep.geological_reader, phase_0_prep.message_filter, phase_0_prep.metadata_extractor, tools.log_config
+External packages: claude_behavior_analyzer, claude_session_reader, geological_reader, message_filter, metadata_extractor
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 282</span><br><span class="field">detect_content_referential_signals</span>: <span class="value">Detect if filter signals are about analyzed content, not session dynamics.
+Returns True if signals are likely content-referential.
+
+Two detection s...</span><br><span class="field">detect_subagent_session</span>: <span class="value">Detect if this is a subagent session.
+
+Three detection strategies:
+1. Session ID pattern: '_agent-' or 'agent-' prefix
+2. Source filename pattern: ...</span><br><span class="field">detect_protocol_message</span>: <span class="value">Detect if a message is system-generated protocol, not human content.
+
+Checks (in order):
+1. Empty/zero-length messages → tool result wrappers
+2. XM...</span><br><span class="field">collapse_char_per_line</span>: <span class="value">Fix character-per-line encoding: A\nL\nW\nA\nY\nS → ALWAYS.
+Returns (collapsed_content, was_encoded).</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (6/7 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>enrich_session.py is a 922-line module with 7 functions and 0 classes. Documentation coverage is good (86%).</blockquote>
+<h3 id="phase-0-deterministic-prep-geological-reader-py">geological_reader.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 1070 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Geological Reader - OPUS EDITION</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+External packages: anthropic, dotenv
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">GeologicalReader</span>: <span class="value">Reads chat history chronologically, treating it as geological strata.
+Only reads from chat_history_copy/ - NEVER from original ~/.claude/</span><br><span class="field">GeologicalReader</span>: <span class="value">Reads chat history USING OPUS FOR ALL INTERPRETATION.
+
+Original: Complex JSON parsing with heuristics
+Opus Edition: Opus understands message struct...</span><br><span class="field">GeologicalReader.deterministic_parse_message</span>: <span class="value">Parse a JSONL message line using pure Python — no LLM calls.
+
+This replaced opus_parse_message() which called Opus at $0.05/line
+for what is essent...</span><br><span class="field">GeologicalReader._parse_jsonl_file</span>: <span class="value">Parse a single JSONL file into geological messages.</span><br><span class="field">GeologicalReader.load_all_sessions</span>: <span class="value">Load all sessions from JSONL files.
+
+Args:
+    limit: Optional limit on number of files to process.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (27/32 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>geological_reader.py is a 1070-line module with 32 functions and 6 classes. Documentation coverage is good (84%). Makes external API calls (Anthropic).</blockquote>
+<h3 id="phase-0-deterministic-prep-llm-pass-runner-py">llm_pass_runner.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 569 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Phase 0 LLM Pass Runner ========================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+External packages: anthropic, prompts
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">run_pass</span>: <span class="value">Run a single LLM pass on a session.
+
+Args:
+    pass_num: Pass number (1-4)
+    session_dir: Path to session output directory
+    data: Loaded enric...</span><br><span class="field">call_api</span>: <span class="value">Call the Anthropic API with retry logic.
+
+Returns:
+    (parsed_results, usage_dict)</span><br><span class="field">run_all_passes</span>: <span class="value">Run all (or specified) LLM passes on a session.
+
+Args:
+    session_dir: Path to session output directory
+    dry_run: If True, estimate costs witho...</span><br><span class="field">main</span>: <span class="value">function at line 517</span><br><span class="field">parse_json_response</span>: <span class="value">Parse JSON array from LLM response, handling common formatting issues.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (10/11 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Deep nesting (max indent depth 10) — consider extracting helper functions</li><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>llm_pass_runner.py is a 569-line module with 11 functions and 0 classes. Documentation coverage is good (91%). Makes external API calls (Anthropic).</blockquote>
+<h3 id="phase-0-deterministic-prep-merge-llm-results-py">merge_llm_results.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 233 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Phase 0 LLM Results Merger ============================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+External packages: prompts
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">merge_session</span>: <span class="value">Merge all LLM pass results into enriched_session_v2.json.
+
+Args:
+    session_dir: Path to session output directory
+    write_output: If True, write...</span><br><span class="field">merge_into_message</span>: <span class="value">Merge results from all 4 passes into an llm_behavior dict for one message.
+
+Returns None if no LLM pass analyzed this message.</span><br><span class="field">main</span>: <span class="value">function at line 215</span><br><span class="field">find_session_dir</span>: <span class="value">Find the output directory for a session.</span><br><span class="field">build_index_lookup</span>: <span class="value">Build a message-index → result lookup from pass output.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (5/6 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>merge_llm_results.py is a 233-line module with 6 functions and 0 classes. Documentation coverage is good (83%).</blockquote>
+<h3 id="phase-0-deterministic-prep-message-filter-py">message_filter.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 338 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Message Filter for Hyperdocs Pipeline =====================================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">MessageFilter</span>: <span class="value">Filters messages based on length, keywords, and context signals.
+
+Usage:
+    filter = MessageFilter()
+    result = filter.classify(message_text, ha...</span><br><span class="field">MessageFilter.classify</span>: <span class="value">Classify a message into a processing tier.
+
+Args:
+    text: The message text
+    has_pasted_content: Whether the message has associated pasted cont...</span><br><span class="field">profile_archive</span>: <span class="value">Profile an archive to estimate filtering effectiveness.
+
+Args:
+    archive_path: Path to PERMANENT_ARCHIVE directory
+    sample_files: Number of fi...</span><br><span class="field">MessageFilter.__init__</span>: <span class="value">method at line 108</span><br><span class="field">MessageFilter.get_stats_summary</span>: <span class="value">Get a summary of filtering statistics.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (7/6 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>message_filter.py is a 338-line module with 6 functions and 2 classes. Documentation coverage is good (117%).</blockquote>
+<h3 id="phase-0-deterministic-prep-metadata-extractor-py">metadata_extractor.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 917 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Metadata Extractor ==================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+External packages: , display_format_adapter, geological_reader, hyperdoc_tracking_manager
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">MetadataExtractor</span>: <span class="value">Extracts structured metadata from messages using pure Python.
+No LLM calls. Fast, deterministic, free.</span><br><span class="field">SessionMetadata</span>: <span class="value">Aggregated metadata for an entire session/file.</span><br><span class="field">MessageMetadata</span>: <span class="value">Metadata extracted from a single message.</span><br><span class="field">MetadataExtractor.extract_message_metadata</span>: <span class="value">Extract metadata from a single message.</span><br><span class="field">MetadataExtractor.extract_session_metadata</span>: <span class="value">Extract aggregated metadata for an entire session.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (10/9 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>metadata_extractor.py is a 917-line module with 9 functions and 3 classes. Documentation coverage is good (111%).</blockquote>
+<h3 id="phase-0-deterministic-prep-normalize-agent-output-py">normalize_agent_output.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 125 lines</div>
+ <span class="rating adequate">Adequate</span>
+<p>Post-Agent Schema Normalizer — Run after ANY agent completes.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: phase_0_prep.normalize_agent_output, tools.log_config
+External packages: schema_normalizer, schema_validator
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">normalize_session_output</span>: <span class="value">Normalize and validate all agent-produced files in a session.
+
+Returns dict of {filename: {status, valid, log}}.</span><br><span class="field">main</span>: <span class="value">function at line 88</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>normalize_agent_output.py is a 125-line module with 2 functions and 0 classes.</blockquote>
+<h3 id="phase-0-deterministic-prep-opus-classifier-py">opus_classifier.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 441 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Opus Message Classifier — Replaces Python tier 1-4 heuristics</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+External packages: anthropic, random
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 310</span><br><span class="field">build_classification_batch</span>: <span class="value">Build a batch of messages for Opus classification.
+
+Selects a representative sample that includes:
+- All messages currently classified as tier 1 (t...</span><br><span class="field">compare_classifications</span>: <span class="value">Compare Opus classifications to Python tier system.</span><br><span class="field">classify_with_opus</span>: <span class="value">Send messages to Opus for classification. Returns list of classifications.</span><br><span class="field">format_messages_for_prompt</span>: <span class="value">Format messages for the Opus classification prompt.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (4/5 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>opus_classifier.py is a 441-line module with 6 functions and 0 classes. Documentation coverage is good (80%). Makes external API calls (Anthropic).</blockquote>
+<h3 id="phase-0-deterministic-prep-post-agent-normalize-py">post_agent_normalize.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 122 lines</div>
+ <span class="rating adequate">Adequate</span>
+<p>Post-Agent Schema Normalizer — Run after ANY agent completes.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: phase_0_prep.post_agent_normalize
+External packages: schema_normalizer, schema_validator
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">normalize_session_output</span>: <span class="value">Normalize and validate all agent-produced files in a session.
+
+Returns dict of {filename: {status, valid, log}}.</span><br><span class="field">main</span>: <span class="value">function at line 85</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>post_agent_normalize.py is a 122-line module with 2 functions and 0 classes.</blockquote>
+<h3 id="phase-0-deterministic-prep-prepare-agent-data-py">prepare_agent_data.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 280 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Prepare agent-friendly data files from enriched_session.json.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+External packages: build_opus_messages
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">_collapse_preview</span>: <span class="value">Collapse char-per-line encoded text for readable previews.</span><br><span class="field">_sanitize_text</span>: <span class="value">Remove profanity from text for API content policy compliance.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (2/2 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>prepare_agent_data.py is a 280-line module with 2 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="phase-0-deterministic-prep-prompts-py">prompts.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 371 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Phase 0 LLM Pass Prompts =========================</p>
+<div class="data-box"><span class="label">Data Flow</span>No significant file I/O detected</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">format_messages_with_context</span>: <span class="value">Format target messages with their preceding user context (for Pass 3).
+
+For each target assistant message, includes up to 2 preceding user messages...</span><br><span class="field">format_messages_for_prompt</span>: <span class="value">Format enriched message records into prompt-ready text.
+
+Args:
+    messages: List of enriched message dicts from enriched_session.json
+    include_...</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (2/2 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Maintains readable nesting depth despite file size</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>prompts.py is a 371-line module with 2 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="phase-0-deterministic-prep-schema-normalizer-py">schema_normalizer.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 817 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Schema Normalizer — Repairs agent-produced JSON files across all sessions.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">normalize_semantic_primitives</span>: <span class="value">Find primitives data and normalize to tagged_messages list.</span><br><span class="field">normalize_thread_extractions</span>: <span class="value">Find thread/extraction data and normalize to canonical threads dict.</span><br><span class="field">main</span>: <span class="value">function at line 746</span><br><span class="field">normalize_synthesis</span>: <span class="value">Normalize synthesis passes to dict format.</span><br><span class="field">normalize_grounded_markers</span>: <span class="value">Normalize grounded markers — find markers wherever they live.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (13/14 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Deep nesting (max indent depth 10) — consider extracting helper functions</li><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>schema_normalizer.py is a 817-line module with 16 functions and 0 classes. Documentation coverage is good (93%).</blockquote>
+<h3 id="phase-0-deterministic-prep-schema-validator-py">schema_validator.py</h3>
+<div class="stage-label">Phase 0: Deterministic Prep &middot; 138 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Schema Validator — Prevents schema variance in future agent runs.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: phase_0_prep.schema_validator, tools.log_config
+External packages: schema_normalizer
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 95</span><br><span class="field">validate_file</span>: <span class="value">Check if a file has canonical data keys. Returns (valid, missing_keys).</span><br><span class="field">validate_and_normalize</span>: <span class="value">Validate a file. If invalid, normalize it. Returns (was_valid, action_taken).</span><br><span class="field">validate_session</span>: <span class="value">Validate all agent-produced files in a session.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (3/4 functions documented)</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>schema_validator.py is a 138-line module with 4 functions and 0 classes. Documentation coverage is good (75%).</blockquote>
+
+<h2 id="phase-1-extraction">Phase 1: Extraction</h2>
+<h3 id="phase-1-extraction-batch-llm-orchestrator-py">batch_llm_orchestrator.py</h3>
+<div class="stage-label">Phase 1: Extraction &middot; 488 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Batch LLM Orchestrator — Runs Phase 0 LLM passes across all sessions.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">run_pass_batch</span>: <span class="value">Run a single pass across multiple sessions with concurrency control.
+
+Returns aggregate statistics.</span><br><span class="field">run_pass_on_session</span>: <span class="value">Run a single LLM pass on a single session via subprocess.
+
+Returns dict with status, cost, and timing info.</span><br><span class="field">main</span>: <span class="value">function at line 443</span><br><span class="field">run_validation</span>: <span class="value">Run all passes on 5 validation sessions.</span><br><span class="field">run_all_passes</span>: <span class="value">Run all 4 passes across all sessions, then merge.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (12/13 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>batch_llm_orchestrator.py is a 488-line module with 13 functions and 0 classes. Documentation coverage is good (92%).</blockquote>
+<h3 id="phase-1-extraction-batch-orchestrator-py">batch_orchestrator.py</h3>
+<div class="stage-label">Phase 1: Extraction &middot; 472 lines</div>
+ <span class="rating adequate">Adequate</span>
+<p>Batch Orchestrator — Runs Phases 1-2 across all sessions automatically.</p>
+<div class="data-box"><span class="label">Data Flow</span>Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">get_all_sessions</span>: <span class="value">Get all sessions with Phase 0 complete, sorted by directory name.</span><br><span class="field">show_next</span>: <span class="value">function at line 92</span><br><span class="field">show_status</span>: <span class="value">function at line 69</span><br><span class="field">show_queue</span>: <span class="value">function at line 134</span><br><span class="field">main</span>: <span class="value">function at line 157</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li><li>Maintains readable nesting depth despite file size</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>batch_orchestrator.py is a 472-line module with 5 functions and 0 classes.</blockquote>
+<h3 id="phase-1-extraction-batch-p1-llm-py">batch_p1_llm.py</h3>
+<div class="stage-label">Phase 1: Extraction &middot; 493 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Batch LLM Orchestrator — Runs Phase 0 LLM passes across all sessions.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">run_pass_batch</span>: <span class="value">Run a single pass across multiple sessions with concurrency control.
+
+Returns aggregate statistics.</span><br><span class="field">run_pass_on_session</span>: <span class="value">Run a single LLM pass on a single session via subprocess.
+
+Returns dict with status, cost, and timing info.</span><br><span class="field">main</span>: <span class="value">function at line 448</span><br><span class="field">run_validation</span>: <span class="value">Run all passes on 5 validation sessions.</span><br><span class="field">run_all_passes</span>: <span class="value">Run all 4 passes across all sessions, then merge.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (12/13 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>batch_p1_llm.py is a 493-line module with 13 functions and 0 classes. Documentation coverage is good (92%).</blockquote>
+<h3 id="phase-1-extraction-extract-threads-py">extract_threads.py</h3>
+<div class="stage-label">Phase 1: Extraction &middot; 803 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Thread Analyst: Extract 6 threads + 6 markers from tier4 messages. Forensic analysis - honest assessment of Claude behavior including harmful patterns.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 566</span><br><span class="field">extract_reactions_thread</span>: <span class="value">Extract REACTIONS thread: how did user react.</span><br><span class="field">extract_markers</span>: <span class="value">Extract the 6 markers for a message.</span><br><span class="field">extract_user_ideas_thread</span>: <span class="value">Extract USER_IDEAS thread: what is the user building/thinking.</span><br><span class="field">extract_claude_response_thread</span>: <span class="value">Extract CLAUDE_RESPONSE thread: what did Claude do, quality assessment.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (11/12 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>extract_threads.py is a 803-line module with 12 functions and 0 classes. Documentation coverage is good (92%).</blockquote>
+<h3 id="phase-1-extraction-interactive-batch-runner-py">interactive_batch_runner.py</h3>
+<div class="stage-label">Phase 1: Extraction &middot; 478 lines</div>
+ <span class="rating adequate">Adequate</span>
+<p>Batch Orchestrator — Runs Phases 1-2 across all sessions automatically.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">get_all_sessions</span>: <span class="value">Get all sessions with Phase 0 complete, sorted by directory name.</span><br><span class="field">show_next</span>: <span class="value">function at line 98</span><br><span class="field">show_status</span>: <span class="value">function at line 75</span><br><span class="field">show_queue</span>: <span class="value">function at line 140</span><br><span class="field">main</span>: <span class="value">function at line 163</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li><li>Maintains readable nesting depth despite file size</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>interactive_batch_runner.py is a 478-line module with 5 functions and 0 classes.</blockquote>
+<h3 id="phase-1-extraction-phase1-redo-orchestrator-py">phase1_redo_orchestrator.py</h3>
+<div class="stage-label">Phase 1: Extraction &middot; 901 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Phase 1 Full Redo Orchestrator — Reprocesses ALL sessions through Phase 1.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config
+External packages: anthropic, schema_normalizer, tiktoken
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">process_session</span>: <span class="value">Run all 4 Phase 1 passes on one session.
+
+For sessions that fit in a single prompt: one API call per agent.
+For sessions that need chunking: one AP...</span><br><span class="field">call_opus</span>: <span class="value">Make a single Opus API call with extended thinking via streaming.
+Retries on transient errors (overloaded, connection drops). Returns parsed JSON o...</span><br><span class="field">main</span>: <span class="value">function at line 817</span><br><span class="field">explorer_verification_prompt</span>: <span class="value">function at line 323</span><br><span class="field">primitives_tagger_prompt</span>: <span class="value">function at line 262</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (13/18 functions documented)</li><li>Proper error handling with specific exception types</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>phase1_redo_orchestrator.py is a 901-line module with 18 functions and 0 classes. Documentation coverage is good (72%). Makes external API calls (Anthropic).</blockquote>
+<h3 id="phase-1-extraction-redo-all-phase1-py">redo_all_phase1.py</h3>
+<div class="stage-label">Phase 1: Extraction &middot; 905 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Phase 1 Full Redo Orchestrator — Reprocesses ALL sessions through Phase 1.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+External packages: anthropic, schema_normalizer, tiktoken
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">process_session</span>: <span class="value">Run all 4 Phase 1 passes on one session.
+
+For sessions that fit in a single prompt: one API call per agent.
+For sessions that need chunking: one AP...</span><br><span class="field">call_opus</span>: <span class="value">Make a single Opus API call with extended thinking via streaming.
+Retries on transient errors (overloaded, connection drops). Returns parsed JSON o...</span><br><span class="field">main</span>: <span class="value">function at line 821</span><br><span class="field">explorer_verification_prompt</span>: <span class="value">function at line 327</span><br><span class="field">primitives_tagger_prompt</span>: <span class="value">function at line 266</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (13/18 functions documented)</li><li>Proper error handling with specific exception types</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>redo_all_phase1.py is a 905-line module with 18 functions and 0 classes. Documentation coverage is good (72%). Makes external API calls (Anthropic).</blockquote>
+<h3 id="phase-1-extraction-tag-primitives-py">tag_primitives.py</h3>
+<div class="stage-label">Phase 1: Extraction &middot; 652 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Semantic Primitives Tagger (standalone) Tags tier 4 priority messages with the 7 Semantic Primitives.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 535</span><br><span class="field">classify_action_vector</span>: <span class="value">Classify the action vector from message content and metadata.</span><br><span class="field">classify_emotion</span>: <span class="value">Classify emotional tenor.</span><br><span class="field">classify_intent</span>: <span class="value">Classify intent marker.</span><br><span class="field">classify_confidence</span>: <span class="value">Classify confidence signal.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (9/10 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>tag_primitives.py is a 652-line module with 10 functions and 0 classes. Documentation coverage is good (90%).</blockquote>
+<h3 id="phase-1-extraction-tag-semantic-primitives-py">tag_semantic_primitives.py</h3>
+<div class="stage-label">Phase 1: Extraction &middot; 656 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Semantic Primitives Tagger (standalone) Tags tier 4 priority messages with the 7 Semantic Primitives.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 539</span><br><span class="field">classify_action_vector</span>: <span class="value">Classify the action vector from message content and metadata.</span><br><span class="field">classify_emotion</span>: <span class="value">Classify emotional tenor.</span><br><span class="field">classify_intent</span>: <span class="value">Classify intent marker.</span><br><span class="field">classify_confidence</span>: <span class="value">Classify confidence signal.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (9/10 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>tag_semantic_primitives.py is a 656-line module with 10 functions and 0 classes. Documentation coverage is good (90%).</blockquote>
+
+<h2 id="phase-2-synthesis">Phase 2: Synthesis</h2>
+<h3 id="phase-2-synthesis-backfill-phase2-py">backfill_phase2.py</h3>
+<div class="stage-label">Phase 2: Synthesis &middot; 457 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Batch Phase 2 generator for sessions missing P2 files.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.json_io, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">build_synthesis</span>: <span class="value">Build a 6-pass synthesis from session data and idea graph.</span><br><span class="field">build_grounded_markers</span>: <span class="value">Build grounded markers from file activity, frustration events, and idea nodes.</span><br><span class="field">build_idea_graph</span>: <span class="value">Build an idea evolution graph from thread extractions and geological notes.</span><br><span class="field">process_session</span>: <span class="value">Process a single session: build missing Phase 2 files (idea graph, synthesis, markers).</span><br><span class="field">_extract_old_format_nodes</span>: <span class="value">Extract idea nodes from old extractions-list thread format.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (9/9 functions documented)</li><li>Has __main__ guard for standalone execution</li><li>Maintains readable nesting depth despite file size</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>backfill_phase2.py is a 457-line module with 9 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="phase-2-synthesis-batch-p2-generator-py">batch_p2_generator.py</h3>
+<div class="stage-label">Phase 2: Synthesis &middot; 436 lines</div>
+ <span class="rating adequate">Adequate</span>
+<p>Batch Phase 2 generator for sessions missing P2 files.</p>
+<div class="data-box"><span class="label">Data Flow</span>Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">build_idea_graph</span>: <span class="value">function at line 32</span><br><span class="field">build_synthesis</span>: <span class="value">function at line 171</span><br><span class="field">build_grounded_markers</span>: <span class="value">function at line 277</span><br><span class="field">process_session</span>: <span class="value">function at line 363</span><br><span class="field">main</span>: <span class="value">function at line 414</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Low docstring coverage (0/7 functions documented)</li><li>Deep nesting (max indent depth 9) — consider extracting helper functions</li><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>batch_p2_generator.py is a 436-line module with 7 functions and 0 classes. Documentation coverage is low (0%).</blockquote>
+<h3 id="phase-2-synthesis-batch-phase2-processor-py">batch_phase2_processor.py</h3>
+<div class="stage-label">Phase 2: Synthesis &middot; 722 lines</div>
+ <span class="rating adequate">Adequate</span>
+<p>Batch Phase 2 Processor - Generates idea_graph.json, synthesis.json, grounded_markers.json from Phase 1 outputs (thread_extractions, geological_notes, semantic_primitives, explorer_notes, session_metadata).</p>
+<div class="data-box"><span class="label">Data Flow</span>External packages: Phase
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">build_markers</span>: <span class="value">function at line 534</span><br><span class="field">build_synthesis</span>: <span class="value">function at line 412</span><br><span class="field">extract_key_messages</span>: <span class="value">Get the most important messages from thread extractions (handles both formats).</span><br><span class="field">build_nodes</span>: <span class="value">Build idea graph nodes from Phase 1 data, using multiple sources.</span><br><span class="field">process_session</span>: <span class="value">function at line 663</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Deep nesting (max indent depth 10) — consider extracting helper functions</li><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>batch_phase2_processor.py is a 722-line module with 17 functions and 0 classes.</blockquote>
+<h3 id="phase-2-synthesis-build-phase2-outputs-py">build_phase2_outputs.py</h3>
+<div class="stage-label">Phase 2: Synthesis &middot; 735 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Batch Phase 2 Processor - Generates idea_graph.json, synthesis.json, grounded_markers.json from Phase 1 outputs (thread_extractions, geological_notes, semantic_primitives, explorer_notes, session_metadata).</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.json_io, tools.log_config
+External packages: Phase
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">build_markers</span>: <span class="value">function at line 547</span><br><span class="field">build_synthesis</span>: <span class="value">function at line 425</span><br><span class="field">build_nodes</span>: <span class="value">Build idea graph nodes from Phase 1 data, using multiple sources.</span><br><span class="field">extract_key_messages</span>: <span class="value">Get the most important messages from thread extractions (handles both formats).</span><br><span class="field">process_session</span>: <span class="value">function at line 676</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li><li>Well-decomposed into small, focused functions</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Deep nesting (max indent depth 10) — consider extracting helper functions</li><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>build_phase2_outputs.py is a 735-line module with 19 functions and 0 classes.</blockquote>
+<h3 id="phase-2-synthesis-code-similarity-py">code_similarity.py</h3>
+<div class="stage-label">Phase 2: Synthesis &middot; 517 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Code Similarity Engine — Full Scan Mode ========================================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">FileFingerprint</span>: <span class="value">All extractable signals from a single Python file.</span><br><span class="field">scan_directory</span>: <span class="value">Full scan: compare all Python files against all others.</span><br><span class="field">main</span>: <span class="value">function at line 421</span><br><span class="field">FileFingerprint._extract</span>: <span class="value">Parse file and extract all signals.</span><br><span class="field">compare_pair</span>: <span class="value">Compare two file fingerprints and return similarity signals.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (8/10 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>code_similarity.py is a 517-line module with 10 functions and 1 classes. Documentation coverage is good (80%).</blockquote>
+<h3 id="phase-2-synthesis-file-genealogy-py">file_genealogy.py</h3>
+<div class="stage-label">Phase 2: Synthesis &middot; 450 lines</div>
+ <span class="rating strong">Strong</span>
+<p>File Genealogy Detector</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.json_io, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">cluster_into_families</span>: <span class="value">Cluster files into families based on detected links.
+
+Uses union-find to group files that are transitively connected.</span><br><span class="field">main</span>: <span class="value">function at line 370</span><br><span class="field">build_file_timelines</span>: <span class="value">Build activity timelines from thread extractions.
+
+Supports two formats:
+- Old format: thread_data[&quot;extractions&quot;] is a list; each entry has
+  entry...</span><br><span class="field">detect_idea_graph_lineage</span>: <span class="value">Find file-to-file links via idea graph edges.
+
+If idea A mentions file X and idea B mentions file Y,
+and A→B is evolved/pivoted/concretized, then X...</span><br><span class="field">detect_temporal_succession</span>: <span class="value">Find files where one stops being modified and another starts.
+
+Signal: file X's last modification is within 20 messages of file Y's first appearance.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (9/10 functions documented)</li><li>Has __main__ guard for standalone execution</li><li>Maintains readable nesting depth despite file size</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>file_genealogy.py is a 450-line module with 14 functions and 0 classes. Documentation coverage is good (90%).</blockquote>
+
+<h2 id="phase-3-hyperdoc-writing">Phase 3: Hyperdoc Writing</h2>
+<h3 id="phase-3-hyperdoc-writing-collect-file-evidence-py">collect_file_evidence.py</h3>
+<div class="stage-label">Phase 3: Hyperdoc Writing &middot; 876 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Phase 3a: Per-Session File Evidence Collector</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.json_io, tools.log_config
+External packages: messages
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 777</span><br><span class="field">build_graph_context</span>: <span class="value">Build graph context section: connected edges, containing subgraphs, and session-level statistics.
+
+Unlike build_lineage() which extracts nodes for ...</span><br><span class="field">build_chronological_timeline</span>: <span class="value">Build chronological timeline from thread entries and grounded markers.</span><br><span class="field">build_synthesis_context</span>: <span class="value">Build synthesis context section from synthesis.json.
+
+Handles two schema variants:
+  Schema A: top-level pass_1_factual, pass_2_patterns, ... keys
+...</span><br><span class="field">build_geological_character</span>: <span class="value">Build geological character section from observations matching by name or time window.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (21/22 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Deep nesting (max indent depth 10) — consider extracting helper functions</li></ul></div>
+<blockquote>collect_file_evidence.py is a 876-line module with 22 functions and 0 classes. Documentation coverage is good (95%).</blockquote>
+<h3 id="phase-3-hyperdoc-writing-evidence-resolver-py">evidence_resolver.py</h3>
+<div class="stage-label">Phase 3: Hyperdoc Writing &middot; 180 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Evidence Resolver — parses @evidence directives and replaces them with rendered blocks.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: evidence, tools.log_config
+External packages: , evidence_resolver</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">resolve</span>: <span class="value">Resolve all @evidence directives in text.
+
+Args:
+    text: Narrator output containing @evidence:type(params) directives
+    session_dir: Path to th...</span><br><span class="field">_parse_params</span>: <span class="value">Parse the params string inside an @evidence directive.
+
+Handles:
+  range=[523,531]        -&gt; {&quot;range&quot;: [523, 531]}
+  file=&quot;config.py&quot;       -&gt; {&quot;fi...</span><br><span class="field">_split_top_level</span>: <span class="value">Split string by commas not inside brackets.</span><br><span class="field">_parse_scalar</span>: <span class="value">Parse a scalar value — integer if numeric, else string.</span><br><span class="field">resolve_count</span>: <span class="value">Count the number of @evidence directives in text without resolving them.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (5/5 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>evidence_resolver.py is a 180-line module with 7 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="phase-3-hyperdoc-writing-generate-dossiers-py">generate_dossiers.py</h3>
+<div class="stage-label">Phase 3: Hyperdoc Writing &middot; 1130 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Agent 7: File Mapper Generates file_dossiers.json and claude_md_analysis.json from session data.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, phase_3_hyperdoc_writing.evidence_resolver, tools.json_io, tools.log_config
+External packages: evidence_resolver
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">file_matches_target</span>: <span class="value">Check if a warning/recommendation target references this file.</span><br><span class="field">_extract_target_text</span>: <span class="value">Extract a target/scope string from a marker dict regardless of schema variant.</span><br><span class="field">load_json</span>: <span class="value">Load JSON from BASE_DIR, returning empty dict if missing or corrupt.</span><br><span class="field">_extract_warning_text</span>: <span class="value">Extract the warning/claim text from a marker dict regardless of schema variant.</span><br><span class="field">_extract_recommendation_text</span>: <span class="value">Extract recommendation/actionable guidance from a marker dict.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (8/8 functions documented)</li><li>Proper error handling with specific exception types</li><li>Maintains readable nesting depth despite file size</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>generate_dossiers.py is a 1130-line module with 8 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="phase-3-hyperdoc-writing-generate-remaining-hyperdocs-py">generate_remaining_hyperdocs.py</h3>
+<div class="stage-label">Phase 3: Hyperdoc Writing &middot; 376 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Generate hyperdoc blocks for the remaining 10 files (we already have 5). Uses file_dossiers.json + grounded_markers.json to compose blocks.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">generate_block</span>: <span class="value">Generate a hyperdoc comment block from a file dossier.</span><br><span class="field">find_insertion_point</span>: <span class="value">Find where to insert hyperdoc (after imports, before first def/class).</span><br><span class="field">_normalize_markers</span>: <span class="value">Convert flat markers list to structured format if needed.</span><br><span class="field">_wrap</span>: <span class="value">Simple word wrap.</span><br><span class="field">get_applicable_warnings</span>: <span class="value">Get warnings that apply to a specific file.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (6/6 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>generate_remaining_hyperdocs.py is a 376-line module with 6 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="phase-3-hyperdoc-writing-generate-viewer-py">generate_viewer.py</h3>
+<div class="stage-label">Phase 3: Hyperdoc Writing &middot; 985 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Generate a comprehensive HTML viewer for all pipeline outputs.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+External packages: html
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">load</span>: <span class="value">function at line 31</span><br><span class="field">load_text</span>: <span class="value">function at line 41</span><br><span class="field">esc</span>: <span class="value">function at line 38</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Uses type annotations for better code clarity</li><li>Maintains readable nesting depth despite file size</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Large file (985 lines) with few functions (3) — may be doing too much in too few places</li><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>generate_viewer.py is a 985-line module with 3 functions and 0 classes.</blockquote>
+<h3 id="phase-3-hyperdoc-writing-write-hyperdocs-py">write_hyperdocs.py</h3>
+<div class="stage-label">Phase 3: Hyperdoc Writing &middot; 631 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Agent 8: Hyperdoc Writer Reads file_dossiers.json and grounded_markers.json to compose hyperdoc comment blocks for the top 5 files. Writes each block to hyperdoc_blocks/{filename}_hyperdoc.txt.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.json_io, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">compose_hyperdoc_block</span>: <span class="value">Compose the full hyperdoc comment block for a single file.</span><br><span class="field">main</span>: <span class="value">function at line 576</span><br><span class="field">_build_friction</span>: <span class="value">Build friction items from warnings, ideas, and edges.</span><br><span class="field">normalize_markers</span>: <span class="value">Convert flat markers list to structured format if needed.
+
+Canonical batch output has: {&quot;markers&quot;: [{marker_id, category, claim, confidence}]}
+Old ...</span><br><span class="field">_get_relevant_patterns</span>: <span class="value">Filter behavioral patterns relevant to this specific file.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (10/15 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>write_hyperdocs.py is a 631-line module with 15 functions and 0 classes. Documentation coverage is good (67%).</blockquote>
+<h3 id="phase-3-hyperdoc-writing-write-more-hyperdocs-py">write_more_hyperdocs.py</h3>
+<div class="stage-label">Phase 3: Hyperdoc Writing &middot; 379 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Generate hyperdoc blocks for the remaining 10 files (we already have 5). Uses file_dossiers.json + grounded_markers.json to compose blocks.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">generate_block</span>: <span class="value">Generate a hyperdoc comment block from a file dossier.</span><br><span class="field">find_insertion_point</span>: <span class="value">Find where to insert hyperdoc (after imports, before first def/class).</span><br><span class="field">_normalize_markers</span>: <span class="value">Convert flat markers list to structured format if needed.</span><br><span class="field">_wrap</span>: <span class="value">Simple word wrap.</span><br><span class="field">get_applicable_warnings</span>: <span class="value">Get warnings that apply to a specific file.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (6/6 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>write_more_hyperdocs.py is a 379-line module with 6 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+
+<h2 id="phase-3-evidence-collectors">Phase 3: Evidence Collectors</h2>
+<h3 id="phase-3-evidence-collectors-base-py">base.py</h3>
+<div class="stage-label">Phase 3: Evidence Collectors &middot; 166 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Base evidence renderer class.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.json_io, tools.log_config</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">EvidenceRenderer</span>: <span class="value">Base class for all evidence renderers.
+
+Subclasses implement render(params) -&gt; str to produce formatted
+evidence blocks from pipeline data.
+
+Data s...</span><br><span class="field">EvidenceRenderer.get_tagged_message</span>: <span class="value">Get semantic primitives for a message by index.
+
+Handles both schema variants:
+  - Nested: primitives under a 'primitives' dict
+  - Flat: primitive...</span><br><span class="field">EvidenceRenderer.__init__</span>: <span class="value">method at line 50</span><br><span class="field">load_json</span>: <span class="value">Load JSON from the first directory where the file exists.
+
+Reuses the same multi-directory search pattern from collect_file_evidence.py:
+PERM sessi...</span><br><span class="field">EvidenceRenderer.format_timestamp</span>: <span class="value">Extract HH:MM:SS from an ISO timestamp string.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (9/16 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>base.py is a 166-line module with 16 functions and 1 classes. Documentation coverage is good (56%).</blockquote>
+<h3 id="phase-3-evidence-collectors-debug-sequence-py">debug_sequence.py</h3>
+<div class="stage-label">Phase 3: Evidence Collectors &middot; 161 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Debug Sequence renderer.</p>
+<div class="data-box"><span class="label">Data Flow</span>External packages: </div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">DebugSequenceRenderer</span>: <span class="value">class at line 12</span><br><span class="field">DebugSequenceRenderer.render</span>: <span class="value">method at line 14</span><br><span class="field">DebugSequenceRenderer._compute_duration</span>: <span class="value">Compute human-readable duration between two ISO timestamps.</span><br><span class="field">DebugSequenceRenderer._classify_action</span>: <span class="value">Classify message action from filter signals and content.</span><br><span class="field">DebugSequenceRenderer._extract_preview</span>: <span class="value">Extract a short preview from message content.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (3/4 functions documented)</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>debug_sequence.py is a 161-line module with 5 functions and 1 classes. Documentation coverage is good (75%).</blockquote>
+<h3 id="phase-3-evidence-collectors-decision-trace-py">decision_trace.py</h3>
+<div class="stage-label">Phase 3: Evidence Collectors &middot; 178 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Decision Trace renderer.</p>
+<div class="data-box"><span class="label">Data Flow</span>External packages: </div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">DecisionTraceRenderer</span>: <span class="value">class at line 13</span><br><span class="field">DecisionTraceRenderer._render_from_marker</span>: <span class="value">Render decision trace starting from a grounded marker.</span><br><span class="field">DecisionTraceRenderer._render_from_chain</span>: <span class="value">Render decision trace from an idea graph node chain.</span><br><span class="field">DecisionTraceRenderer._find_related_nodes</span>: <span class="value">Find idea graph nodes related to this marker.</span><br><span class="field">DecisionTraceRenderer._wrap</span>: <span class="value">Simple word wrap.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (5/6 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Well-decomposed into small, focused functions</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>decision_trace.py is a 178-line module with 6 functions and 1 classes. Documentation coverage is good (83%).</blockquote>
+<h3 id="phase-3-evidence-collectors-emotional-arc-py">emotional_arc.py</h3>
+<div class="stage-label">Phase 3: Evidence Collectors &middot; 83 lines</div>
+ <span class="rating adequate">Adequate</span>
+<p>Emotional Arc renderer.</p>
+<div class="data-box"><span class="label">Data Flow</span>External packages: </div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">EmotionalArcRenderer</span>: <span class="value">class at line 12</span><br><span class="field">EmotionalArcRenderer.render</span>: <span class="value">method at line 14</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>emotional_arc.py is a 83-line module with 1 functions and 1 classes.</blockquote>
+<h3 id="phase-3-evidence-collectors-file-timeline-py">file_timeline.py</h3>
+<div class="stage-label">Phase 3: Evidence Collectors &middot; 137 lines</div>
+ <span class="rating strong">Strong</span>
+<p>File Timeline renderer.</p>
+<div class="data-box"><span class="label">Data Flow</span>External packages: 
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">FileTimelineRenderer</span>: <span class="value">class at line 20</span><br><span class="field">FileTimelineRenderer._render_from_events</span>: <span class="value">Render timeline from a list of event dicts.</span><br><span class="field">FileTimelineRenderer._scan_threads_for_file</span>: <span class="value">Scan thread_extractions for mentions of this file.</span><br><span class="field">FileTimelineRenderer.render</span>: <span class="value">method at line 22</span><br><span class="field">FileTimelineRenderer._load_file_evidence</span>: <span class="value">Try to load file_evidence/{safe_name}_evidence.json.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (5/6 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Well-decomposed into small, focused functions</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>file_timeline.py is a 137-line module with 6 functions and 1 classes. Documentation coverage is good (83%).</blockquote>
+<h3 id="phase-3-evidence-collectors-geological-event-py">geological_event.py</h3>
+<div class="stage-label">Phase 3: Evidence Collectors &middot; 149 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Geological Event renderer.</p>
+<div class="data-box"><span class="label">Data Flow</span>External packages: </div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">GeologicalEventRenderer</span>: <span class="value">class at line 12</span><br><span class="field">GeologicalEventRenderer.render</span>: <span class="value">method at line 14</span><br><span class="field">GeologicalEventRenderer._find_observation</span>: <span class="value">Find a geological observation covering this message index.</span><br><span class="field">GeologicalEventRenderer._wrap</span>: <span class="value">Simple word wrap.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (2/3 functions documented)</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>geological_event.py is a 149-line module with 3 functions and 1 classes. Documentation coverage is good (67%).</blockquote>
+<h3 id="phase-3-evidence-collectors-idea-transition-py">idea_transition.py</h3>
+<div class="stage-label">Phase 3: Evidence Collectors &middot; 125 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Idea Transition renderer.</p>
+<div class="data-box"><span class="label">Data Flow</span>External packages: </div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">IdeaTransitionRenderer</span>: <span class="value">class at line 13</span><br><span class="field">IdeaTransitionRenderer.render</span>: <span class="value">method at line 15</span><br><span class="field">IdeaTransitionRenderer._build_chain_from_node</span>: <span class="value">Build a chain by following edges backward then forward from node_id.</span><br><span class="field">IdeaTransitionRenderer._find_edge</span>: <span class="value">Find edge between two nodes.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (2/3 functions documented)</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>idea_transition.py is a 125-line module with 3 functions and 1 classes. Documentation coverage is good (67%).</blockquote>
+<h3 id="phase-3-evidence-collectors-reaction-log-py">reaction_log.py</h3>
+<div class="stage-label">Phase 3: Evidence Collectors &middot; 92 lines</div>
+ <span class="rating adequate">Adequate</span>
+<p>Reaction Log renderer.</p>
+<div class="data-box"><span class="label">Data Flow</span>External packages: </div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">ReactionLogRenderer</span>: <span class="value">class at line 12</span><br><span class="field">ReactionLogRenderer.render</span>: <span class="value">method at line 14</span><br><span class="field">ReactionLogRenderer._caps_bar</span>: <span class="value">Render a visual bar for caps ratio (0.0 to 1.0).</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>reaction_log.py is a 92-line module with 2 functions and 1 classes.</blockquote>
+
+<h2 id="phase-4a-aggregation">Phase 4a: Aggregation</h2>
+<h3 id="phase-4a-aggregation-aggregate-dossiers-py">aggregate_dossiers.py</h3>
+<div class="stage-label">Phase 4a: Aggregation &middot; 765 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Phase 4a: Cross-Session Dossier Aggregation</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.file_lock, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 530</span><br><span class="field">load_cross_session_evidence</span>: <span class="value">Load per-file evidence from file_evidence/ subdirectories across all sessions.
+Returns {filename: {
+    cross_session_emotional_arc: {per_session_e...</span><br><span class="field">build_frustration_file_map</span>: <span class="value">Join frustration peaks with file mentions to build per-file frustration associations.
+Returns {filepath: [{session, message_index, caps_ratio, prof...</span><br><span class="field">aggregate_file_entries</span>: <span class="value">Aggregate multiple session entries for a single file.</span><br><span class="field">load_code_similarity</span>: <span class="value">Load code similarity index and build per-file lookup.
+Returns {filepath: [{similar_to, score, pattern_type}, ...]}
+Builds a basename lookup so both...</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (10/11 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>aggregate_dossiers.py is a 765-line module with 11 functions and 0 classes. Documentation coverage is good (91%).</blockquote>
+
+<h2 id="phase-4b-insertion">Phase 4b: Insertion</h2>
+<h3 id="phase-4b-insertion-hyperdoc-layers-py">hyperdoc_layers.py</h3>
+<div class="stage-label">Phase 4b: Insertion &middot; 298 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Hyperdoc Layer Manager ======================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, phase_4_insertion.hyperdoc_layers
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">HyperdocLayerManager</span>: <span class="value">Manages the layered hyperdoc format.</span><br><span class="field">main</span>: <span class="value">function at line 248</span><br><span class="field">migrate_directory</span>: <span class="value">Migrate all existing hyperdocs from snapshot format to layered format.</span><br><span class="field">HyperdocLayerManager.append_layer</span>: <span class="value">Append a new layer to an existing hyperdoc.</span><br><span class="field">HyperdocLayerManager.create_seed</span>: <span class="value">Create a seed hyperdoc for a file that is about to be created.
+The seed captures WHY this file exists before any code is written.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (9/10 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>hyperdoc_layers.py is a 298-line module with 10 functions and 1 classes. Documentation coverage is good (90%).</blockquote>
+<h3 id="phase-4b-insertion-hyperdoc-store-init-py">hyperdoc_store_init.py</h3>
+<div class="stage-label">Phase 4b: Insertion &middot; 193 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Hyperdoc Store Initialization — Versioned External Storage</p>
+<div class="data-box"><span class="label">Data Flow</span>External packages: os;
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">init_file_store</span>: <span class="value">Initialize the store for one file.
+Creates directory, populates v1, copies current rendered files.
+Returns dict with status info.</span><br><span class="field">main</span>: <span class="value">function at line 156</span><br><span class="field">build_index</span>: <span class="value">Build _index.json with metadata about all stored files.</span><br><span class="field">load_dossier_for_file</span>: <span class="value">Load the dossier entry for a specific file.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (3/4 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>hyperdoc_store_init.py is a 193-line module with 4 functions and 0 classes. Documentation coverage is good (75%).</blockquote>
+<h3 id="phase-4b-insertion-init-hyperdoc-store-py">init_hyperdoc_store.py</h3>
+<div class="stage-label">Phase 4b: Insertion &middot; 193 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Hyperdoc Store Initialization — Versioned External Storage</p>
+<div class="data-box"><span class="label">Data Flow</span>External packages: os;
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">init_file_store</span>: <span class="value">Initialize the store for one file.
+Creates directory, populates v1, copies current rendered files.
+Returns dict with status info.</span><br><span class="field">main</span>: <span class="value">function at line 156</span><br><span class="field">build_index</span>: <span class="value">Build _index.json with metadata about all stored files.</span><br><span class="field">load_dossier_for_file</span>: <span class="value">Load the dossier entry for a specific file.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (3/4 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>init_hyperdoc_store.py is a 193-line module with 4 functions and 0 classes. Documentation coverage is good (75%).</blockquote>
+<h3 id="phase-4b-insertion-insert-from-json-py">insert_from_json.py</h3>
+<div class="stage-label">Phase 4b: Insertion &middot; 526 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Phase 4b: Insert hyperdocs from Phase 4b JSON into source code files.</p>
+<div class="data-box"><span class="label">Data Flow</span>Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">find_header_insertion_point</span>: <span class="value">Find the line index where the header should be inserted.
+After imports/module-level setup, before first class/function/decorator.
+Reuses proven log...</span><br><span class="field">process_non_python</span>: <span class="value">Handle non-Python files with appropriate comment syntax.</span><br><span class="field">insert_all</span>: <span class="value">Insert header, inline annotations, and footer into source lines.
+Returns new list of lines.</span><br><span class="field">process_hyperdoc</span>: <span class="value">Process one hyperdoc JSON file.</span><br><span class="field">main</span>: <span class="value">function at line 468</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (7/8 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>insert_from_json.py is a 526-line module with 8 functions and 0 classes. Documentation coverage is good (88%).</blockquote>
+<h3 id="phase-4b-insertion-insert-from-phase4b-py">insert_from_phase4b.py</h3>
+<div class="stage-label">Phase 4b: Insertion &middot; 526 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Phase 4b: Insert hyperdocs from Phase 4b JSON into source code files.</p>
+<div class="data-box"><span class="label">Data Flow</span>Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">find_header_insertion_point</span>: <span class="value">Find the line index where the header should be inserted.
+After imports/module-level setup, before first class/function/decorator.
+Reuses proven log...</span><br><span class="field">process_non_python</span>: <span class="value">Handle non-Python files with appropriate comment syntax.</span><br><span class="field">insert_all</span>: <span class="value">Insert header, inline annotations, and footer into source lines.
+Returns new list of lines.</span><br><span class="field">process_hyperdoc</span>: <span class="value">Process one hyperdoc JSON file.</span><br><span class="field">main</span>: <span class="value">function at line 468</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (7/8 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>insert_from_phase4b.py is a 526-line module with 8 functions and 0 classes. Documentation coverage is good (88%).</blockquote>
+<h3 id="phase-4b-insertion-insert-hyperdocs-py">insert_hyperdocs.py</h3>
+<div class="stage-label">Phase 4b: Insertion &middot; 251 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Insert hyperdoc blocks into copies of the original code files.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">find_insertion_point</span>: <span class="value">Find the line index where the hyperdoc should be inserted.
+
+Strategy:
+1. Skip shebang line (#!) if present
+2. Skip module docstring (triple-quoted)...</span><br><span class="field">main</span>: <span class="value">function at line 199</span><br><span class="field">insert_hyperdoc</span>: <span class="value">Insert hyperdoc block at the appropriate position in source code.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (2/3 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>insert_hyperdocs.py is a 251-line module with 3 functions and 0 classes. Documentation coverage is good (67%).</blockquote>
+<h3 id="phase-4b-insertion-insert-hyperdocs-3part-py">insert_hyperdocs_3part.py</h3>
+<div class="stage-label">Phase 4b: Insertion &middot; 355 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Smart Hyperdoc Insertion (V2) — Header + Inline + Footer</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">find_header_insertion_point</span>: <span class="value">Find the line index where the header hyperdoc should be inserted.
+
+Strategy: after imports/module-level setup, before first class/function/decorato...</span><br><span class="field">insert_all</span>: <span class="value">Insert header, inline comments, and footer into source lines.
+
+Returns new list of lines.</span><br><span class="field">process_file</span>: <span class="value">Process one file: read source, read hyperdoc parts, insert, write preview.</span><br><span class="field">get_function_class_locations</span>: <span class="value">Use AST to find all top-level and class-level function/class definitions.
+
+Returns list of dicts: {name, type, line, col_offset}
+Line numbers are 1...</span><br><span class="field">main</span>: <span class="value">function at line 327</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (4/5 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Deep nesting (max indent depth 11) — consider extracting helper functions</li><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>insert_hyperdocs_3part.py is a 355-line module with 5 functions and 0 classes. Documentation coverage is good (80%).</blockquote>
+<h3 id="phase-4b-insertion-insert-hyperdocs-v2-py">insert_hyperdocs_v2.py</h3>
+<div class="stage-label">Phase 4b: Insertion &middot; 355 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Smart Hyperdoc Insertion (V2) — Header + Inline + Footer</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">find_header_insertion_point</span>: <span class="value">Find the line index where the header hyperdoc should be inserted.
+
+Strategy: after imports/module-level setup, before first class/function/decorato...</span><br><span class="field">insert_all</span>: <span class="value">Insert header, inline comments, and footer into source lines.
+
+Returns new list of lines.</span><br><span class="field">process_file</span>: <span class="value">Process one file: read source, read hyperdoc parts, insert, write preview.</span><br><span class="field">get_function_class_locations</span>: <span class="value">Use AST to find all top-level and class-level function/class definitions.
+
+Returns list of dicts: {name, type, line, col_offset}
+Line numbers are 1...</span><br><span class="field">main</span>: <span class="value">function at line 327</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (4/5 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Deep nesting (max indent depth 11) — consider extracting helper functions</li><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>insert_hyperdocs_v2.py is a 355-line module with 5 functions and 0 classes. Documentation coverage is good (80%).</blockquote>
+
+<h2 id="product">Product</h2>
+<h3 id="product-concierge-py">concierge.py</h3>
+<div class="stage-label">Product &middot; 359 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Hyperdocs Concierge — Zero-work onboarding.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">discover</span>: <span class="value">Scan all Claude Code sessions, group by project.</span><br><span class="field">process</span>: <span class="value">Run Phase 0 on a specific session.</span><br><span class="field">show_status</span>: <span class="value">Show pipeline state for the most recent session.</span><br><span class="field">find_session</span>: <span class="value">Find a session file by ID (full or partial).</span><br><span class="field">main</span>: <span class="value">function at line 337</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (7/9 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>concierge.py is a 359-line module with 9 functions and 0 classes. Documentation coverage is good (78%).</blockquote>
+<h3 id="product-coverage-stats-py">coverage_stats.py</h3>
+<div class="stage-label">Product &middot; 189 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Coverage Stats Generator — Produces coverage.json for the wrecktangle.com landing page.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">generate_coverage</span>: <span class="value">Generate the coverage.json file.</span><br><span class="field">scan_processed_sessions</span>: <span class="value">Scan processed session directories and classify by phase completeness.
+
+Returns a dict of session_name -&gt; {phases: {0: status, 1: status, ...}}
+whe...</span><br><span class="field">detect_realtime_sessions</span>: <span class="value">Check for sessions being processed by the realtime hook.
+
+The realtime hook writes to OUTPUT_DIR/realtime_buffer.jsonl.
+If the buffer exists and ha...</span><br><span class="field">main</span>: <span class="value">function at line 174</span><br><span class="field">count_total_sessions</span>: <span class="value">Count JSONL files in the canonical chat history directory.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (4/5 functions documented)</li><li>Proper error handling with specific exception types</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>coverage_stats.py is a 189-line module with 5 functions and 0 classes. Documentation coverage is good (80%).</blockquote>
+<h3 id="product-dashboard-py">dashboard.py</h3>
+<div class="stage-label">Product &middot; 293 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Hyperdocs Dashboard — Static HTML generator.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.json_io, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">generate_dashboard</span>: <span class="value">Generate the dashboard HTML.</span><br><span class="field">_normalize_markers</span>: <span class="value">Convert flat markers list to structured format if needed.</span><br><span class="field">main</span>: <span class="value">function at line 273</span><br><span class="field">find_latest_session</span>: <span class="value">Find the most recently modified session output directory.</span><br><span class="field">load_json_safe</span>: <span class="value">Load JSON or return empty dict. Marks missing files for dashboard display.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (4/5 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>dashboard.py is a 293-line module with 5 functions and 0 classes. Documentation coverage is good (80%).</blockquote>
+<h3 id="product-install-py">install.py</h3>
+<div class="stage-label">Product &middot; 149 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Hyperdocs Installer — One-time setup.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">install_hook</span>: <span class="value">Add the PostToolUse hook to .claude/settings.json.</span><br><span class="field">main</span>: <span class="value">function at line 110</span><br><span class="field">install_slash_command</span>: <span class="value">Copy the /hyperdocs command to the user's .claude/commands/.</span><br><span class="field">set_env_hint</span>: <span class="value">Create a .env file with HYPERDOCS_PATH for the slash command.</span><br><span class="field">run_discovery</span>: <span class="value">Run the concierge discovery.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (4/5 functions documented)</li><li>Has __main__ guard for standalone execution</li><li>Well-decomposed into small, focused functions</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>install.py is a 149-line module with 5 functions and 0 classes. Documentation coverage is good (80%).</blockquote>
+<h3 id="product-realtime-hook-py">realtime_hook.py</h3>
+<div class="stage-label">Product &middot; 127 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Hyperdocs Real-Time Hook — Captures Edit/Write operations as they happen.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">extract_operation</span>: <span class="value">Extract the relevant fields from a PostToolUse hook payload.</span><br><span class="field">main</span>: <span class="value">function at line 103</span><br><span class="field">get_buffer_stats</span>: <span class="value">Get current buffer statistics.</span><br><span class="field">append_to_buffer</span>: <span class="value">Append one operation to the buffer file.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (3/4 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>realtime_hook.py is a 127-line module with 4 functions and 0 classes. Documentation coverage is good (75%).</blockquote>
+<h3 id="product-session-profiler-py">session_profiler.py</h3>
+<div class="stage-label">Product &middot; 628 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Session Profiler — Discover and visualize Claude Code chat history.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+External packages: {{
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">generate_html</span>: <span class="value">Generate the interactive session timeline visualization.</span><br><span class="field">profile_session</span>: <span class="value">Extract metadata from a single JSONL session file without reading the whole thing.</span><br><span class="field">main</span>: <span class="value">function at line 569</span><br><span class="field">find_chat_history</span>: <span class="value">Find Claude Code chat history in standard locations.</span><br><span class="field">profile_all_sessions</span>: <span class="value">Profile every session in the chat directory.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (4/5 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>session_profiler.py is a 628-line module with 5 functions and 0 classes. Documentation coverage is good (80%).</blockquote>
+
+<h2 id="tools">Tools</h2>
+<h3 id="tools-add-data-trace-sheets-py">add_data_trace_sheets.py</h3>
+<div class="stage-label">Tools &middot; 550 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Add data-trace sheets to the pipeline Excel workbook.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.json_io, tools.log_config
+External packages: openpyxl</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">build_sheet_6_message_trace</span>: <span class="value">Sheet 6: 3 real messages traced through every transformation stage.</span><br><span class="field">main</span>: <span class="value">Load the pipeline Excel workbook and add/replace the Message Data Trace sheet.</span><br><span class="field">load_safe</span>: <span class="value">Load JSON from path, returning None if missing or corrupt.</span><br><span class="field">add_row</span>: <span class="value">Write a data row with optional background fill, text wrapping, and thin border.</span><br><span class="field">style_header</span>: <span class="value">Apply dark header styling (white text, dark fill) to a row of cells.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (6/6 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>add_data_trace_sheets.py is a 550-line module with 10 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="tools-analyze-data-flow-py">analyze_data_flow.py</h3>
+<div class="stage-label">Tools &middot; 627 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Positioning Analyzer — Data Flow Graph + Dead-End Detection + Phase Positioning ================================================================================</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">analyze</span>: <span class="value">Run the full positioning analysis.</span><br><span class="field">extract_io_from_source</span>: <span class="value">Extract input and output file references from a Python source file.
+
+Uses multiple strategies:
+1. AST-based: Find json.load/json.dump/open/Path.rea...</span><br><span class="field">get_phase_for_path</span>: <span class="value">Determine which phase a file belongs to based on its directory.
+
+Returns (phase_number, phase_name) where phase_number is:
+  0 for phase_0_prep/
+  ...</span><br><span class="field">discover_python_files</span>: <span class="value">Find all .py files in hyperdocs_3, excluding output and non-source dirs.</span><br><span class="field">build_relative_name</span>: <span class="value">Build a short relative name for display.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (5/5 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>analyze_data_flow.py is a 627-line module with 5 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="tools-batch-phase3a-py">batch_phase3a.py</h3>
+<div class="stage-label">Tools &middot; 146 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Batch runner for Phase 3a (collect_file_evidence.py) across multiple sessions.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 92</span><br><span class="field">find_eligible_sessions</span>: <span class="value">Find sessions with Phase 2 complete but no file_evidence/ directory.</span><br><span class="field">run_phase3a</span>: <span class="value">Run collect_file_evidence.py on a single session.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (2/3 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>batch_phase3a.py is a 146-line module with 3 functions and 0 classes. Documentation coverage is good (67%).</blockquote>
+<h3 id="tools-batch-runner-py">batch_runner.py</h3>
+<div class="stage-label">Tools &middot; 148 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Batch pipeline runner with checkpoint-based retry/resume.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.file_lock, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 83</span><br><span class="field">run_session</span>: <span class="value">Run pipeline on a single session. Returns (success, duration).</span><br><span class="field">save_checkpoint</span>: <span class="value">Save checkpoint atomically.</span><br><span class="field">discover_sessions</span>: <span class="value">Find all session directories.</span><br><span class="field">load_checkpoint</span>: <span class="value">Load checkpoint state or return empty.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (4/5 functions documented)</li><li>Proper error handling with specific exception types</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>batch_runner.py is a 148-line module with 5 functions and 0 classes. Documentation coverage is good (80%).</blockquote>
+<h3 id="tools-data-lifecycle-py">data_lifecycle.py</h3>
+<div class="stage-label">Tools &middot; 172 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Data lifecycle manager — identify stale, orphan, and oversized data.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 104</span><br><span class="field">scan_backups</span>: <span class="value">Find backup directories created by schema normalizer.</span><br><span class="field">scan_orphan_files</span>: <span class="value">Find files in session dirs that don't match known filenames.</span><br><span class="field">scan_large_files</span>: <span class="value">Find JSON files larger than 10MB.</span><br><span class="field">scan_empty_sessions</span>: <span class="value">Find session directories with 0 JSON files.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (5/6 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>data_lifecycle.py is a 172-line module with 6 functions and 0 classes. Documentation coverage is good (83%).</blockquote>
+<h3 id="tools-extract-dashboard-data-py">extract_dashboard_data.py</h3>
+<div class="stage-label">Tools &middot; 332 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Extract all visualization data from the Hyperdocs pipeline output. Produces dashboard_data.json with rich data for the interactive dashboard.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">compute_aggregates</span>: <span class="value">Compute dashboard-level aggregates.</span><br><span class="field">extract_file_data</span>: <span class="value">Extract rich metadata from all 456 hyperdoc JSONs.</span><br><span class="field">extract_session_data</span>: <span class="value">Extract per-session completeness and metadata.</span><br><span class="field">extract_idea_graphs</span>: <span class="value">Extract the richest idea graphs for visualization.</span><br><span class="field">main</span>: <span class="value">function at line 296</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (5/6 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>extract_dashboard_data.py is a 332-line module with 6 functions and 0 classes. Documentation coverage is good (83%).</blockquote>
+<h3 id="tools-extract-viz-data-py">extract_viz_data.py</h3>
+<div class="stage-label">Tools &middot; 326 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Extract all visualization data from the Hyperdocs pipeline output. Produces dashboard_data.json with rich data for the interactive dashboard.</p>
+<div class="data-box"><span class="label">Data Flow</span>Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">compute_aggregates</span>: <span class="value">Compute dashboard-level aggregates.</span><br><span class="field">extract_file_data</span>: <span class="value">Extract rich metadata from all 456 hyperdoc JSONs.</span><br><span class="field">extract_session_data</span>: <span class="value">Extract per-session completeness and metadata.</span><br><span class="field">extract_idea_graphs</span>: <span class="value">Extract the richest idea graphs for visualization.</span><br><span class="field">main</span>: <span class="value">function at line 290</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (5/6 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>extract_viz_data.py is a 326-line module with 6 functions and 0 classes. Documentation coverage is good (83%).</blockquote>
+<h3 id="tools-file-lock-py">file_lock.py</h3>
+<div class="stage-label">Tools &middot; 70 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Atomic file writing with advisory locking for shared pipeline state files.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.file_lock
+External packages: fcntl
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">atomic_json_write</span>: <span class="value">Write JSON atomically with advisory lock.
+
+1. Acquires exclusive lock on a .lock file
+2. Writes to a temp file
+3. Atomically renames temp → target
+...</span><br><span class="field">locked_json_read</span>: <span class="value">Read JSON with shared lock (blocks during concurrent writes).
+
+Returns parsed data, or empty dict if file doesn't exist.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (2/2 functions documented)</li><li>Proper error handling with specific exception types</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>file_lock.py is a 70-line module with 2 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="tools-generate-pipeline-excel-py">generate_pipeline_excel.py</h3>
+<div class="stage-label">Tools &middot; 954 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Generate an exhaustive Excel workbook documenting every detail of the Hyperdocs pipeline.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.json_io, tools.log_config
+External packages: openpyxl</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">build_sheet_2_file_schemas</span>: <span class="value">Sheet 2: Every field in every JSON file type, with types and samples from a real session.</span><br><span class="field">build_sheet_3_session_inventory</span>: <span class="value">Sheet 3: Per-session file inventory for all processed sessions.</span><br><span class="field">build_sheet_4_cross_session_top_files</span>: <span class="value">Sheet 4: Top files from cross-session index with all their data.</span><br><span class="field">build_sheet_5_data_flow</span>: <span class="value">Sheet 5: Which file feeds which file — the complete dependency graph.</span><br><span class="field">build_sheet_1_pipeline_steps</span>: <span class="value">Sheet 1: Every single pipeline step.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (7/11 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>generate_pipeline_excel.py is a 954-line module with 11 functions and 0 classes. Documentation coverage is good (64%).</blockquote>
+<h3 id="tools-hyperdoc-comparison-py">hyperdoc_comparison.py</h3>
+<div class="stage-label">Tools &middot; 293 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Hyperdoc Comparison — Side-by-side demo of Opus with vs without hyperdocs.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+External packages: anthropic
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">generate_html</span>: <span class="value">Generate side-by-side comparison HTML.</span><br><span class="field">run_comparison</span>: <span class="value">Run the full comparison on one file.</span><br><span class="field">main</span>: <span class="value">function at line 255</span><br><span class="field">call_opus</span>: <span class="value">Single Opus API call. Returns response text.</span><br><span class="field">strip_markers</span>: <span class="value">Remove everything after the HISTORICAL disclaimer line.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (4/5 functions documented)</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Makes API calls without try/except — network errors will crash</li><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>hyperdoc_comparison.py is a 293-line module with 7 functions and 0 classes. Documentation coverage is good (80%). Makes external API calls (Anthropic).</blockquote>
+<h3 id="tools-json-io-py">json_io.py</h3>
+<div class="stage-label">Tools &middot; 47 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Shared JSON I/O for the Hyperdocs pipeline.</p>
+<div class="data-box"><span class="label">Data Flow</span>Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">load_json</span>: <span class="value">Load and parse a JSON file. Crashes on missing or corrupt files.
+
+Args:
+    path: str or Path to the JSON file.
+
+Returns:
+    Parsed JSON data (dic...</span><br><span class="field">save_json</span>: <span class="value">Write data as JSON to a file. Creates parent directories if needed.
+
+Args:
+    path: str or Path to the output file.
+    data: JSON-serializable da...</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (2/2 functions documented)</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>json_io.py is a 47-line module with 2 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="tools-log-config-py">log_config.py</h3>
+<div class="stage-label">Tools &middot; 87 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Shared logging setup for the Hyperdocs pipeline.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">setup_pipeline_logging</span>: <span class="value">Configure the root hyperdocs logger with console and optional file output.
+
+Idempotent — only attaches handlers if none exist yet on the root logge...</span><br><span class="field">_JsonFormatter</span>: <span class="value">Formats log records as single-line JSON for structured log files.</span><br><span class="field">get_logger</span>: <span class="value">Return a logger under the hyperdocs namespace.
+
+Args:
+    name: dotted module name, e.g. &quot;phase0.enrich_session&quot;
+
+Returns:
+    logging.Logger named...</span><br><span class="field">_JsonFormatter.format</span>: <span class="value">method at line 44</span><br><span class="field">_JsonFormatter.__init__</span>: <span class="value">method at line 40</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (3/4 functions documented)</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>log_config.py is a 87-line module with 4 functions and 1 classes. Documentation coverage is good (75%).</blockquote>
+<h3 id="tools-pipeline-health-check-py">pipeline_health_check.py</h3>
+<div class="stage-label">Tools &middot; 810 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Pipeline Health Check — All 10 test types for the Hyperdocs pipeline.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+External packages: build_phase2_outputs
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">HealthCheck</span>: <span class="value">class at line 155</span><br><span class="field">HealthCheck.check_phase3_4_runtime</span>: <span class="value">Test Phase 3 generate_viewer and Phase 4 insertion against real session data.</span><br><span class="field">HealthCheck.run_all</span>: <span class="value">Run all 10 checks.</span><br><span class="field">HealthCheck.check_data_volume</span>: <span class="value">Verify no data loss between stages.</span><br><span class="field">HealthCheck.check_contracts</span>: <span class="value">Enforce formal stage output contracts.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (15/19 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>Deep nesting (max indent depth 14) — consider extracting helper functions</li><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>pipeline_health_check.py is a 810-line module with 19 functions and 1 classes. Documentation coverage is good (79%).</blockquote>
+<h3 id="tools-pipeline-status-py">pipeline_status.py</h3>
+<div class="stage-label">Tools &middot; 165 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Pipeline observability — aggregate status across all sessions and runs.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 93</span><br><span class="field">scan_sessions</span>: <span class="value">Scan all session directories and classify completeness.</span><br><span class="field">scan_logs</span>: <span class="value">Scan pipeline_run.log files across all session output dirs.</span><br><span class="field">scan_checkpoints</span>: <span class="value">Load batch runner checkpoint.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (3/4 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>pipeline_status.py is a 165-line module with 4 functions and 0 classes. Documentation coverage is good (75%).</blockquote>
+<h3 id="tools-positioning-analyzer-py">positioning_analyzer.py</h3>
+<div class="stage-label">Tools &middot; 622 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Positioning Analyzer — Data Flow Graph + Dead-End Detection + Phase Positioning ================================================================================</p>
+<div class="data-box"><span class="label">Data Flow</span>Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">analyze</span>: <span class="value">Run the full positioning analysis.</span><br><span class="field">extract_io_from_source</span>: <span class="value">Extract input and output file references from a Python source file.
+
+Uses multiple strategies:
+1. AST-based: Find json.load/json.dump/open/Path.rea...</span><br><span class="field">get_phase_for_path</span>: <span class="value">Determine which phase a file belongs to based on its directory.
+
+Returns (phase_number, phase_name) where phase_number is:
+  0 for phase_0_prep/
+  ...</span><br><span class="field">discover_python_files</span>: <span class="value">Find all .py files in hyperdocs_3, excluding output and non-source dirs.</span><br><span class="field">build_relative_name</span>: <span class="value">Build a short relative name for display.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (5/5 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>positioning_analyzer.py is a 622-line module with 5 functions and 0 classes. Documentation coverage is good (100%).</blockquote>
+<h3 id="tools-run-pipeline-py">run_pipeline.py</h3>
+<div class="stage-label">Tools &middot; 444 lines</div>
+ <span class="rating strong">Strong</span>
+<p>End-to-end pipeline runner for Hyperdocs.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: tools.log_config
+External packages: backfill_phase2
+Reads: files from disk (JSON, JSONL, or text)
+Writes: output files to disk</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 353</span><br><span class="field">run_phase_2</span>: <span class="value">Phase 2: Build idea graph + synthesis (deterministic from Phase 1 output).</span><br><span class="field">run_script</span>: <span class="value">Run a Python script with HYPERDOCS_SESSION_ID set.</span><br><span class="field">run_phase_3</span>: <span class="value">Phase 3: Collect evidence, generate dossiers, and viewer.</span><br><span class="field">run_opus_classifier</span>: <span class="value">Phase 0c: Opus message classification (replaces Python tier heuristics).</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (9/10 functions documented)</li><li>Proper error handling with specific exception types</li><li>Uses type annotations for better code clarity</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>run_pipeline.py is a 444-line module with 10 functions and 0 classes. Documentation coverage is good (90%).</blockquote>
+<h3 id="tools-schema-contracts-py">schema_contracts.py</h3>
+<div class="stage-label">Tools &middot; 210 lines</div>
+ <span class="rating strong">Strong</span>
+<p>Formal schema contracts for all pipeline output files.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.schema_contracts
+Reads: files from disk (JSON, JSONL, or text)</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">validate_file</span>: <span class="value">Validate a single JSON file against its contract.
+Returns list of error strings (empty = valid).</span><br><span class="field">main</span>: <span class="value">function at line 165</span><br><span class="field">validate_session</span>: <span class="value">Validate all JSON files in a session directory.
+Returns {filename: [errors]} for files with errors.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Good docstring coverage (2/3 functions documented)</li><li>Uses type annotations for better code clarity</li><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No logging in a file over 200 lines — debugging production issues will be harder</li></ul></div>
+<blockquote>schema_contracts.py is a 210-line module with 3 functions and 0 classes. Documentation coverage is good (67%).</blockquote>
+<h3 id="tools-verify-data-locations-py">verify_data_locations.py</h3>
+<div class="stage-label">Tools &middot; 99 lines</div>
+ <span class="rating solid">Solid</span>
+<p>Verify data consistency between output/ and ~/PERMANENT_HYPERDOCS/sessions/.</p>
+<div class="data-box"><span class="label">Data Flow</span>Internal dependencies: config, tools.log_config</div>
+<div class="data-box"><span class="label">Key Functions</span><span class="field">main</span>: <span class="value">function at line 41</span><br><span class="field">get_session_dirs</span>: <span class="value">Return {session_name: file_count} for all session directories.</span></div>
+<div class="callout green"><strong>Strengths</strong><ul><li>Has __main__ guard for standalone execution</li></ul></div>
+<div class="callout red"><strong>Weaknesses</strong><ul><li>No major structural issues detected from static analysis</li></ul></div>
+<blockquote>verify_data_locations.py is a 99-line module with 2 functions and 0 classes.</blockquote>
+
+<div class="opinion" id="cross-cutting">
+<h2>Cross-Cutting Analysis</h2>
+<h3>Architectural Patterns</h3><ul>
+<li>Phase-based pipeline architecture: code is organized into sequential phases (0-4b) where each phase's output feeds the next</li>
+<li>Config centralization: single config.py module with env var overrides used across all phases</li>
+<li>Batch orchestration pattern: multiple phases use batch orchestrators that iterate over sessions and spawn per-session processing</li>
+<li>LLM integration layer: Phase 1 and parts of Phase 0 use Anthropic API calls for extraction tasks</li>
+<li>Evidence collector plugin pattern: Phase 3 uses a base class with specialized collectors (emotional_arc, decision_trace, etc.)</li>
+<li>JSON as the universal interchange format: all inter-phase data is serialized as JSON files on disk</li>
+</ul>
+<h3>Common Weaknesses</h3><ul>
+<li>Missing logging (found in 56 files)</li>
+<li>Deep nesting (found in 10 files)</li>
+</ul>
+<h3>Recommendations</h3><ul>
+<li><strong>[HIGH]</strong> Add structured logging across all phases — currently most files use print() or no output, making production debugging difficult</li>
+<li><strong>[HIGH]</strong> Replace bare except clauses with specific exception types to prevent silent error swallowing</li>
+<li><strong>[MEDIUM]</strong> Add docstrings to undocumented functions, especially public APIs that other phases call</li>
+<li><strong>[MEDIUM]</strong> Consider adding a shared retry/backoff wrapper for all Anthropic API calls instead of per-file error handling</li>
+<li><strong>[LOW]</strong> Extract common file I/O patterns (read JSON, write JSON, ensure directory) into a shared utility module</li>
+</ul>
+<p>The Hyperdocs pipeline consists of 87 active Python files across 10 phase groups. 79/87 files rate Solid or better based on static analysis metrics. The architecture is well-organized with clear phase boundaries, but documentation coverage and error handling are inconsistent across files. The evidence collector pattern in Phase 3 is a clean abstraction. The biggest systemic risk is the lack of structured logging — when something fails in production, diagnosing the issue requires reading raw tracebacks rather than structured log events.</p>
+</div>
+
+<footer>
+<p>Generated by tools/system_file_report/generate_report.py on February 24, 2026. Analysis method: local deterministic. Each file was read in full and analyzed for structure, imports, functions, classes, error handling, documentation coverage, and code patterns. All analysis is based on reading the actual source code — no claims are made without reading the file first. Re-run with --llm for LLM-powered analysis via Claude Sonnet API.</p>
+</footer>
+
+</div>
+</body>
+</html>

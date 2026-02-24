@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperdocs System Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#090b14;--s1:#111525;--s2:#171c32;--s3:#1e2540;
+  --bdr:rgba(99,102,241,.12);--bdr2:rgba(99,102,241,.25);
+  --tx:#e2e4ed;--tx2:#7b829e;--tx3:#535873;
+  --acc:#6366f1;
+  --p0:#22d3ee;--p0bg:rgba(34,211,238,.08);--p0bd:rgba(34,211,238,.35);
+  --p1:#a78bfa;--p1bg:rgba(167,139,250,.08);--p1bd:rgba(167,139,250,.35);
+  --p2:#34d399;--p2bg:rgba(52,211,153,.08);--p2bd:rgba(52,211,153,.35);
+  --p3:#fbbf24;--p3bg:rgba(251,191,36,.08);--p3bd:rgba(251,191,36,.35);
+  --p4:#f87171;--p4bg:rgba(248,113,113,.08);--p4bd:rgba(248,113,113,.35);
+  --free:#34d399;--paid:#f87171;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:'Inter',system-ui,sans-serif;padding:48px 32px 80px;line-height:1.5}
+.page{max-width:1200px;margin:0 auto}
+
+/* Header */
+.hdr{text-align:center;margin-bottom:48px}
+.hdr h1{font-size:44px;font-weight:800;letter-spacing:-1.5px;background:linear-gradient(135deg,var(--p0),var(--acc),var(--p1));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+.hdr p{color:var(--tx2);font-size:17px}
+.hdr .date{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx3);margin-top:8px}
+
+/* KPI strip */
+.kpi{display:flex;gap:2px;margin-bottom:48px;border-radius:14px;overflow:hidden}
+.kpi>div{flex:1;background:var(--s1);padding:20px 16px;text-align:center}
+.kpi .n{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:800}
+.kpi .l{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--tx2);margin-top:2px;font-weight:600}
+
+/* Pipeline */
+.pipeline{position:relative}
+
+/* Vertical spine */
+.spine{position:absolute;left:50%;top:0;bottom:0;width:3px;background:linear-gradient(to bottom,var(--p0),var(--p1),var(--p2),var(--p3),var(--p4));opacity:.3;transform:translateX(-50%)}
+
+/* Phase row */
+.phase{position:relative;margin-bottom:24px}
+.phase-label{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.phase-dot{width:14px;height:14px;border-radius:50%;border:3px solid;flex-shrink:0}
+.phase-name{font-weight:700;font-size:15px;letter-spacing:.3px}
+.phase-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3);margin-left:auto}
+.phase-cost{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
+
+/* Cards */
+.cards{display:grid;gap:12px}
+.cards.c2{grid-template-columns:1fr 1fr}
+.cards.c3{grid-template-columns:1fr 1fr 1fr}
+.cards.c4{grid-template-columns:1fr 1fr 1fr 1fr}
+
+.card{border-radius:12px;padding:20px;border:1px solid var(--bdr);position:relative;overflow:hidden;transition:border-color .2s}
+.card:hover{border-color:var(--bdr2)}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.card h4{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.card .icon{font-size:16px}
+.card .desc{font-size:12px;color:var(--tx2);line-height:1.7}
+.card .desc strong{color:var(--tx);font-weight:600}
+.card .mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3);margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr)}
+.card code{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--s2);padding:1px 6px;border-radius:3px;color:var(--tx)}
+
+/* Phase-specific */
+.p0 .card{background:var(--p0bg);border-color:var(--p0bd)}.p0 .card::before{background:var(--p0)}.p0 .phase-dot{border-color:var(--p0);background:var(--p0bg)}.p0 .phase-name{color:var(--p0)}
+.p1 .card{background:var(--p1bg);border-color:var(--p1bd)}.p1 .card::before{background:var(--p1)}.p1 .phase-dot{border-color:var(--p1);background:var(--p1bg)}.p1 .phase-name{color:var(--p1)}
+.p2 .card{background:var(--p2bg);border-color:var(--p2bd)}.p2 .card::before{background:var(--p2)}.p2 .phase-dot{border-color:var(--p2);background:var(--p2bg)}.p2 .phase-name{color:var(--p2)}
+.p3 .card{background:var(--p3bg);border-color:var(--p3bd)}.p3 .card::before{background:var(--p3)}.p3 .phase-dot{border-color:var(--p3);background:var(--p3bg)}.p3 .phase-name{color:var(--p3)}
+.p4 .card{background:var(--p4bg);border-color:var(--p4bd)}.p4 .card::before{background:var(--p4)}.p4 .phase-dot{border-color:var(--p4);background:var(--p4bg)}.p4 .phase-name{color:var(--p4)}
+
+/* Output row */
+.output-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 24px;padding:14px 20px;background:var(--s1);border:1px solid var(--bdr);border-radius:10px}
+.output-row .file{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--s2);padding:4px 10px;border-radius:6px;color:var(--tx2);border:1px solid var(--bdr)}
+
+/* Arrow between phases */
+.arrow{display:flex;justify-content:center;margin:6px 0;color:var(--tx3);font-size:20px;letter-spacing:4px}
+
+/* Wide card */
+.wide{grid-column:1/-1}
+
+/* Cost badges */
+.cost-free{background:rgba(52,211,153,.15);color:var(--free)}
+.cost-paid{background:rgba(248,113,113,.12);color:var(--paid)}
+
+/* Footer */
+.foot{text-align:center;margin-top:64px;padding-top:32px;border-top:1px solid var(--bdr);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx3)}
+
+@media(max-width:900px){.cards.c3,.cards.c4{grid-template-columns:1fr 1fr}.cards.c2{grid-template-columns:1fr}}
+@media(max-width:600px){.cards.c2,.cards.c3,.cards.c4{grid-template-columns:1fr}.kpi{flex-wrap:wrap}.kpi>div{min-width:45%}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="hdr">
+  <h1>Hyperdocs System Architecture</h1>
+  <p>Complete pipeline: raw JSONL chat history → 456 annotated hyperdocs</p>
+  <div class="date">Feb 24, 2026 — Derived from reading 13 source files + 3 agent prompts</div>
+</div>
+
+<div class="kpi">
+  <div><div class="n" style="color:var(--p0)">5</div><div class="l">Phases</div></div>
+  <div><div class="n" style="color:var(--p2)">87</div><div class="l">Python Files</div></div>
+  <div><div class="n" style="color:var(--acc)">37,759</div><div class="l">Lines of Code</div></div>
+  <div><div class="n" style="color:var(--p1)">8</div><div class="l">Opus Agents</div></div>
+  <div><div class="n" style="color:var(--p3)">298</div><div class="l">Sessions</div></div>
+  <div><div class="n" style="color:var(--p4)">456</div><div class="l">Hyperdocs</div></div>
+</div>
+
+<div class="pipeline">
+<div class="spine"></div>
+
+<!-- INPUT -->
+<div class="phase" style="margin-bottom:16px">
+  <div style="background:var(--s1);border:2px solid var(--acc);border-radius:12px;padding:18px 24px;text-align:center">
+    <div style="font-weight:700;font-size:16px;color:var(--acc);margin-bottom:4px">INPUT: Raw JSONL Chat History</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx2)">~/.claude/projects/ &nbsp;•&nbsp; ~/.claude/history.jsonl &nbsp;•&nbsp; ~/PERMANENT_CHAT_HISTORY/sessions/</div>
+  </div>
+</div>
+
+<div class="arrow">▼ ▼ ▼</div>
+
+<!-- PHASE 0 -->
+<div class="phase p0">
+  <div class="phase-label">
+    <div class="phase-dot"></div>
+    <div class="phase-name">PHASE 0: DETERMINISTIC PREP</div>
+    <div class="phase-meta">23 files &nbsp;•&nbsp; 11,218 lines</div>
+    <div class="phase-cost cost-free">$0</div>
+  </div>
+  <div class="cards c2">
+    <div class="card">
+      <h4><span class="icon">🐍</span> enrich_session.py <span style="color:var(--tx3);font-weight:400;font-size:11px">(922 lines)</span></h4>
+      <div class="desc">
+        <strong>Load</strong> JSONL via ClaudeSessionReader → ClaudeMessage objects<br>
+        <strong>Detect</strong> 9 protocol patterns (XML tags, /clear, skill injections)<br>
+        <strong>Collapse</strong> char-per-line encoding (A\nL\nW\nA\nY\nS → ALWAYS)<br>
+        <strong>Extract</strong> 50+ metadata signals via MetadataExtractor<br>
+        <strong>Filter</strong> into 4 tiers via MessageFilter<br>
+        <strong>Analyze</strong> 20 Claude behavior patterns via ClaudeBehaviorAnalyzer<br>
+        <strong>Apply</strong> 9 data quality fixes (documented inline)
+      </div>
+      <div class="mono">Entry: <code>enrich_session.py</code></div>
+    </div>
+    <div class="card">
+      <h4><span class="icon">🐍</span> prepare_agent_data.py <span style="color:var(--tx3);font-weight:400;font-size:11px">(280 lines)</span></h4>
+      <div class="desc">
+        <strong>Split</strong> enriched messages by tier (1-4)<br>
+        <strong>Sanitize</strong> profanity for API content policy compliance<br>
+        <strong>Build</strong> priority message lists for Phase 1 agents<br>
+        <strong>Optional:</strong> opus_classifier.py replaces Python tiers with Opus importance ratings (graceful fallback if fails)
+      </div>
+      <div class="mono">Also: <code>opus_classifier.py</code> <code>metadata_extractor.py</code> <code>message_filter.py</code> <code>schema_normalizer.py</code></div>
+    </div>
+  </div>
+</div>
+
+<div class="output-row">
+  <div class="file">enriched_session.json</div>
+  <div class="file">session_metadata.json</div>
+  <div class="file">safe_tier4.json</div>
+  <div class="file">tier4_priority_messages.json</div>
+  <div class="file">tier2plus_messages.json</div>
+  <div class="file" style="opacity:.5">opus_classifications.json (optional)</div>
+</div>
+
+<div class="arrow">▼ ▼ ▼</div>
+
+<!-- PHASE 1 -->
+<div class="phase p1">
+  <div class="phase-label">
+    <div class="phase-dot"></div>
+    <div class="phase-name">PHASE 1: EXTRACTION — 4 Parallel Opus Agents</div>
+    <div class="phase-meta">9 files &nbsp;•&nbsp; 5,848 lines</div>
+    <div class="phase-cost cost-paid">~$5-10</div>
+  </div>
+  <div class="cards c4">
+    <div class="card">
+      <h4><span class="icon">🤖</span> Thread Analyst</h4>
+      <div class="desc">
+        <strong>6 threads:</strong> ideas, reactions, software, code, plans, behavior<br>
+        <strong>6 markers</strong> per message<br>
+        Canonical dict format
+      </div>
+      <div class="mono"><code>thread-analyst.md</code></div>
+    </div>
+    <div class="card">
+      <h4><span class="icon">🤖</span> Geological Reader</h4>
+      <div class="desc">
+        <strong>Multi-resolution:</strong><br>
+        micro (message-level)<br>
+        meso (conversation-level)<br>
+        macro (session-level)
+      </div>
+      <div class="mono"><code>geological-reader.md</code></div>
+    </div>
+    <div class="card">
+      <h4><span class="icon">🤖</span> Primitives Tagger</h4>
+      <div class="desc">
+        <strong>7 semantic dimensions:</strong><br>
+        emotional_tenor, action_vector, confidence_signal, intent_marker, friction_log, decision_trace
+      </div>
+      <div class="mono"><code>primitives-tagger.md</code></div>
+    </div>
+    <div class="card">
+      <h4><span class="icon">🤖</span> Free Explorer</h4>
+      <div class="desc">
+        <strong>Open-ended discovery:</strong><br>
+        Pattern detection<br>
+        Anomaly identification<br>
+        Data quality issues
+      </div>
+      <div class="mono"><code>free-explorer.md</code></div>
+    </div>
+  </div>
+</div>
+
+<div class="output-row">
+  <div class="file">thread_extractions.json</div>
+  <div class="file">geological_notes.json</div>
+  <div class="file">semantic_primitives.json</div>
+  <div class="file">explorer_notes.json</div>
+</div>
+
+<div class="arrow">▼ ▼ ▼</div>
+
+<!-- PHASE 2 -->
+<div class="phase p2">
+  <div class="phase-label">
+    <div class="phase-dot"></div>
+    <div class="phase-name">PHASE 2: SYNTHESIS</div>
+    <div class="phase-meta">6 files &nbsp;•&nbsp; 3,317 lines</div>
+    <div class="phase-cost cost-paid">~$5-10</div>
+  </div>
+  <div class="cards c4">
+    <div class="card">
+      <h4><span class="icon">🤖</span> Idea Graph Builder</h4>
+      <div class="desc">
+        <strong>Directed graph:</strong><br>
+        Nodes = idea-states<br>
+        Edges = <strong>10 transition types</strong><br>
+        <span style="font-size:11px;color:var(--tx3)">evolved, pivoted, split, merged, abandoned, resurrected, constrained, expanded, concretized, abstracted</span>
+      </div>
+      <div class="mono"><code>idea-graph-builder.md</code></div>
+    </div>
+    <div class="card">
+      <h4><span class="icon">🤖</span> Synthesizer</h4>
+      <div class="desc">
+        <strong>6-pass temperature ramp:</strong><br>
+        1. Factual (0.3)<br>
+        2. Patterns (0.5)<br>
+        3. Vertical (0.7)<br>
+        4. Creative (1.0)<br>
+        5. Meta (0.8)<br>
+        6. Grounding (0)
+      </div>
+      <div class="mono"><code>synthesizer.md</code></div>
+    </div>
+    <div class="card">
+      <h4><span class="icon">🐍</span> File Genealogy</h4>
+      <div class="desc">
+        <strong>3 detection signals:</strong><br>
+        1. Idea graph lineage<br>
+        2. Temporal succession<br>
+        3. Name similarity<br>
+        <strong style="color:var(--p2)">Result: 18 families</strong>
+      </div>
+      <div class="mono"><code>file_genealogy.py</code> (450 lines)</div>
+    </div>
+    <div class="card">
+      <h4><span class="icon">🐍</span> Code Similarity</h4>
+      <div class="desc">
+        <strong>Fingerprint index:</strong><br>
+        10 pattern types<br>
+        57,970 pairs compared<br>
+        <strong style="color:var(--p2)">Result: 14,176 matches</strong>
+      </div>
+      <div class="mono"><code>code_similarity.py</code> (517 lines)</div>
+    </div>
+  </div>
+</div>
+
+<div class="output-row">
+  <div class="file">idea_graph.json</div>
+  <div class="file">synthesis.json</div>
+  <div class="file">grounded_markers.json</div>
+  <div class="file">file_genealogy.json</div>
+  <div class="file">code_similarity_index.json (7.9MB)</div>
+</div>
+
+<div class="arrow">▼ ▼ ▼</div>
+
+<!-- PHASE 3 -->
+<div class="phase p3">
+  <div class="phase-label">
+    <div class="phase-dot"></div>
+    <div class="phase-name">PHASE 3: EVIDENCE COLLECTION + DOSSIERS</div>
+    <div class="phase-meta">15 files &nbsp;•&nbsp; 5,648 lines</div>
+    <div class="phase-cost cost-paid">~$5-10</div>
+  </div>
+  <div class="cards c3">
+    <div class="card">
+      <h4><span class="icon">🐍</span> collect_file_evidence.py <span style="color:var(--tx3);font-weight:400;font-size:11px">(876 lines)</span></h4>
+      <div class="desc">
+        <strong>11 evidence types</strong> from <strong>12 data sources</strong><br>
+        Time-window correlation: <strong>±10 messages</strong> around each file mention<br><br>
+        <span style="font-size:11px;color:var(--tx3)">emotional_arc • geological_character • lineage • explorer_observations • chronological_timeline • code_similarity • graph_context • synthesis_context • claude_md_context • session_context • thread_markers</span>
+      </div>
+      <div class="mono">Phase 3a entry point</div>
+    </div>
+    <div class="card">
+      <h4><span class="icon">🔌</span> 8 Evidence Renderers</h4>
+      <div class="desc">
+        <strong>Plugin pattern</strong> with base class:<br><br>
+        <code>emotional_arc.py</code><br>
+        <code>decision_trace.py</code><br>
+        <code>geological_event.py</code><br>
+        <code>file_timeline.py</code><br>
+        <code>idea_transition.py</code><br>
+        <code>debug_sequence.py</code><br>
+        <code>reaction_log.py</code>
+      </div>
+      <div class="mono"><code>evidence/base.py</code> (166 lines)</div>
+    </div>
+    <div class="card">
+      <h4><span class="icon">🤖</span> File Mapper + Dossiers</h4>
+      <div class="desc">
+        <strong>generate_dossiers.py</strong> (1,130 lines)<br>
+        Per-file dossiers with <strong>20+ fields:</strong><br><br>
+        story_arc, confidence, warnings, key_decisions, related_files, claude_behavior, significance, grounded_markers, idea_graph_nodes, source_messages
+      </div>
+      <div class="mono"><code>file-mapper.md</code> agent</div>
+    </div>
+  </div>
+</div>
+
+<div class="output-row">
+  <div class="file">file_dossiers.json</div>
+  <div class="file">file_evidence/{file}_evidence.json (per file)</div>
+  <div class="file">claude_md_analysis.json</div>
+  <div class="file">viewer.html</div>
+</div>
+
+<div class="arrow">▼ ▼ ▼</div>
+
+<!-- PHASE 4a -->
+<div class="phase p4">
+  <div class="phase-label">
+    <div class="phase-dot"></div>
+    <div class="phase-name">PHASE 4a: CROSS-SESSION AGGREGATION</div>
+    <div class="phase-meta">1 file &nbsp;•&nbsp; 765 lines</div>
+    <div class="phase-cost cost-free">$0</div>
+  </div>
+  <div class="cards c2" style="grid-template-columns:2fr 1fr">
+    <div class="card">
+      <h4><span class="icon">🐍</span> aggregate_dossiers.py <span style="color:var(--tx3);font-weight:400;font-size:11px">(765 lines)</span></h4>
+      <div class="desc">
+        <strong>Read</strong> all 298 session file_dossiers.json<br>
+        <strong>Normalize</strong> 2 incompatible schemas (dict vs list)<br>
+        <strong>Merge</strong> warnings, decisions, confidence history, story arcs per file<br>
+        <strong>Enrich</strong> with code similarity (14,176 matches)<br>
+        <strong>Enrich</strong> with genealogy families (18 families)<br>
+        <strong>Join</strong> frustration peaks with file mentions (±5 msg window)<br>
+        <strong>Load</strong> cross-session evidence from file_evidence/ dirs<br>
+        <strong>Promote</strong> files appearing in 3+ sessions → hyperdoc_inputs/
+      </div>
+      <div class="mono">Pure Python, no LLM calls</div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center;text-align:center">
+      <div style="font-size:48px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--p4)">492</div>
+      <div style="font-size:13px;color:var(--tx2);margin-top:4px">hyperdoc inputs generated</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:8px">(files with 3+ session appearances)</div>
+    </div>
+  </div>
+</div>
+
+<div class="output-row">
+  <div class="file">cross_session_file_index.json</div>
+  <div class="file">hyperdoc_inputs/*.json (492 files)</div>
+</div>
+
+<div class="arrow">▼ ▼ ▼</div>
+
+<!-- PHASE 4b -->
+<div class="phase p4">
+  <div class="phase-label">
+    <div class="phase-dot"></div>
+    <div class="phase-name">PHASE 4b: HYPERDOC WRITING + INSERTION</div>
+    <div class="phase-meta">8 files &nbsp;•&nbsp; 2,697 lines</div>
+    <div class="phase-cost cost-paid">~$20-30</div>
+  </div>
+  <div class="cards c3">
+    <div class="card">
+      <h4><span class="icon">🤖</span> Hyperdoc Writer (Per-File)</h4>
+      <div class="desc">
+        <strong>1 Opus agent per file</strong><br>
+        Reads single file's aggregated dossier<br><br>
+        <strong>Produces 3 outputs:</strong><br>
+        <code>{file}_header.txt</code> — story arc, friction, decisions, warnings, iron rules, Claude behavior, emotional context<br>
+        <code>{file}_inline.json</code> — per-function annotations<br>
+        <code>{file}_footer.txt</code> — version history, metrics, idea subgraphs
+      </div>
+      <div class="mono"><code>hyperdoc-writer-per-file.md</code></div>
+    </div>
+    <div class="card">
+      <h4><span class="icon">🐍</span> Smart Insertion</h4>
+      <div class="desc">
+        <strong>AST-based 3-point insertion:</strong><br><br>
+        <strong style="color:var(--p4)">1. HEADER</strong> — after imports, before first class/function<br>
+        <strong style="color:var(--p4)">2. INLINE</strong> — before each function/class (AST-located)<br>
+        <strong style="color:var(--p4)">3. FOOTER</strong> — at end of file<br><br>
+        Uses <code>ast.parse()</code> to find all def/class locations
+      </div>
+      <div class="mono"><code>insert_hyperdocs_v2.py</code> (355 lines)</div>
+    </div>
+    <div class="card">
+      <h4><span class="icon">📚</span> Layered Accumulation</h4>
+      <div class="desc">
+        <strong>Layered format v2:</strong><br><br>
+        New analysis passes <strong>APPEND</strong> layers<br>
+        Existing content <strong>NEVER replaced</strong><br>
+        Version history maintained<br><br>
+        <strong style="color:var(--p4)">Rule:</strong> Accumulate, never replace
+      </div>
+      <div class="mono"><code>hyperdoc_layers.py</code> (298 lines)</div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">▼ ▼ ▼</div>
+
+<!-- FINAL OUTPUT -->
+<div style="background:linear-gradient(135deg,var(--p4bg),var(--p1bg));border:2px solid var(--acc);border-radius:14px;padding:28px 32px;text-align:center;margin-top:8px">
+  <div style="font-size:24px;font-weight:800;margin-bottom:8px;background:linear-gradient(135deg,var(--p0),var(--acc),var(--p1));-webkit-background-clip:text;-webkit-text-fill-color:transparent">FINAL OUTPUT</div>
+  <div style="display:flex;justify-content:center;gap:48px;flex-wrap:wrap;margin-top:16px">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:800;color:var(--p2)">456</div>
+      <div style="font-size:12px;color:var(--tx2)">Hyperdocs Generated</div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:800;color:var(--p0)">14MB</div>
+      <div style="font-size:12px;color:var(--tx2)">Total Output Size</div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:800;color:var(--p1)">341</div>
+      <div style="font-size:12px;color:var(--tx2)">Enhanced Source Files</div>
+    </div>
+  </div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx3);margin-top:16px">~/PERMANENT_HYPERDOCS/hyperdocs/</div>
+</div>
+
+</div><!-- end pipeline -->
+
+<div class="foot">
+  Hyperdocs Architecture Diagram v2 • 5 phases (0–4) • 87 files • 37,759 lines • 8 agents • Feb 24, 2026<br>
+  Derived from reading actual Python source code — not documentation
+</div>
+
+</div>
+</body>
+</html>
