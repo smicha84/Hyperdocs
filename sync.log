@@ -624,3 +624,32 @@ ERROR tests/test_aggregate_dossiers.py
 ............                                                             [100%]
 84 passed in 1.24s
 [2026-02-24 13:30:00] Tests passed.
+[main 1327bd3] Auto-sync:  63 files changed, 9730 insertions(+), 700 deletions(-)
+ 63 files changed, 9730 insertions(+), 700 deletions(-)
+ create mode 100644 phase_0_prep/batch_p0_llm.py
+ create mode 100644 phase_0_prep/build_opus_messages.py
+ create mode 100644 phase_0_prep/enrich_session.py
+ create mode 100644 phase_0_prep/normalize_agent_output.py
+ create mode 100644 phase_1_extraction/batch_p1_llm.py
+ create mode 100644 phase_1_extraction/interactive_batch_runner.py
+ create mode 100644 phase_1_extraction/redo_all_phase1.py
+ create mode 100644 phase_1_extraction/tag_semantic_primitives.py
+ create mode 100644 phase_2_synthesis/backfill_phase2.py
+ create mode 100644 phase_2_synthesis/build_phase2_outputs.py
+ create mode 100644 phase_3_hyperdoc_writing/write_more_hyperdocs.py
+ create mode 100644 phase_4_insertion/init_hyperdoc_store.py
+ create mode 100644 phase_4_insertion/insert_from_json.py
+ create mode 100644 phase_4_insertion/insert_hyperdocs_3part.py
+ create mode 100644 phase_4a_aggregation/__init__.py
+ create mode 100644 phase_4a_aggregation/aggregate_dossiers.py
+ create mode 100644 tools/analyze_data_flow.py
+ create mode 100644 tools/extract_dashboard_data.py
+ create mode 100644 tools/json_io.py
+ create mode 100644 tools/log_config.py
+fatal: could not read Username for 'https://github.com': Device not configured
+[2026-02-24 13:30:00] ERROR: git push failed
+[2026-02-24 14:30:00] Running tests...
+........................................................................ [ 85%]
+............                                                             [100%]
+84 passed in 1.30s
+[2026-02-24 14:30:00] Tests passed.

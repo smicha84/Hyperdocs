@@ -147,8 +147,8 @@
   <a href="#causal">Causal Map</a>
   <div class="sep">5 Questions</div>
   <a href="#q1">Q1: Problems (15)</a>
-  <a href="#q2">Q2: Solved (8)</a>
-  <a href="#q3">Q3: Unsolved (8)</a>
+  <a href="#q2">Q2: Solved (9)</a>
+  <a href="#q3">Q3: Unsolved (7)</a>
   <a href="#q4">Q4: New Problems (11)</a>
   <a href="#q5">Q5: Emergent (6)</a>
   <div class="sep">Data</div>
@@ -163,18 +163,18 @@
   <h1>Hyperdocs: Problem Landscape</h1>
   <p class="subtitle">What it was built to solve. What it actually solves. What it doesn't. What it creates.</p>
   <div class="meta">
-    <span>285 sessions processed</span>
+    <span>298 sessions processed</span>
     <span>3,399 in archive</span>
     <span>456 hyperdocs</span>
     <span>14MB output</span>
-    <span>Feb 20, 2026</span>
+    <span>Feb 24, 2026</span>
   </div>
 </div>
 
 <div class="kpi-row">
   <div class="kpi"><div class="num" style="color:var(--red)">15</div><div class="lbl">Root Problems</div></div>
-  <div class="kpi"><div class="num" style="color:var(--green)">8</div><div class="lbl">Solved</div></div>
-  <div class="kpi"><div class="num" style="color:var(--red)">8</div><div class="lbl">Unsolved</div></div>
+  <div class="kpi"><div class="num" style="color:var(--green)">9</div><div class="lbl">Solved</div></div>
+  <div class="kpi"><div class="num" style="color:var(--red)">7</div><div class="lbl">Unsolved</div></div>
   <div class="kpi"><div class="num" style="color:var(--amber)">11</div><div class="lbl">New Problems</div></div>
   <div class="kpi"><div class="num" style="color:var(--cyan)">6</div><div class="lbl">Emergent Wins</div></div>
   <div class="kpi"><div class="num" style="color:var(--green)">73%</div><div class="lbl">Ground Truth</div></div>
@@ -190,12 +190,12 @@
     <thead><tr><th>Source</th><th>Count</th><th>What It Contains</th></tr></thead>
     <tbody>
       <tr><td><code>PERMANENT_CHAT_HISTORY/sessions/</code></td><td><strong>3,399</strong> sessions</td><td>Full cross-account archive. Bulk import from multiple API accounts.</td></tr>
-      <tr><td>Hyperdocs processed output</td><td><strong>285</strong> sessions</td><td>Pipeline has run on these. 279 Phase 0 complete.</td></tr>
+      <tr><td>Hyperdocs processed output</td><td><strong>298</strong> sessions</td><td>Pipeline has run on these. 292 Phase 0 complete.</td></tr>
       <tr><td><code>PERMANENT_HYPERDOCS/hyperdocs/</code></td><td><strong>456</strong> files</td><td>Cross-session hyperdocs written by Phase 4 agents.</td></tr>
       <tr><td><code>PERMANENT_HYPERDOCS/hyperdoc_inputs/</code></td><td><strong>492</strong> files</td><td>Per-file extraction inputs for hyperdoc generation.</td></tr>
       <tr><td><code>code_similarity_index.json</code></td><td><strong>341</strong> files, <strong>14,176</strong> matches</td><td>Pairwise code similarity. 57,970 pairs compared. 10 pattern types.</td></tr>
       <tr><td><code>cross_session_genealogy.json</code></td><td><strong>18</strong> families</td><td>File identity tracked across renames and rewrites.</td></tr>
-      <tr><td><code>completeness_report.json</code></td><td><strong>14</strong> file types tracked</td><td>Per-phase completeness across all 285 sessions.</td></tr>
+      <tr><td><code>completeness_report.json</code></td><td><strong>14</strong> file types tracked</td><td>Per-phase completeness across all 298 sessions.</td></tr>
       <tr><td>Idea Evolution Analysis (PDF)</td><td><strong>1,668</strong> ideas, <strong>261</strong> sessions</td><td>Statistical analysis of idea trajectories and transitions.</td></tr>
     </tbody>
   </table>
@@ -262,9 +262,9 @@ flowchart TD
 </div>
 
 <!-- Q2: WHAT IT SOLVES -->
-<div id="q2" class="sec-head"><div class="dot" style="background:var(--green)"></div>Q2 &mdash; What does it actually solve today? (8)</div>
+<div id="q2" class="sec-head"><div class="dot" style="background:var(--green)"></div>Q2 &mdash; What does it actually solve today? (9)</div>
 
-<div class="callout green"><strong>8 of 15 root problems</strong> addressed with working code. Each references the specific file that solves it.</div>
+<div class="callout green"><strong>9 of 15 root problems</strong> addressed with working code. Each references the specific file that solves it.</div>
 
 <div class="table-wrap">
   <table>
@@ -273,19 +273,19 @@ flowchart TD
       <tr>
         <td><strong>Unreadable chat history</strong></td>
         <td>Phase 0: <code>deterministic_prep.py</code> &mdash; protocol detection (9 patterns), char-per-line collapse, profanity sanitization, 50+ metadata signals via <code>metadata_extractor.py</code>. Pure Python, $0.</td>
-        <td>279/285 sessions Phase 0 complete.<small>Source: <code>completeness_report.json</code></small></td>
+        <td>292/298 sessions Phase 0 complete.<small>Source: <code>completeness_report.json</code></small></td>
         <td><span class="tag solved">SOLVED</span></td>
       </tr>
       <tr>
         <td><strong>Behavioral blindness</strong></td>
         <td>Phase 1: 4 parallel Opus agents &mdash; <code>thread-analyst.md</code> (6 threads + 6 markers per msg), <code>geological-reader.md</code> (multi-resolution), <code>primitives-tagger.md</code> (7 semantic primitives), <code>free-explorer.md</code> (open-ended).</td>
-        <td>284/285 Phase 1 complete. Led to 12 behavioral commitments.<small>Source: <code>completeness_report.json</code></small></td>
+        <td>297/298 Phase 1 complete. Led to 12 behavioral commitments.<small>Source: <code>completeness_report.json</code></small></td>
         <td><span class="tag solved">SOLVED</span></td>
       </tr>
       <tr>
         <td><strong>Idea cemetery</strong></td>
         <td>Phase 2: <code>idea-graph-builder.md</code> &mdash; directed graph. Nodes = idea-states, edges = 10 transition types: evolved, pivoted, split, merged, abandoned, resurrected, constrained, expanded, concretized, abstracted.</td>
-        <td>278/285 Phase 2 complete. 1,668 ideas tracked across 261 sessions.<small>Source: <code>completeness_report.json</code></small></td>
+        <td>291/298 Phase 2 complete. 1,668 ideas tracked across 261 sessions.<small>Source: <code>completeness_report.json</code></small></td>
         <td><span class="tag solved">SOLVED</span></td>
       </tr>
       <tr>
@@ -299,7 +299,7 @@ flowchart TD
       <tr>
         <td><strong>No ground truth</strong></td>
         <td>Phase 5: <code>claim_extractor.py</code> &rarr; <code>ground_truth_verifier.py</code> (AST checks, regex scans, 6 check types) &rarr; <code>gap_reporter.py</code>. The gap between claims and reality is now computable.</td>
-        <td>261/285 sessions verified. 73% credibility across 22,812 checks.<small>Source: <code>completeness_report.json</code></small></td>
+        <td>274/298 sessions verified. 73% credibility across 22,812 checks.<small>Source: <code>completeness_report.json</code></small></td>
         <td><span class="tag solved">SOLVED</span></td>
       </tr>
       <tr>
@@ -320,12 +320,18 @@ flowchart TD
         <td>Gates archived. Commitments govern ALL sessions globally. Each commitment backed by specific statistics.<small>Source: <code>~/.claude/CLAUDE.md</code></small></td>
         <td><span class="tag solved">SOLVED</span></td>
       </tr>
+      <tr>
+        <td><strong>End-to-end automation</strong></td>
+        <td><code>tools/run_pipeline.py</code> &mdash; master orchestrator runs all phases sequentially with error handling per session.</td>
+        <td>Single command: <code>python3 tools/run_pipeline.py SESSION_ID</code>. Runs P0 &rarr; P1 &rarr; P2 &rarr; P3 &rarr; P4a &rarr; P4b &rarr; P5.<small>Source: <code>~/Hyperdocs/tools/run_pipeline.py</code></small></td>
+        <td><span class="tag solved">SOLVED</span></td>
+      </tr>
     </tbody>
   </table>
 </div>
 
 <!-- Q3: WHAT IT DOESN'T SOLVE -->
-<div id="q3" class="sec-head"><div class="dot" style="background:var(--red)"></div>Q3 &mdash; What doesn't it solve? (8)</div>
+<div id="q3" class="sec-head"><div class="dot" style="background:var(--red)"></div>Q3 &mdash; What doesn't it solve? (7)</div>
 
 <div class="callout red"><strong>Pattern:</strong> Every unsolved problem has the same shape &mdash; <em>detection without prevention</em>. Hyperdocs can tell you what happened but cannot stop it from happening.</div>
 
@@ -336,7 +342,6 @@ flowchart TD
       <tr><td><strong>Real-time context injection</strong></td><td>Pipeline runs post-session. When a new session starts, Claude still doesn't automatically have hyperdocs loaded.</td><td>Auto-load hyperdocs at session start. <code>realtime_hook.py</code> captures but doesn't inject.</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
       <tr><td><strong>Preventing silent decisions</strong></td><td>Phase 1 can detect them after the fact. Commitment 12 is behavioral only. Nothing enforces it in real time.</td><td>Pre-commit hooks that detect parameter choices and force presentation to user.</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
       <tr><td><strong>Preventing premature completion</strong></td><td>30:1 ratio is measurable but not blockable. Commitment 5 is voluntary.</td><td>Mandatory verification requirements before "done" claims. Ground truth check before session end.</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
-      <tr><td><strong>End-to-end automation</strong></td><td>Each phase has its own orchestrator. No single command runs all 6 phases sequentially with error handling.</td><td>Master orchestrator: <code>python3 run_pipeline.py SESSION_ID</code></td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
       <tr><td><strong>Information consumption</strong></td><td>456 hyperdocs, 6,135+ JSON files. The system produces insight but can't force consumption. Dashboard exists but is passive.</td><td>Active surfacing: "Here are the 3 most important things from your last session."</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
       <tr><td><strong>Cross-session memory</strong></td><td>CLAUDE.md + memory files help but are limited. Claude doesn't automatically recall what happened 3 sessions ago.</td><td>"In your last 3 sessions, you worked on X, decided Y, abandoned Z."</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
       <tr><td><strong>Idea abandonment</strong></td><td>Idea Graph tracks abandonment (30:1 ratio) but can't prevent it. Behavioral root cause.</td><td>"You abandoned X in 3 sessions. Want to revisit or formally close it?"</td><td><span class="tag unsolved">UNSOLVED</span></td></tr>
@@ -355,7 +360,7 @@ flowchart TD
     <thead><tr><th>Problem</th><th>How It Arose</th><th>Severity</th></tr></thead>
     <tbody>
       <tr><td><strong>Processing cost</strong></td><td>$4,800+ all-Opus across 261 sessions. ~$18/session average. Phases 1-3 use Opus exclusively.</td><td style="color:var(--red)">HIGH</td></tr>
-      <tr><td><strong>Complexity explosion</strong></td><td>42 Python files in hyperdocs_3, 6 phases, 9 agent definitions, 456 hyperdocs, 6,135+ JSON extraction files.</td><td style="color:var(--red)">HIGH</td></tr>
+      <tr><td><strong>Complexity explosion</strong></td><td>154 Python files in <code>~/Hyperdocs/</code>, 7 phases, 8 agent definitions, 456 hyperdocs, 6,135+ JSON extraction files.</td><td style="color:var(--red)">HIGH</td></tr>
       <tr><td><strong>Schema drift</strong></td><td>886 JSON schema variants across 269 "complete" sessions. 798 data fields invisible to downstream consumers because filed under different key names.</td><td style="color:var(--red)">HIGH</td></tr>
       <tr><td><strong>Information overload</strong></td><td>14MB hyperdocs output, 492 input files, 19 HTML visualizations, 3 PDFs. More data does not equal understanding.</td><td style="color:var(--red)">HIGH</td></tr>
       <tr><td><strong>Multi-account session loss</strong></td><td>Switching API accounts wipes <code>~/.claude/projects/</code>. 564 sessions invisible without Desktop backup system.</td><td style="color:var(--red)">HIGH</td></tr>
@@ -406,11 +411,11 @@ flowchart TD
       <tr><td>Hyperdocs total size</td><td style="color:var(--green)"><code>14MB</code></td><td><code>du -sh ~/PERMANENT_HYPERDOCS/hyperdocs/</code></td></tr>
       <tr><td>Code similarity matches</td><td style="color:var(--green)"><code>14,176</code></td><td><code>code_similarity_index.json</code> (57,970 pairs, 341 files)</td></tr>
       <tr><td>Sessions in archive</td><td style="color:var(--cyan)"><code>3,399</code></td><td><code>PERMANENT_CHAT_HISTORY/sessions/</code></td></tr>
-      <tr><td>Sessions processed</td><td style="color:var(--blue)"><code>285</code></td><td><code>completeness_report.json</code></td></tr>
-      <tr><td>Phase 0 complete</td><td style="color:var(--green)"><code>279/285</code></td><td><code>completeness_report.json</code></td></tr>
-      <tr><td>Phase 1 complete</td><td style="color:var(--green)"><code>284/285</code></td><td><code>completeness_report.json</code></td></tr>
-      <tr><td>Phase 2 complete</td><td style="color:var(--green)"><code>278/285</code></td><td><code>completeness_report.json</code></td></tr>
-      <tr><td>Phase 5 (ground truth)</td><td style="color:var(--amber)"><code>261/285</code></td><td><code>completeness_report.json</code></td></tr>
+      <tr><td>Sessions processed</td><td style="color:var(--blue)"><code>298</code></td><td><code>completeness_report.json</code></td></tr>
+      <tr><td>Phase 0 complete</td><td style="color:var(--green)"><code>292/298</code></td><td><code>completeness_report.json</code></td></tr>
+      <tr><td>Phase 1 complete</td><td style="color:var(--green)"><code>297/298</code></td><td><code>completeness_report.json</code></td></tr>
+      <tr><td>Phase 2 complete</td><td style="color:var(--green)"><code>291/298</code></td><td><code>completeness_report.json</code></td></tr>
+      <tr><td>Phase 5 (ground truth)</td><td style="color:var(--amber)"><code>274/298</code></td><td><code>completeness_report.json</code></td></tr>
       <tr><td>File genealogy families</td><td style="color:var(--green)"><code>18</code></td><td><code>cross_session_genealogy.json</code></td></tr>
       <tr><td>Processing cost (all-Opus)</td><td style="color:var(--red)"><code>$4,800+</code></td><td>261 sessions batch estimate</td></tr>
       <tr><td>Hardcoded parameters</td><td style="color:var(--amber)"><code>150+</code></td><td>limits_audit.html</td></tr>
@@ -459,7 +464,7 @@ flowchart TD
 <div class="quote">"never truncate hyperdocs you fucking moron"<div class="attr">3b7084d5 (other account) &mdash; on data integrity</div></div>
 
 <div style="text-align:center; margin-top:56px; color:var(--text-dim); font-size:11px; font-family:var(--font-mono);">
-  Hyperdocs Problem Landscape v2 &bull; Evidence from 285 sessions, 1,668 ideas, 22,812 checks &bull; Feb 20, 2026
+  Hyperdocs Problem Landscape v2 &bull; Evidence from 298 sessions, 1,668 ideas, 22,812 checks &bull; Feb 24, 2026
 </div>
 
 </div></div>

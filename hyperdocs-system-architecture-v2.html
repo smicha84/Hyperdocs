@@ -132,6 +132,7 @@
   .tag.stub { background:var(--amber-dim); color:var(--amber); }
   .tag.drift { background:var(--purple-dim); color:var(--purple); }
   .tag.data { background:var(--orange-dim); color:var(--orange); }
+  .tag.resolved { background:var(--green-dim); color:var(--green); }
 
   /* Callout */
   .callout { background:var(--surface); border:1px solid var(--border-bright); border-left:3px solid var(--accent); border-radius:8px; padding:16px 20px; margin-bottom:24px; font-size:14px; }
@@ -159,14 +160,14 @@
   <div class="hero">
     <h1>Hyperdocs System Architecture</h1>
     <p class="subtitle">Complete pipeline audit &mdash; what exists, what works, what's missing</p>
-    <p class="date">Feb 20, 2026</p>
+    <p class="date">Feb 24, 2026</p>
   </div>
 
   <div class="kpi-row" id="overview">
-    <div class="kpi"><div class="number" style="color:var(--accent)">6</div><div class="label">Pipeline Phases</div></div>
-    <div class="kpi"><div class="number" style="color:var(--green)">42</div><div class="label">Python Files</div></div>
-    <div class="kpi"><div class="number" style="color:var(--purple)">7</div><div class="label">Agent Prompts</div></div>
-    <div class="kpi"><div class="number" style="color:var(--green)">285</div><div class="label">Sessions Processed</div></div>
+    <div class="kpi"><div class="number" style="color:var(--accent)">7</div><div class="label">Pipeline Phases</div></div>
+    <div class="kpi"><div class="number" style="color:var(--green)">154</div><div class="label">Python Files</div></div>
+    <div class="kpi"><div class="number" style="color:var(--purple)">8</div><div class="label">Agent Prompts</div></div>
+    <div class="kpi"><div class="number" style="color:var(--green)">298</div><div class="label">Sessions Processed</div></div>
     <div class="kpi"><div class="number" style="color:var(--green)">456</div><div class="label">Hyperdocs Written</div></div>
     <div class="kpi"><div class="number" style="color:var(--green)">73%</div><div class="label">Credibility</div></div>
   </div>
@@ -186,7 +187,7 @@ flowchart TD
         A["JSONL session files<br/>~/.claude/projects/"]
     end
     subgraph P0["PHASE 0: Deterministic Prep — $0"]
-        B["deterministic_prep.py<br/>Protocol detect + metadata"] --> C["prepare_agent_data.py<br/>Tier files + safe_*.json"]
+        B["deterministic_prep.py<br/>enrich_session.py<br/>opus_classifier.py"] --> C["prepare_agent_data.py<br/>Tier files + safe_*.json"]
     end
     subgraph P1["PHASE 1: Extraction — 4 Opus Agents"]
         D["Thread Analyst<br/>6 threads + 6 markers"]
@@ -201,10 +202,14 @@ flowchart TD
         K["Code Similarity<br/>Fingerprint index"]
     end
     subgraph P3["PHASE 3: File Mapping — Opus"]
-        L["File Mapper<br/>Per-file dossiers"] --> M["Hyperdoc Writer<br/>Per-file agents"]
+        L["File Mapper<br/>Per-file dossiers"]
+        L2["collect_file_evidence.py<br/>Phase 3a evidence"]
     end
-    subgraph P4["PHASE 4: Insertion — Python, $0"]
-        N["insert_hyperdocs_v2.py"] --> O["hyperdoc_layers.py<br/>Accumulate, never replace"]
+    subgraph P4A["PHASE 4a: Cross-Session Aggregation — Python, $0"]
+        NA["aggregate_dossiers.py<br/>Merge across 298 sessions"]
+    end
+    subgraph P4B["PHASE 4b: Hyperdoc Writing + Insertion"]
+        M["Hyperdoc Writer Per-File<br/>Opus agents"] --> N["insert_hyperdocs_v2.py"] --> O["hyperdoc_layers.py<br/>Accumulate, never replace"]
     end
     subgraph P5["PHASE 5: Ground Truth — Python, $0"]
         P["claim_extractor.py"] --> Q["ground_truth_verifier.py"] --> R["gap_reporter.py"]
@@ -214,7 +219,9 @@ flowchart TD
     D & E & F & G --> H & I
     J & K -.-> H
     H & I --> L
-    M --> N
+    L --> L2
+    L2 --> NA
+    NA --> M
     O --> P
 
     classDef input fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#e2e8f0
@@ -222,14 +229,16 @@ flowchart TD
     classDef ph1 fill:#1a1040,stroke:#a78bfa,stroke-width:1px,color:#e2e8f0
     classDef ph2 fill:#0a2e1f,stroke:#34d399,stroke-width:1px,color:#e2e8f0
     classDef ph3 fill:#2e2408,stroke:#fbbf24,stroke-width:1px,color:#e2e8f0
-    classDef ph4 fill:#2e1a08,stroke:#fb923c,stroke-width:1px,color:#e2e8f0
+    classDef ph4a fill:#2e1a08,stroke:#fb923c,stroke-width:1px,color:#e2e8f0
+    classDef ph4b fill:#2e1a08,stroke:#fb923c,stroke-width:1px,color:#e2e8f0
     classDef ph5 fill:#2e0808,stroke:#f87171,stroke-width:1px,color:#e2e8f0
     class A input
     class B,C ph0
     class D,E,F,G ph1
     class H,I,J,K ph2
-    class L,M ph3
-    class N,O ph4
+    class L,L2 ph3
+    class NA ph4a
+    class M,N,O ph4b
     class P,Q,R ph5
       </pre>
     </div>
@@ -242,11 +251,11 @@ flowchart TD
 
       <div class="phase-card p0">
         <h3><span class="badge">P0</span> Deterministic Prep</h3>
-        <p>Pure Python, $0 cost. Loads JSONL, extracts 50+ metadata signals per message, classifies into 4 tiers, detects protocol messages (9 patterns), collapses char-per-line encoding, sanitizes profanity.</p>
-        <div class="files"><code>deterministic_prep.py</code> <code>prepare_agent_data.py</code> <code>message_filter.py</code> <code>metadata_extractor.py</code> <code>claude_behavior_analyzer.py</code> <code>claude_session_reader.py</code></div>
+        <p>Pure Python, $0 cost. Loads JSONL, extracts 50+ metadata signals per message, classifies into 4 tiers, detects protocol messages (9 patterns), collapses char-per-line encoding, sanitizes profanity. Enrichment and Opus classification added in V5.</p>
+        <div class="files"><code>deterministic_prep.py</code> <code>enrich_session.py</code> <code>opus_classifier.py</code> <code>prepare_agent_data.py</code> <code>message_filter.py</code> <code>metadata_extractor.py</code> <code>claude_behavior_analyzer.py</code> <code>claude_session_reader.py</code></div>
         <div class="io"><strong>Input:</strong> Raw JSONL chat history</div>
         <div class="io"><strong>Output:</strong> enriched_session.json, session_summary.json, safe_tier4.json, tier4_priority_messages.json, tier2plus_messages.json</div>
-        <div class="status working">Working &mdash; 279/285 sessions</div>
+        <div class="status working">Working &mdash; 292/298 sessions</div>
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: $0/session</div>
       </div>
 
@@ -256,7 +265,7 @@ flowchart TD
         <div class="files"><code>thread-analyst.md</code> <code>geological-reader.md</code> <code>primitives-tagger.md</code> <code>free-explorer.md</code> <code>phase1_redo_orchestrator.py</code></div>
         <div class="io"><strong>Input:</strong> Phase 0 tier files + session_summary.json</div>
         <div class="io"><strong>Output:</strong> thread_extractions.json, geological_notes.json, semantic_primitives.json, explorer_notes.json</div>
-        <div class="status working">Working &mdash; 284/285 sessions</div>
+        <div class="status working">Working &mdash; 297/298 sessions</div>
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: ~$5-10/session (4 Opus agents)</div>
       </div>
 
@@ -266,28 +275,38 @@ flowchart TD
         <div class="files"><code>idea-graph-builder.md</code> <code>synthesizer.md</code> <code>file_genealogy.py</code> <code>code_similarity.py</code></div>
         <div class="io"><strong>Input:</strong> All Phase 1 outputs</div>
         <div class="io"><strong>Output:</strong> idea_graph.json, synthesis.json, grounded_markers.json, file_genealogy.json</div>
-        <div class="status working">Working &mdash; 278/285 sessions</div>
+        <div class="status working">Working &mdash; 291/298 sessions</div>
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: ~$5-10/session (2 agents + Python)</div>
       </div>
 
       <div class="phase-card p3">
-        <h3><span class="badge">P3</span> File Mapping &amp; Hyperdoc Writing</h3>
-        <p>File Mapper creates per-file dossiers (20+ fields) aggregated across sessions. Hyperdoc Writer launches per-file Opus agents to produce header + inline annotations + footer.</p>
-        <div class="files"><code>file-mapper.md</code> <code>hyperdoc-writer-per-file.md</code> <code>generate_dossiers.py</code> <code>generate_viewer.py</code></div>
+        <h3><span class="badge">P3</span> File Mapping + Evidence Collection</h3>
+        <p>File Mapper creates per-file dossiers (20+ fields) aggregated across sessions. Phase 3a evidence collection gathers graph context, synthesis context, and CLAUDE.md analysis into the evidence pipeline.</p>
+        <div class="files"><code>file-mapper.md</code> <code>generate_dossiers.py</code> <code>collect_file_evidence.py</code> <code>generate_viewer.py</code></div>
         <div class="io"><strong>Input:</strong> Phase 2 outputs + cross-session data</div>
-        <div class="io"><strong>Output:</strong> file_dossiers.json, claude_md_analysis.json, per-file hyperdoc blocks</div>
-        <div class="status working">Working &mdash; 261/285 sessions + 456 hyperdocs</div>
-        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: ~$20-30/session (per-file Opus agents)</div>
+        <div class="io"><strong>Output:</strong> file_dossiers.json, claude_md_analysis.json, per-file evidence bundles</div>
+        <div class="status working">Working &mdash; 274/298 sessions</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: ~$5-10/session (1 Opus agent + Python)</div>
       </div>
 
       <div class="phase-card p4">
-        <h3><span class="badge">P4</span> Smart Insertion</h3>
-        <p>Inserts hyperdocs into Python files using layered format v2. New analysis passes append layers; existing content never replaced. 106 inline function annotations across reference batch.</p>
-        <div class="files"><code>insert_hyperdocs_v2.py</code> <code>hyperdoc_layers.py</code> <code>insert_from_phase4b.py</code></div>
-        <div class="io"><strong>Input:</strong> Hyperdoc blocks from Phase 3</div>
+        <h3><span class="badge">P4a</span> Cross-Session Aggregation</h3>
+        <p>Reads all 298 session dossiers. Merges per-file data across sessions: warnings, decisions, confidence history, frustration, emotions. Enriches with code similarity, genealogy families, frustration associations, cross-session evidence. Promotes files with 3+ sessions to <code>hyperdoc_inputs/</code> for Opus writing.</p>
+        <div class="files"><code>aggregate_dossiers.py</code></div>
+        <div class="io"><strong>Input:</strong> All Phase 3 file_dossiers.json + evidence bundles across 298 sessions</div>
+        <div class="io"><strong>Output:</strong> <code>cross_session_file_index.json</code>, per-file <code>hyperdoc_inputs/*.json</code></div>
+        <div class="status working">Working &mdash; 298 sessions aggregated, 492 hyperdoc inputs</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: $0 (pure Python)</div>
+      </div>
+
+      <div class="phase-card p4">
+        <h3><span class="badge">P4b</span> Hyperdoc Writing + Insertion</h3>
+        <p>Hyperdoc Writer Per-File launches Opus agents per file to produce header + inline annotations + footer. Smart Insertion inserts into Python files using layered format v2. New analysis passes append layers; existing content never replaced.</p>
+        <div class="files"><code>hyperdoc-writer-per-file.md</code> <code>insert_hyperdocs_v2.py</code> <code>hyperdoc_layers.py</code> <code>insert_from_phase4b.py</code></div>
+        <div class="io"><strong>Input:</strong> <code>hyperdoc_inputs/*.json</code> from Phase 4a</div>
         <div class="io"><strong>Output:</strong> Enhanced Python files, layered JSON. 341 enhanced files, 456 hyperdocs (14MB).</div>
         <div class="status working">Working &mdash; 456 hyperdocs written</div>
-        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: $0 (pure Python)</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: ~$20-30/session (per-file Opus agents) + $0 insertion</div>
       </div>
 
       <div class="phase-card p5">
@@ -296,7 +315,7 @@ flowchart TD
         <div class="files"><code>claim_extractor.py</code> <code>ground_truth_verifier.py</code> <code>gap_reporter.py</code></div>
         <div class="io"><strong>Input:</strong> Phase 2 synthesis + filesystem reality</div>
         <div class="io"><strong>Output:</strong> ground_truth_verification.json per session</div>
-        <div class="status working">Working &mdash; 261/285 sessions, 73% credibility</div>
+        <div class="status working">Working &mdash; 274/298 sessions, 73% credibility</div>
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: $0 (pure Python, AST checks)</div>
       </div>
 
@@ -317,6 +336,7 @@ flowchart TD
           <tr><td><strong>Idea Graph Builder</strong></td><td><code>idea-graph-builder.md</code></td><td>All Phase 1 outputs</td><td>idea_graph.json<small>Nodes + 10 transition types</small></td><td>Opus 4.6</td></tr>
           <tr><td><strong>Synthesizer</strong></td><td><code>synthesizer.md</code></td><td>All Phase 1 outputs</td><td>synthesis.json + grounded_markers.json<small>6-pass temperature ramp</small></td><td>Opus 4.6</td></tr>
           <tr><td><strong>File Mapper</strong></td><td><code>file-mapper.md</code></td><td>Phase 2 outputs</td><td>file_dossiers.json<small>Per-file, 20+ fields each</small></td><td>Opus 4.6</td></tr>
+          <tr><td><strong>Hyperdoc Writer (Per-File)</strong></td><td><code>hyperdoc-writer-per-file.md</code></td><td>hyperdoc_inputs/*.json from Phase 4a</td><td>Per-file hyperdoc blocks<small>Header + inline annotations + footer</small></td><td>Opus 4.6</td></tr>
         </tbody>
       </table>
     </div>
@@ -333,8 +353,9 @@ flowchart TD
           <tr><td style="color:var(--p1)"><strong>P1</strong></td><td><code>thread_extractions.json</code> <code>geological_notes.json</code> <code>semantic_primitives.json</code> <code>explorer_notes.json</code></td><td>4</td></tr>
           <tr><td style="color:var(--p2)"><strong>P2</strong></td><td><code>idea_graph.json</code> <code>synthesis.json</code> <code>grounded_markers.json</code></td><td>3</td></tr>
           <tr><td style="color:var(--p3)"><strong>P3</strong></td><td><code>file_dossiers.json</code> <code>claude_md_analysis.json</code></td><td>2</td></tr>
+          <tr><td style="color:var(--p4)"><strong>P4a</strong></td><td><code>cross_session_file_index.json</code> <code>hyperdoc_inputs/*.json</code> (per promoted file)</td><td>2+</td></tr>
           <tr><td style="color:var(--p5)"><strong>P5</strong></td><td><code>ground_truth_verification.json</code></td><td>1</td></tr>
-          <tr style="background:var(--surface2)"><td><strong>Total</strong></td><td>Up to 15 structured JSON files per session</td><td><strong>15</strong></td></tr>
+          <tr style="background:var(--surface2)"><td><strong>Total</strong></td><td>Up to 16+ structured JSON files per session + cross-session aggregation outputs</td><td><strong>16+</strong></td></tr>
         </tbody>
       </table>
     </div>
@@ -368,20 +389,20 @@ flowchart TD
       <table>
         <thead><tr><th>Issue</th><th>Impact</th><th>What Needs to Happen</th><th>Type</th></tr></thead>
         <tbody>
-          <tr><td><strong>V5 code dependency</strong><small><code>deterministic_prep.py</code> line 30-31</small></td><td><code>sys.path.insert(0, str(V5_CODE))</code> imports 5 modules from <code>hyperdocs_2/V5/code/</code>. Other users can't run Phase 0.</td><td>Bundle 5 V5 modules into <code>phase_0_prep/v5_compat/</code></td><td><span class="tag port">PORTABILITY</span></td></tr>
+          <tr style="opacity:0.6"><td><s><strong>V5 code dependency</strong></s><small><code>phase_0_prep/v5_compat/</code> (8 files)</small></td><td><s>Other users can't run Phase 0.</s> Bundled into <code>v5_compat/</code>.</td><td>N/A</td><td><span class="tag resolved">RESOLVED</span></td></tr>
           <tr><td><strong>Stub files</strong></td><td><code>extract_threads.py</code>, <code>tag_primitives.py</code> listed in <code>phase_1_extraction/</code> but not functional. Confusing for new users.</td><td>Implement as wrappers or document that agent .md files are the real entry point.</td><td><span class="tag stub">STUB</span></td></tr>
-          <tr><td><strong>Missing requirements.txt</strong></td><td>No dependency manifest in source. Users don't know what to install.</td><td>Create: <code>anthropic</code>, <code>tiktoken</code>, <code>python-dotenv</code></td><td><span class="tag missing">MISSING</span></td></tr>
+          <tr style="opacity:0.6"><td><s><strong>Missing requirements.txt</strong></s></td><td><s>No dependency manifest in source.</s> <code>requirements.txt</code> exists.</td><td>N/A</td><td><span class="tag resolved">RESOLVED</span></td></tr>
           <tr><td><strong>PERMANENT_* paths</strong></td><td>9 files hardcode <code>Path.home() / "PERMANENT_*"</code> directly instead of using config.py.</td><td>Route all 9 files through <code>config.py</code> imports.</td><td><span class="tag port">PORTABILITY</span></td></tr>
           <tr><td><strong>GitHub repo drift</strong></td><td>22 files changed in source, not pushed. 1,633 insertions / 654 deletions behind.</td><td>Run <code>sync_from_dev.sh</code>, commit, push.</td><td><span class="tag drift">DRIFT</span></td></tr>
-          <tr><td><strong>No master orchestrator</strong></td><td>No single command runs all 6 phases. Each phase has its own entry point.</td><td>Build <code>run_pipeline.py SESSION_ID</code></td><td><span class="tag missing">MISSING</span></td></tr>
-          <tr><td><strong>7 sessions fail Phase 0</strong></td><td>Malformed JSONL or missing files. 279/285 = 6 failures.</td><td>Investigate root cause or document as known failures.</td><td><span class="tag data">DATA</span></td></tr>
+          <tr style="opacity:0.6"><td><s><strong>No master orchestrator</strong></s></td><td><s>No single command runs all 6 phases.</s> <code>tools/run_pipeline.py</code> exists.</td><td>N/A</td><td><span class="tag resolved">RESOLVED</span></td></tr>
+          <tr><td><strong>6 sessions fail Phase 0</strong></td><td>Malformed JSONL or missing files. 292/298 = 6 failures.</td><td>Investigate root cause or document as known failures.</td><td><span class="tag data">DATA</span></td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
   <div style="text-align:center; margin-top:56px; color:var(--text-dim); font-size:12px; font-family:var(--font-mono);">
-    Hyperdocs System Architecture v2 &bull; 6 phases, 42 files, 7 agents &bull; Feb 20, 2026
+    Hyperdocs System Architecture v2 &bull; 7 phases, 154 files, 8 agents &bull; Feb 24, 2026
   </div>
 
 </div>

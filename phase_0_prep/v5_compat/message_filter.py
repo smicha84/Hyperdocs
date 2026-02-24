@@ -301,7 +301,7 @@ def profile_archive(archive_path: str, sample_files: int = 10) -> Dict[str, Any]
                             'score': result.score,
                             'signals': result.signals,
                         })
-                except:
+                except Exception:
                     pass
 
     return {
