@@ -671,3 +671,30 @@ fatal: could not read Username for 'https://github.com': Device not configured
 ............                                                             [100%]
 84 passed in 1.61s
 [2026-02-24 16:30:00] Tests passed.
+[main 5489ed4] Auto-sync:  21 files changed, 6504 insertions(+), 5 deletions(-)
+ 21 files changed, 6504 insertions(+), 5 deletions(-)
+ create mode 100644 hyperdocs-architecture-diagram-v2.html
+ create mode 100644 hyperdocs-code-analysis-findings-v2.html
+ create mode 100644 hyperdocs-system-file-analysis-v2.html
+ rename {phase_5_ground_truth => obsolete/phase_5_ground_truth_v2}/claim_extractor.py (100%)
+ rename {phase_5_ground_truth => obsolete/phase_5_ground_truth_v2}/completeness_scanner.py (100%)
+ rename {phase_5_ground_truth => obsolete/phase_5_ground_truth_v2}/gap_reporter.py (100%)
+ rename {phase_5_ground_truth => obsolete/phase_5_ground_truth_v2}/ground_truth_verifier.py (100%)
+ rename {phase_5_ground_truth => obsolete/phase_5_ground_truth_v2}/post_agent_normalize.py (100%)
+ rename {phase_5_ground_truth => obsolete/phase_5_ground_truth_v2}/run_verification.py (100%)
+ rename {phase_5_ground_truth => obsolete/phase_5_ground_truth_v2}/schema_normalizer.py (100%)
+ rename {phase_5_ground_truth => obsolete/phase_5_ground_truth_v2}/schema_validator.py (100%)
+ create mode 100644 tools/idea_graph_explorer/__init__.py
+ create mode 100644 tools/idea_graph_explorer/graph_analytics.py
+ create mode 100644 tools/idea_graph_explorer/normalizer.py
+ create mode 100644 tools/idea_graph_explorer/server.py
+ create mode 100644 tools/idea_graph_explorer/templates/explorer.html
+ create mode 100644 tools/system_file_report/__init__.py
+ create mode 100644 tools/system_file_report/generate_report.py
+fatal: could not read Username for 'https://github.com': Device not configured
+[2026-02-24 16:30:00] ERROR: git push failed
+[2026-02-24 17:30:00] Running tests...
+........................................................................ [ 85%]
+............                                                             [100%]
+84 passed in 1.81s
+[2026-02-24 17:30:00] Tests passed.

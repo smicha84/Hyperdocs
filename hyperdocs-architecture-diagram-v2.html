@@ -3,462 +3,3855 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hyperdocs System Architecture</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Hyperdocs I/O Graph</title>
 <style>
-:root {
-  --bg:#090b14;--s1:#111525;--s2:#171c32;--s3:#1e2540;
-  --bdr:rgba(99,102,241,.12);--bdr2:rgba(99,102,241,.25);
-  --tx:#e2e4ed;--tx2:#7b829e;--tx3:#535873;
-  --acc:#6366f1;
-  --p0:#22d3ee;--p0bg:rgba(34,211,238,.08);--p0bd:rgba(34,211,238,.35);
-  --p1:#a78bfa;--p1bg:rgba(167,139,250,.08);--p1bd:rgba(167,139,250,.35);
-  --p2:#34d399;--p2bg:rgba(52,211,153,.08);--p2bd:rgba(52,211,153,.35);
-  --p3:#fbbf24;--p3bg:rgba(251,191,36,.08);--p3bd:rgba(251,191,36,.35);
-  --p4:#f87171;--p4bg:rgba(248,113,113,.08);--p4bd:rgba(248,113,113,.35);
-  --free:#34d399;--paid:#f87171;
-}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--tx);font-family:'Inter',system-ui,sans-serif;padding:48px 32px 80px;line-height:1.5}
-.page{max-width:1200px;margin:0 auto}
-
-/* Header */
-.hdr{text-align:center;margin-bottom:48px}
-.hdr h1{font-size:44px;font-weight:800;letter-spacing:-1.5px;background:linear-gradient(135deg,var(--p0),var(--acc),var(--p1));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
-.hdr p{color:var(--tx2);font-size:17px}
-.hdr .date{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx3);margin-top:8px}
-
-/* KPI strip */
-.kpi{display:flex;gap:2px;margin-bottom:48px;border-radius:14px;overflow:hidden}
-.kpi>div{flex:1;background:var(--s1);padding:20px 16px;text-align:center}
-.kpi .n{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:800}
-.kpi .l{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--tx2);margin-top:2px;font-weight:600}
-
-/* Pipeline */
-.pipeline{position:relative}
-
-/* Vertical spine */
-.spine{position:absolute;left:50%;top:0;bottom:0;width:3px;background:linear-gradient(to bottom,var(--p0),var(--p1),var(--p2),var(--p3),var(--p4));opacity:.3;transform:translateX(-50%)}
-
-/* Phase row */
-.phase{position:relative;margin-bottom:24px}
-.phase-label{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.phase-dot{width:14px;height:14px;border-radius:50%;border:3px solid;flex-shrink:0}
-.phase-name{font-weight:700;font-size:15px;letter-spacing:.3px}
-.phase-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3);margin-left:auto}
-.phase-cost{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
-
-/* Cards */
-.cards{display:grid;gap:12px}
-.cards.c2{grid-template-columns:1fr 1fr}
-.cards.c3{grid-template-columns:1fr 1fr 1fr}
-.cards.c4{grid-template-columns:1fr 1fr 1fr 1fr}
-
-.card{border-radius:12px;padding:20px;border:1px solid var(--bdr);position:relative;overflow:hidden;transition:border-color .2s}
-.card:hover{border-color:var(--bdr2)}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-.card h4{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
-.card .icon{font-size:16px}
-.card .desc{font-size:12px;color:var(--tx2);line-height:1.7}
-.card .desc strong{color:var(--tx);font-weight:600}
-.card .mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3);margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr)}
-.card code{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--s2);padding:1px 6px;border-radius:3px;color:var(--tx)}
-
-/* Phase-specific */
-.p0 .card{background:var(--p0bg);border-color:var(--p0bd)}.p0 .card::before{background:var(--p0)}.p0 .phase-dot{border-color:var(--p0);background:var(--p0bg)}.p0 .phase-name{color:var(--p0)}
-.p1 .card{background:var(--p1bg);border-color:var(--p1bd)}.p1 .card::before{background:var(--p1)}.p1 .phase-dot{border-color:var(--p1);background:var(--p1bg)}.p1 .phase-name{color:var(--p1)}
-.p2 .card{background:var(--p2bg);border-color:var(--p2bd)}.p2 .card::before{background:var(--p2)}.p2 .phase-dot{border-color:var(--p2);background:var(--p2bg)}.p2 .phase-name{color:var(--p2)}
-.p3 .card{background:var(--p3bg);border-color:var(--p3bd)}.p3 .card::before{background:var(--p3)}.p3 .phase-dot{border-color:var(--p3);background:var(--p3bg)}.p3 .phase-name{color:var(--p3)}
-.p4 .card{background:var(--p4bg);border-color:var(--p4bd)}.p4 .card::before{background:var(--p4)}.p4 .phase-dot{border-color:var(--p4);background:var(--p4bg)}.p4 .phase-name{color:var(--p4)}
-
-/* Output row */
-.output-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 24px;padding:14px 20px;background:var(--s1);border:1px solid var(--bdr);border-radius:10px}
-.output-row .file{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--s2);padding:4px 10px;border-radius:6px;color:var(--tx2);border:1px solid var(--bdr)}
-
-/* Arrow between phases */
-.arrow{display:flex;justify-content:center;margin:6px 0;color:var(--tx3);font-size:20px;letter-spacing:4px}
-
-/* Wide card */
-.wide{grid-column:1/-1}
-
-/* Cost badges */
-.cost-free{background:rgba(52,211,153,.15);color:var(--free)}
-.cost-paid{background:rgba(248,113,113,.12);color:var(--paid)}
-
-/* Footer */
-.foot{text-align:center;margin-top:64px;padding-top:32px;border-top:1px solid var(--bdr);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx3)}
-
-@media(max-width:900px){.cards.c3,.cards.c4{grid-template-columns:1fr 1fr}.cards.c2{grid-template-columns:1fr}}
-@media(max-width:600px){.cards.c2,.cards.c3,.cards.c4{grid-template-columns:1fr}.kpi{flex-wrap:wrap}.kpi>div{min-width:45%}}
+body{background:#080a12;color:#e2e8f0;font-family:system-ui,sans-serif;overflow:hidden;height:100vh}
+#controls{position:fixed;top:16px;left:16px;z-index:100;display:flex;flex-direction:column;gap:8px;max-width:280px}
+#controls h1{font-size:22px;font-weight:700;background:linear-gradient(135deg,#22d3ee,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#controls p{font-size:11px;color:#8892a8;line-height:1.5}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#8892a8}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.filters{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.filter-btn{background:#111525;border:1px solid rgba(255,255,255,.1);color:#8892a8;padding:4px 10px;border-radius:6px;font-size:10px;cursor:pointer;transition:all .15s}
+.filter-btn:hover,.filter-btn.active{color:#e2e8f0;border-color:rgba(255,255,255,.3);background:#1a1f35}
+.filter-btn.active{font-weight:600}
+#info{position:fixed;bottom:16px;left:16px;z-index:100;background:#111525;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 18px;font-size:12px;max-width:350px;display:none;line-height:1.6}
+#info h3{font-size:14px;margin-bottom:6px}
+#info .tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;margin:1px 2px}
+#info .read{background:rgba(52,211,153,.15);color:#6ee7b7}
+#info .write{background:rgba(248,113,113,.15);color:#fca5a5}
+#stats{position:fixed;top:16px;right:16px;z-index:100;display:flex;gap:12px}
+.stat{background:#111525;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;text-align:center}
+.stat-n{font-size:22px;font-weight:700;font-family:monospace}
+.stat-l{font-size:9px;color:#8892a8;text-transform:uppercase;letter-spacing:.5px}
+svg{width:100%;height:100%}
+.link{stroke-opacity:.25;fill:none}
+.link-read{stroke:#34d399}
+.link-write{stroke:#f87171}
+.node-label{font-size:9px;fill:#8892a8;pointer-events:none;text-anchor:middle;dominant-baseline:central}
+.node-label.highlight{fill:#e2e8f0;font-size:11px;font-weight:600}
 </style>
 </head>
 <body>
-<div class="page">
 
-<div class="hdr">
-  <h1>Hyperdocs System Architecture</h1>
-  <p>Complete pipeline: raw JSONL chat history → 456 annotated hyperdocs</p>
-  <div class="date">Feb 24, 2026 — Derived from reading 13 source files + 3 agent prompts</div>
-</div>
-
-<div class="kpi">
-  <div><div class="n" style="color:var(--p0)">5</div><div class="l">Phases</div></div>
-  <div><div class="n" style="color:var(--p2)">87</div><div class="l">Python Files</div></div>
-  <div><div class="n" style="color:var(--acc)">37,759</div><div class="l">Lines of Code</div></div>
-  <div><div class="n" style="color:var(--p1)">8</div><div class="l">Opus Agents</div></div>
-  <div><div class="n" style="color:var(--p3)">298</div><div class="l">Sessions</div></div>
-  <div><div class="n" style="color:var(--p4)">456</div><div class="l">Hyperdocs</div></div>
-</div>
-
-<div class="pipeline">
-<div class="spine"></div>
-
-<!-- INPUT -->
-<div class="phase" style="margin-bottom:16px">
-  <div style="background:var(--s1);border:2px solid var(--acc);border-radius:12px;padding:18px 24px;text-align:center">
-    <div style="font-weight:700;font-size:16px;color:var(--acc);margin-bottom:4px">INPUT: Raw JSONL Chat History</div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx2)">~/.claude/projects/ &nbsp;•&nbsp; ~/.claude/history.jsonl &nbsp;•&nbsp; ~/PERMANENT_CHAT_HISTORY/sessions/</div>
+<div id="controls">
+  <h1>Hyperdocs I/O Graph</h1>
+  <p>143 nodes, 531 edges. Every .py file and every .json artifact. Green = reads, red = writes. Drag nodes. Scroll to zoom. Click a node for details.</p>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#22d3ee"></div>P0 Prep</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>P1 Extract</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#34d399"></div>P2 Synth</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>P3 Evidence</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>P4 Insert</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>Product/Tools</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#475569;border:2px solid #64748b;width:8px;height:8px"></div>JSON Data</div>
+  </div>
+  <div class="filters">
+    <button class="filter-btn active" onclick="filterPhase(-1)">All</button>
+    <button class="filter-btn" onclick="filterPhase(0)">P0</button>
+    <button class="filter-btn" onclick="filterPhase(1)">P1</button>
+    <button class="filter-btn" onclick="filterPhase(2)">P2</button>
+    <button class="filter-btn" onclick="filterPhase(3)">P3</button>
+    <button class="filter-btn" onclick="filterPhase(4)">P4</button>
+    <button class="filter-btn" onclick="filterPhase(5)">Product</button>
+    <button class="filter-btn" onclick="filterPhase(6)">Tools</button>
+  </div>
+  <div style="margin-top:4px">
+    <div class="legend-item" style="gap:6px"><div style="width:30px;height:2px;background:#34d399"></div>reads from</div>
+    <div class="legend-item" style="gap:6px"><div style="width:30px;height:2px;background:#f87171"></div>writes to</div>
   </div>
 </div>
 
-<div class="arrow">▼ ▼ ▼</div>
-
-<!-- PHASE 0 -->
-<div class="phase p0">
-  <div class="phase-label">
-    <div class="phase-dot"></div>
-    <div class="phase-name">PHASE 0: DETERMINISTIC PREP</div>
-    <div class="phase-meta">23 files &nbsp;•&nbsp; 11,218 lines</div>
-    <div class="phase-cost cost-free">$0</div>
-  </div>
-  <div class="cards c2">
-    <div class="card">
-      <h4><span class="icon">🐍</span> enrich_session.py <span style="color:var(--tx3);font-weight:400;font-size:11px">(922 lines)</span></h4>
-      <div class="desc">
-        <strong>Load</strong> JSONL via ClaudeSessionReader → ClaudeMessage objects<br>
-        <strong>Detect</strong> 9 protocol patterns (XML tags, /clear, skill injections)<br>
-        <strong>Collapse</strong> char-per-line encoding (A\nL\nW\nA\nY\nS → ALWAYS)<br>
-        <strong>Extract</strong> 50+ metadata signals via MetadataExtractor<br>
-        <strong>Filter</strong> into 4 tiers via MessageFilter<br>
-        <strong>Analyze</strong> 20 Claude behavior patterns via ClaudeBehaviorAnalyzer<br>
-        <strong>Apply</strong> 9 data quality fixes (documented inline)
-      </div>
-      <div class="mono">Entry: <code>enrich_session.py</code></div>
-    </div>
-    <div class="card">
-      <h4><span class="icon">🐍</span> prepare_agent_data.py <span style="color:var(--tx3);font-weight:400;font-size:11px">(280 lines)</span></h4>
-      <div class="desc">
-        <strong>Split</strong> enriched messages by tier (1-4)<br>
-        <strong>Sanitize</strong> profanity for API content policy compliance<br>
-        <strong>Build</strong> priority message lists for Phase 1 agents<br>
-        <strong>Optional:</strong> opus_classifier.py replaces Python tiers with Opus importance ratings (graceful fallback if fails)
-      </div>
-      <div class="mono">Also: <code>opus_classifier.py</code> <code>metadata_extractor.py</code> <code>message_filter.py</code> <code>schema_normalizer.py</code></div>
-    </div>
-  </div>
+<div id="stats">
+  <div class="stat"><div class="stat-n" style="color:#22d3ee">92</div><div class="stat-l">.py files</div></div>
+  <div class="stat"><div class="stat-n" style="color:#fbbf24">51</div><div class="stat-l">.json files</div></div>
+  <div class="stat"><div class="stat-n" style="color:#34d399">531</div><div class="stat-l">edges</div></div>
 </div>
 
-<div class="output-row">
-  <div class="file">enriched_session.json</div>
-  <div class="file">session_metadata.json</div>
-  <div class="file">safe_tier4.json</div>
-  <div class="file">tier4_priority_messages.json</div>
-  <div class="file">tier2plus_messages.json</div>
-  <div class="file" style="opacity:.5">opus_classifications.json (optional)</div>
-</div>
+<div id="info"></div>
 
-<div class="arrow">▼ ▼ ▼</div>
+<svg id="graph"></svg>
 
-<!-- PHASE 1 -->
-<div class="phase p1">
-  <div class="phase-label">
-    <div class="phase-dot"></div>
-    <div class="phase-name">PHASE 1: EXTRACTION — 4 Parallel Opus Agents</div>
-    <div class="phase-meta">9 files &nbsp;•&nbsp; 5,848 lines</div>
-    <div class="phase-cost cost-paid">~$5-10</div>
-  </div>
-  <div class="cards c4">
-    <div class="card">
-      <h4><span class="icon">🤖</span> Thread Analyst</h4>
-      <div class="desc">
-        <strong>6 threads:</strong> ideas, reactions, software, code, plans, behavior<br>
-        <strong>6 markers</strong> per message<br>
-        Canonical dict format
-      </div>
-      <div class="mono"><code>thread-analyst.md</code></div>
-    </div>
-    <div class="card">
-      <h4><span class="icon">🤖</span> Geological Reader</h4>
-      <div class="desc">
-        <strong>Multi-resolution:</strong><br>
-        micro (message-level)<br>
-        meso (conversation-level)<br>
-        macro (session-level)
-      </div>
-      <div class="mono"><code>geological-reader.md</code></div>
-    </div>
-    <div class="card">
-      <h4><span class="icon">🤖</span> Primitives Tagger</h4>
-      <div class="desc">
-        <strong>7 semantic dimensions:</strong><br>
-        emotional_tenor, action_vector, confidence_signal, intent_marker, friction_log, decision_trace
-      </div>
-      <div class="mono"><code>primitives-tagger.md</code></div>
-    </div>
-    <div class="card">
-      <h4><span class="icon">🤖</span> Free Explorer</h4>
-      <div class="desc">
-        <strong>Open-ended discovery:</strong><br>
-        Pattern detection<br>
-        Anomaly identification<br>
-        Data quality issues
-      </div>
-      <div class="mono"><code>free-explorer.md</code></div>
-    </div>
-  </div>
-</div>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script>
+const PHASE_COLORS = {
+  0: '#22d3ee', 1: '#a78bfa', 2: '#34d399', 3: '#fbbf24',
+  4: '#f87171', 5: '#94a3b8', 6: '#64748b', 7: '#64748b', 8: '#475569', '-1': '#475569'
+};
 
-<div class="output-row">
-  <div class="file">thread_extractions.json</div>
-  <div class="file">geological_notes.json</div>
-  <div class="file">semantic_primitives.json</div>
-  <div class="file">explorer_notes.json</div>
-</div>
+const PHASE_NAMES = {
+  0:'Phase 0: Prep', 1:'Phase 1: Extraction', 2:'Phase 2: Synthesis',
+  3:'Phase 3: Evidence', 4:'Phase 4: Insertion', 5:'Product', 6:'Tools', 7:'Realtime'
+};
 
-<div class="arrow">▼ ▼ ▼</div>
+let graphData, simulation, svg, g, link, node, label;
+let activePhase = -1;
 
-<!-- PHASE 2 -->
-<div class="phase p2">
-  <div class="phase-label">
-    <div class="phase-dot"></div>
-    <div class="phase-name">PHASE 2: SYNTHESIS</div>
-    <div class="phase-meta">6 files &nbsp;•&nbsp; 3,317 lines</div>
-    <div class="phase-cost cost-paid">~$5-10</div>
-  </div>
-  <div class="cards c4">
-    <div class="card">
-      <h4><span class="icon">🤖</span> Idea Graph Builder</h4>
-      <div class="desc">
-        <strong>Directed graph:</strong><br>
-        Nodes = idea-states<br>
-        Edges = <strong>10 transition types</strong><br>
-        <span style="font-size:11px;color:var(--tx3)">evolved, pivoted, split, merged, abandoned, resurrected, constrained, expanded, concretized, abstracted</span>
-      </div>
-      <div class="mono"><code>idea-graph-builder.md</code></div>
-    </div>
-    <div class="card">
-      <h4><span class="icon">🤖</span> Synthesizer</h4>
-      <div class="desc">
-        <strong>6-pass temperature ramp:</strong><br>
-        1. Factual (0.3)<br>
-        2. Patterns (0.5)<br>
-        3. Vertical (0.7)<br>
-        4. Creative (1.0)<br>
-        5. Meta (0.8)<br>
-        6. Grounding (0)
-      </div>
-      <div class="mono"><code>synthesizer.md</code></div>
-    </div>
-    <div class="card">
-      <h4><span class="icon">🐍</span> File Genealogy</h4>
-      <div class="desc">
-        <strong>3 detection signals:</strong><br>
-        1. Idea graph lineage<br>
-        2. Temporal succession<br>
-        3. Name similarity<br>
-        <strong style="color:var(--p2)">Result: 18 families</strong>
-      </div>
-      <div class="mono"><code>file_genealogy.py</code> (450 lines)</div>
-    </div>
-    <div class="card">
-      <h4><span class="icon">🐍</span> Code Similarity</h4>
-      <div class="desc">
-        <strong>Fingerprint index:</strong><br>
-        10 pattern types<br>
-        57,970 pairs compared<br>
-        <strong style="color:var(--p2)">Result: 14,176 matches</strong>
-      </div>
-      <div class="mono"><code>code_similarity.py</code> (517 lines)</div>
-    </div>
-  </div>
-</div>
+const GRAPH_DATA = {
+  "nodes": [
+    {
+      "id": "batch_runner.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 149
+    },
+    {
+      "id": "idea_transition.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 126
+    },
+    {
+      "id": "generate_viewer.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 986
+    },
+    {
+      "id": "coverage_stats.py",
+      "type": "py",
+      "phase": 5,
+      "lines": 190
+    },
+    {
+      "id": "normalize_agent_output.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 126
+    },
+    {
+      "id": "batch_p2_generator.py",
+      "type": "py",
+      "phase": 2,
+      "lines": 437
+    },
+    {
+      "id": "insert_hyperdocs_v2.py",
+      "type": "py",
+      "phase": 4,
+      "lines": 356
+    },
+    {
+      "id": "metadata_extractor.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 918
+    },
+    {
+      "id": "redo_all_phase1.py",
+      "type": "py",
+      "phase": 1,
+      "lines": 906
+    },
+    {
+      "id": "insert_hyperdocs.py",
+      "type": "py",
+      "phase": 4,
+      "lines": 252
+    },
+    {
+      "id": "data_lifecycle.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 173
+    },
+    {
+      "id": "graph_analytics.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 234
+    },
+    {
+      "id": "evidence_resolver.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 181
+    },
+    {
+      "id": "schema_validator.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 139
+    },
+    {
+      "id": "insert_from_phase4b.py",
+      "type": "py",
+      "phase": 4,
+      "lines": 527
+    },
+    {
+      "id": "collect_file_evidence.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 877
+    },
+    {
+      "id": "code_similarity.py",
+      "type": "py",
+      "phase": 2,
+      "lines": 521
+    },
+    {
+      "id": "batch_p0_llm.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 504
+    },
+    {
+      "id": "emotional_arc.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 84
+    },
+    {
+      "id": "tag_semantic_primitives.py",
+      "type": "py",
+      "phase": 1,
+      "lines": 657
+    },
+    {
+      "id": "generate_report.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 1008
+    },
+    {
+      "id": "prompts.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 372
+    },
+    {
+      "id": "analyze_data_flow.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 628
+    },
+    {
+      "id": "config.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 420
+    },
+    {
+      "id": "claude_behavior_analyzer.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 859
+    },
+    {
+      "id": "build_phase2_outputs.py",
+      "type": "py",
+      "phase": 2,
+      "lines": 736
+    },
+    {
+      "id": "merge_llm_results.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 234
+    },
+    {
+      "id": "batch_phase3a.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 147
+    },
+    {
+      "id": "code_similarity_incremental.py",
+      "type": "py",
+      "phase": 7,
+      "lines": 272
+    },
+    {
+      "id": "write_more_hyperdocs.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 380
+    },
+    {
+      "id": "insert_hyperdocs_3part.py",
+      "type": "py",
+      "phase": 4,
+      "lines": 356
+    },
+    {
+      "id": "pipeline_health_check.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 811
+    },
+    {
+      "id": "llm_pass_runner.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 570
+    },
+    {
+      "id": "extract_dashboard_data.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 333
+    },
+    {
+      "id": "geological_event.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 150
+    },
+    {
+      "id": "json_io.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 48
+    },
+    {
+      "id": "opus_classifier.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 442
+    },
+    {
+      "id": "verify_data_locations.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 100
+    },
+    {
+      "id": "file_genealogy.py",
+      "type": "py",
+      "phase": 2,
+      "lines": 451
+    },
+    {
+      "id": "batch_orchestrator.py",
+      "type": "py",
+      "phase": 1,
+      "lines": 473
+    },
+    {
+      "id": "batch_phase2_processor.py",
+      "type": "py",
+      "phase": 2,
+      "lines": 723
+    },
+    {
+      "id": "dashboard.py",
+      "type": "py",
+      "phase": 5,
+      "lines": 294
+    },
+    {
+      "id": "schema_contracts.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 211
+    },
+    {
+      "id": "claude_session_reader.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 396
+    },
+    {
+      "id": "build_opus_messages.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 262
+    },
+    {
+      "id": "install.py",
+      "type": "py",
+      "phase": 5,
+      "lines": 150
+    },
+    {
+      "id": "generate_remaining_hyperdocs.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 377
+    },
+    {
+      "id": "deterministic_prep.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 920
+    },
+    {
+      "id": "post_agent_normalize.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 123
+    },
+    {
+      "id": "decision_trace.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 179
+    },
+    {
+      "id": "tag_primitives.py",
+      "type": "py",
+      "phase": 1,
+      "lines": 653
+    },
+    {
+      "id": "app_level_manager.py",
+      "type": "py",
+      "phase": 7,
+      "lines": 290
+    },
+    {
+      "id": "hyperdoc_layers.py",
+      "type": "py",
+      "phase": 4,
+      "lines": 299
+    },
+    {
+      "id": "add_data_trace_sheets.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 551
+    },
+    {
+      "id": "log_config.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 88
+    },
+    {
+      "id": "init_hyperdoc_store.py",
+      "type": "py",
+      "phase": 4,
+      "lines": 194
+    },
+    {
+      "id": "batch_p1_llm.py",
+      "type": "py",
+      "phase": 1,
+      "lines": 494
+    },
+    {
+      "id": "generate_dossiers.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 1131
+    },
+    {
+      "id": "server.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 381
+    },
+    {
+      "id": "concierge.py",
+      "type": "py",
+      "phase": 5,
+      "lines": 360
+    },
+    {
+      "id": "write_hyperdocs.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 632
+    },
+    {
+      "id": "batch_llm_orchestrator.py",
+      "type": "py",
+      "phase": 1,
+      "lines": 500
+    },
+    {
+      "id": "hyperdoc_store_init.py",
+      "type": "py",
+      "phase": 4,
+      "lines": 194
+    },
+    {
+      "id": "debug_sequence.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 162
+    },
+    {
+      "id": "generate_pipeline_excel.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 955
+    },
+    {
+      "id": "phase1_redo_orchestrator.py",
+      "type": "py",
+      "phase": 1,
+      "lines": 902
+    },
+    {
+      "id": "session_profiler.py",
+      "type": "py",
+      "phase": 5,
+      "lines": 629
+    },
+    {
+      "id": "extract_threads.py",
+      "type": "py",
+      "phase": 1,
+      "lines": 804
+    },
+    {
+      "id": "file_timeline.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 138
+    },
+    {
+      "id": "hyperdoc_comparison.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 294
+    },
+    {
+      "id": "geological_reader.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 1071
+    },
+    {
+      "id": "base.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 167
+    },
+    {
+      "id": "session_metadata_tracker.py",
+      "type": "py",
+      "phase": 7,
+      "lines": 185
+    },
+    {
+      "id": "interactive_batch_runner.py",
+      "type": "py",
+      "phase": 1,
+      "lines": 479
+    },
+    {
+      "id": "extract_viz_data.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 327
+    },
+    {
+      "id": "enrich_session.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 923
+    },
+    {
+      "id": "prepare_agent_data.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 281
+    },
+    {
+      "id": "backfill_phase2.py",
+      "type": "py",
+      "phase": 2,
+      "lines": 458
+    },
+    {
+      "id": "file_lock.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 71
+    },
+    {
+      "id": "realtime_hook.py",
+      "type": "py",
+      "phase": 5,
+      "lines": 128
+    },
+    {
+      "id": "schema_normalizer.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 818
+    },
+    {
+      "id": "batch_phase0_reprocess.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 232
+    },
+    {
+      "id": "pipeline_status.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 166
+    },
+    {
+      "id": "run_pipeline.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 445
+    },
+    {
+      "id": "reaction_log.py",
+      "type": "py",
+      "phase": 3,
+      "lines": 93
+    },
+    {
+      "id": "positioning_analyzer.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 623
+    },
+    {
+      "id": "normalizer.py",
+      "type": "py",
+      "phase": 6,
+      "lines": 252
+    },
+    {
+      "id": "aggregate_dossiers.py",
+      "type": "py",
+      "phase": 4,
+      "lines": 762
+    },
+    {
+      "id": "completeness_scanner.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 433
+    },
+    {
+      "id": "build_opus_filtered.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 258
+    },
+    {
+      "id": "insert_from_json.py",
+      "type": "py",
+      "phase": 4,
+      "lines": 527
+    },
+    {
+      "id": "message_filter.py",
+      "type": "py",
+      "phase": 0,
+      "lines": 339
+    },
+    {
+      "id": "emergency_contexts.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "grounded_markers.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "settings.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "batch_llm_status.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "safe_condensed.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "geological_notes.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "completeness_report.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "cross_session_file_index.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "explorer_notes.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "session_measurements.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "discovery.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "dashboard_data.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "phase1_redo_progress.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "batch_runner_checkpoint.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "enriched_session_v2.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "normalization_log.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "_index.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "enriched_session.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "file_genealogy.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "claude_md_analysis.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "code_similarity_index.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "llm_pass_checkpoint.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "api_call_log.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "llm_pass1_content_ref.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "thread_extractions.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "safe_opus_priority.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "opus_classifications.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "ground_truth_verification.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "*.jsonl",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "opus_vs_python_comparison.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "llm_pass2_behaviors.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "tier4_priority_messages.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "user_messages_tier2plus.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "file_dossiers.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "llm_pass_cost_log.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "pipeline_status.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "safe_tier4.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "phase0_reprocess_log.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "health_check_report.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "llm_pass3_intent.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "current_inline.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "duplicate_manifest.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "synthesis.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "llm_pass4_importance.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "conversation_condensed.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "semantic_primitives.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "tier2plus_messages.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "idea_graph.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "session_metadata.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "opus_priority_messages.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    },
+    {
+      "id": "opus_extended_messages.json",
+      "type": "json",
+      "phase": -1,
+      "lines": 0
+    }
+  ],
+  "edges": [
+    {
+      "source": "batch_llm_status.json",
+      "target": "batch_llm_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "duplicate_manifest.json",
+      "target": "batch_llm_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "batch_llm_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "batch_llm_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "batch_llm_status.json",
+      "target": "batch_p0_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "duplicate_manifest.json",
+      "target": "batch_p0_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "batch_p0_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "batch_p0_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "batch_phase0_reprocess.py",
+      "type": "read"
+    },
+    {
+      "source": "phase0_reprocess_log.json",
+      "target": "batch_phase0_reprocess.py",
+      "type": "read"
+    },
+    {
+      "source": "batch_phase0_reprocess.py",
+      "target": "phase0_reprocess_log.json",
+      "type": "write"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "build_opus_filtered.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "build_opus_filtered.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_classifications.json",
+      "target": "build_opus_filtered.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_extended_messages.json",
+      "target": "build_opus_filtered.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_priority_messages.json",
+      "target": "build_opus_filtered.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_opus_priority.json",
+      "target": "build_opus_filtered.py",
+      "type": "read"
+    },
+    {
+      "source": "build_opus_filtered.py",
+      "target": "opus_extended_messages.json",
+      "type": "write"
+    },
+    {
+      "source": "build_opus_filtered.py",
+      "target": "opus_priority_messages.json",
+      "type": "write"
+    },
+    {
+      "source": "build_opus_filtered.py",
+      "target": "safe_opus_priority.json",
+      "type": "write"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "build_opus_messages.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "build_opus_messages.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_classifications.json",
+      "target": "build_opus_messages.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_extended_messages.json",
+      "target": "build_opus_messages.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_priority_messages.json",
+      "target": "build_opus_messages.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_opus_priority.json",
+      "target": "build_opus_messages.py",
+      "type": "read"
+    },
+    {
+      "source": "build_opus_messages.py",
+      "target": "opus_extended_messages.json",
+      "type": "write"
+    },
+    {
+      "source": "build_opus_messages.py",
+      "target": "opus_priority_messages.json",
+      "type": "write"
+    },
+    {
+      "source": "build_opus_messages.py",
+      "target": "safe_opus_priority.json",
+      "type": "write"
+    },
+    {
+      "source": "*.jsonl",
+      "target": "claude_session_reader.py",
+      "type": "read"
+    },
+    {
+      "source": "code_similarity_index.json",
+      "target": "code_similarity.py",
+      "type": "read"
+    },
+    {
+      "source": "code_similarity.py",
+      "target": "code_similarity_index.json",
+      "type": "write"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "completeness_report.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "conversation_condensed.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "emergency_contexts.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "file_genealogy.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "ground_truth_verification.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_condensed.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_tier4.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "tier2plus_messages.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "tier4_priority_messages.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "user_messages_tier2plus.json",
+      "target": "completeness_scanner.py",
+      "type": "read"
+    },
+    {
+      "source": "completeness_scanner.py",
+      "target": "completeness_report.json",
+      "type": "write"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "deterministic_prep.py",
+      "type": "read"
+    },
+    {
+      "source": "deterministic_prep.py",
+      "target": "enriched_session.json",
+      "type": "write"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "enrich_session.py",
+      "type": "read"
+    },
+    {
+      "source": "enrich_session.py",
+      "target": "enriched_session.json",
+      "type": "write"
+    },
+    {
+      "source": "*.jsonl",
+      "target": "geological_reader.py",
+      "type": "read"
+    },
+    {
+      "source": "api_call_log.json",
+      "target": "geological_reader.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_reader.py",
+      "target": "api_call_log.json",
+      "type": "write"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "llm_pass_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_condensed.json",
+      "target": "llm_pass_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "merge_llm_results.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "merge_llm_results.py",
+      "type": "read"
+    },
+    {
+      "source": "merge_llm_results.py",
+      "target": "enriched_session.json",
+      "type": "write"
+    },
+    {
+      "source": "merge_llm_results.py",
+      "target": "enriched_session_v2.json",
+      "type": "write"
+    },
+    {
+      "source": "*.jsonl",
+      "target": "message_filter.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "opus_classifier.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "opus_classifier.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_classifications.json",
+      "target": "opus_classifier.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_vs_python_comparison.json",
+      "target": "opus_classifier.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_classifier.py",
+      "target": "enriched_session.json",
+      "type": "write"
+    },
+    {
+      "source": "opus_classifier.py",
+      "target": "enriched_session_v2.json",
+      "type": "write"
+    },
+    {
+      "source": "opus_classifier.py",
+      "target": "opus_classifications.json",
+      "type": "write"
+    },
+    {
+      "source": "opus_classifier.py",
+      "target": "opus_vs_python_comparison.json",
+      "type": "write"
+    },
+    {
+      "source": "conversation_condensed.json",
+      "target": "prepare_agent_data.py",
+      "type": "read"
+    },
+    {
+      "source": "emergency_contexts.json",
+      "target": "prepare_agent_data.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "prepare_agent_data.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "prepare_agent_data.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_classifications.json",
+      "target": "prepare_agent_data.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_condensed.json",
+      "target": "prepare_agent_data.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_tier4.json",
+      "target": "prepare_agent_data.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "prepare_agent_data.py",
+      "type": "read"
+    },
+    {
+      "source": "tier2plus_messages.json",
+      "target": "prepare_agent_data.py",
+      "type": "read"
+    },
+    {
+      "source": "tier4_priority_messages.json",
+      "target": "prepare_agent_data.py",
+      "type": "read"
+    },
+    {
+      "source": "user_messages_tier2plus.json",
+      "target": "prepare_agent_data.py",
+      "type": "read"
+    },
+    {
+      "source": "prepare_agent_data.py",
+      "target": "conversation_condensed.json",
+      "type": "write"
+    },
+    {
+      "source": "prepare_agent_data.py",
+      "target": "emergency_contexts.json",
+      "type": "write"
+    },
+    {
+      "source": "prepare_agent_data.py",
+      "target": "enriched_session.json",
+      "type": "write"
+    },
+    {
+      "source": "prepare_agent_data.py",
+      "target": "enriched_session_v2.json",
+      "type": "write"
+    },
+    {
+      "source": "prepare_agent_data.py",
+      "target": "safe_condensed.json",
+      "type": "write"
+    },
+    {
+      "source": "prepare_agent_data.py",
+      "target": "safe_tier4.json",
+      "type": "write"
+    },
+    {
+      "source": "prepare_agent_data.py",
+      "target": "session_metadata.json",
+      "type": "write"
+    },
+    {
+      "source": "prepare_agent_data.py",
+      "target": "tier2plus_messages.json",
+      "type": "write"
+    },
+    {
+      "source": "prepare_agent_data.py",
+      "target": "tier4_priority_messages.json",
+      "type": "write"
+    },
+    {
+      "source": "prepare_agent_data.py",
+      "target": "user_messages_tier2plus.json",
+      "type": "write"
+    },
+    {
+      "source": "llm_pass1_content_ref.json",
+      "target": "prompts.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass2_behaviors.json",
+      "target": "prompts.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass3_intent.json",
+      "target": "prompts.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass4_importance.json",
+      "target": "prompts.py",
+      "type": "read"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "schema_normalizer.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "schema_normalizer.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "schema_normalizer.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "schema_normalizer.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "schema_normalizer.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "schema_normalizer.py",
+      "type": "read"
+    },
+    {
+      "source": "normalization_log.json",
+      "target": "schema_normalizer.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "schema_normalizer.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "schema_normalizer.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "schema_normalizer.py",
+      "type": "read"
+    },
+    {
+      "source": "schema_normalizer.py",
+      "target": "normalization_log.json",
+      "type": "write"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "schema_validator.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "schema_validator.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "schema_validator.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "schema_validator.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "schema_validator.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "schema_validator.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "schema_validator.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "schema_validator.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "schema_validator.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass1_content_ref.json",
+      "target": "batch_llm_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass2_behaviors.json",
+      "target": "batch_llm_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass3_intent.json",
+      "target": "batch_llm_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass4_importance.json",
+      "target": "batch_llm_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass_checkpoint.json",
+      "target": "batch_llm_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass_cost_log.json",
+      "target": "batch_llm_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "batch_llm_orchestrator.py",
+      "target": "enriched_session.json",
+      "type": "write"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "batch_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "batch_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "batch_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "batch_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "batch_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_tier4.json",
+      "target": "batch_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "batch_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "batch_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "batch_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "batch_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "batch_p1_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "batch_p1_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass1_content_ref.json",
+      "target": "batch_p1_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass2_behaviors.json",
+      "target": "batch_p1_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass3_intent.json",
+      "target": "batch_p1_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass4_importance.json",
+      "target": "batch_p1_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass_checkpoint.json",
+      "target": "batch_p1_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass_cost_log.json",
+      "target": "batch_p1_llm.py",
+      "type": "read"
+    },
+    {
+      "source": "batch_p1_llm.py",
+      "target": "enriched_session.json",
+      "type": "write"
+    },
+    {
+      "source": "opus_priority_messages.json",
+      "target": "extract_threads.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "extract_threads.py",
+      "type": "read"
+    },
+    {
+      "source": "tier4_priority_messages.json",
+      "target": "extract_threads.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "interactive_batch_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "interactive_batch_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "interactive_batch_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "interactive_batch_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "interactive_batch_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_tier4.json",
+      "target": "interactive_batch_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "interactive_batch_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "interactive_batch_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "interactive_batch_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "interactive_batch_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "phase1_redo_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "phase1_redo_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "phase1_redo_progress.json",
+      "target": "phase1_redo_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_condensed.json",
+      "target": "phase1_redo_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_tier4.json",
+      "target": "phase1_redo_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "phase1_redo_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "phase1_redo_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "phase1_redo_orchestrator.py",
+      "type": "read"
+    },
+    {
+      "source": "phase1_redo_orchestrator.py",
+      "target": "explorer_notes.json",
+      "type": "write"
+    },
+    {
+      "source": "phase1_redo_orchestrator.py",
+      "target": "geological_notes.json",
+      "type": "write"
+    },
+    {
+      "source": "phase1_redo_orchestrator.py",
+      "target": "safe_condensed.json",
+      "type": "write"
+    },
+    {
+      "source": "phase1_redo_orchestrator.py",
+      "target": "semantic_primitives.json",
+      "type": "write"
+    },
+    {
+      "source": "phase1_redo_orchestrator.py",
+      "target": "session_measurements.json",
+      "type": "write"
+    },
+    {
+      "source": "phase1_redo_orchestrator.py",
+      "target": "thread_extractions.json",
+      "type": "write"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "redo_all_phase1.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "redo_all_phase1.py",
+      "type": "read"
+    },
+    {
+      "source": "phase1_redo_progress.json",
+      "target": "redo_all_phase1.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_condensed.json",
+      "target": "redo_all_phase1.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_tier4.json",
+      "target": "redo_all_phase1.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "redo_all_phase1.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "redo_all_phase1.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "redo_all_phase1.py",
+      "type": "read"
+    },
+    {
+      "source": "redo_all_phase1.py",
+      "target": "explorer_notes.json",
+      "type": "write"
+    },
+    {
+      "source": "redo_all_phase1.py",
+      "target": "geological_notes.json",
+      "type": "write"
+    },
+    {
+      "source": "redo_all_phase1.py",
+      "target": "safe_condensed.json",
+      "type": "write"
+    },
+    {
+      "source": "redo_all_phase1.py",
+      "target": "semantic_primitives.json",
+      "type": "write"
+    },
+    {
+      "source": "redo_all_phase1.py",
+      "target": "session_measurements.json",
+      "type": "write"
+    },
+    {
+      "source": "redo_all_phase1.py",
+      "target": "thread_extractions.json",
+      "type": "write"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "tag_primitives.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_priority_messages.json",
+      "target": "tag_primitives.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "tag_primitives.py",
+      "type": "read"
+    },
+    {
+      "source": "tier4_priority_messages.json",
+      "target": "tag_primitives.py",
+      "type": "read"
+    },
+    {
+      "source": "user_messages_tier2plus.json",
+      "target": "tag_primitives.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "tag_semantic_primitives.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_priority_messages.json",
+      "target": "tag_semantic_primitives.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "tag_semantic_primitives.py",
+      "type": "read"
+    },
+    {
+      "source": "tier4_priority_messages.json",
+      "target": "tag_semantic_primitives.py",
+      "type": "read"
+    },
+    {
+      "source": "user_messages_tier2plus.json",
+      "target": "tag_semantic_primitives.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "backfill_phase2.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "backfill_phase2.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "backfill_phase2.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "backfill_phase2.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "backfill_phase2.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "backfill_phase2.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "backfill_phase2.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "backfill_phase2.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "batch_p2_generator.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "batch_p2_generator.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "batch_p2_generator.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "batch_p2_generator.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "batch_p2_generator.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "batch_p2_generator.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "batch_p2_generator.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "batch_p2_generator.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "batch_phase2_processor.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "batch_phase2_processor.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "batch_phase2_processor.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "batch_phase2_processor.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "batch_phase2_processor.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "batch_phase2_processor.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "batch_phase2_processor.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "batch_phase2_processor.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "build_phase2_outputs.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "build_phase2_outputs.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "build_phase2_outputs.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "build_phase2_outputs.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "build_phase2_outputs.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "build_phase2_outputs.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "build_phase2_outputs.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "build_phase2_outputs.py",
+      "type": "read"
+    },
+    {
+      "source": "file_genealogy.json",
+      "target": "file_genealogy.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "file_genealogy.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "file_genealogy.py",
+      "type": "read"
+    },
+    {
+      "source": "file_genealogy.py",
+      "target": "file_genealogy.json",
+      "type": "write"
+    },
+    {
+      "source": "file_genealogy.py",
+      "target": "idea_graph.json",
+      "type": "write"
+    },
+    {
+      "source": "file_genealogy.py",
+      "target": "thread_extractions.json",
+      "type": "write"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "collect_file_evidence.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "collect_file_evidence.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "collect_file_evidence.py",
+      "type": "read"
+    },
+    {
+      "source": "file_genealogy.json",
+      "target": "collect_file_evidence.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "collect_file_evidence.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "collect_file_evidence.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "collect_file_evidence.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "collect_file_evidence.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "collect_file_evidence.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "collect_file_evidence.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "collect_file_evidence.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "base.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "base.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "base.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "base.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "base.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "base.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "base.py",
+      "type": "read"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "generate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "generate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "generate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "generate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "generate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "generate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "generate_remaining_hyperdocs.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "generate_remaining_hyperdocs.py",
+      "type": "read"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "generate_viewer.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "generate_viewer.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "generate_viewer.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "generate_viewer.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "generate_viewer.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "generate_viewer.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "generate_viewer.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "generate_viewer.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "generate_viewer.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "generate_viewer.py",
+      "type": "read"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "write_hyperdocs.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "write_hyperdocs.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "write_hyperdocs.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "write_hyperdocs.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "write_more_hyperdocs.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "write_more_hyperdocs.py",
+      "type": "read"
+    },
+    {
+      "source": "code_similarity_index.json",
+      "target": "aggregate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "cross_session_file_index.json",
+      "target": "aggregate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "aggregate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "aggregate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "aggregate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "file_genealogy.json",
+      "target": "aggregate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "aggregate_dossiers.py",
+      "type": "read"
+    },
+    {
+      "source": "aggregate_dossiers.py",
+      "target": "cross_session_file_index.json",
+      "type": "write"
+    },
+    {
+      "source": "_index.json",
+      "target": "hyperdoc_store_init.py",
+      "type": "read"
+    },
+    {
+      "source": "current_inline.json",
+      "target": "hyperdoc_store_init.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "hyperdoc_store_init.py",
+      "type": "read"
+    },
+    {
+      "source": "hyperdoc_store_init.py",
+      "target": "_index.json",
+      "type": "write"
+    },
+    {
+      "source": "hyperdoc_store_init.py",
+      "target": "current_inline.json",
+      "type": "write"
+    },
+    {
+      "source": "_index.json",
+      "target": "init_hyperdoc_store.py",
+      "type": "read"
+    },
+    {
+      "source": "current_inline.json",
+      "target": "init_hyperdoc_store.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "init_hyperdoc_store.py",
+      "type": "read"
+    },
+    {
+      "source": "init_hyperdoc_store.py",
+      "target": "_index.json",
+      "type": "write"
+    },
+    {
+      "source": "init_hyperdoc_store.py",
+      "target": "current_inline.json",
+      "type": "write"
+    },
+    {
+      "source": "*.jsonl",
+      "target": "concierge.py",
+      "type": "read"
+    },
+    {
+      "source": "discovery.json",
+      "target": "concierge.py",
+      "type": "read"
+    },
+    {
+      "source": "pipeline_status.json",
+      "target": "concierge.py",
+      "type": "read"
+    },
+    {
+      "source": "concierge.py",
+      "target": "discovery.json",
+      "type": "write"
+    },
+    {
+      "source": "concierge.py",
+      "target": "pipeline_status.json",
+      "type": "write"
+    },
+    {
+      "source": "*.jsonl",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "coverage_stats.py",
+      "type": "read"
+    },
+    {
+      "source": "file_genealogy.json",
+      "target": "dashboard.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "dashboard.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "dashboard.py",
+      "type": "read"
+    },
+    {
+      "source": "settings.json",
+      "target": "install.py",
+      "type": "read"
+    },
+    {
+      "source": "install.py",
+      "target": "settings.json",
+      "type": "write"
+    },
+    {
+      "source": "*.jsonl",
+      "target": "session_profiler.py",
+      "type": "read"
+    },
+    {
+      "source": "code_similarity_index.json",
+      "target": "app_level_manager.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "app_level_manager.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "app_level_manager.py",
+      "type": "read"
+    },
+    {
+      "source": "ground_truth_verification.json",
+      "target": "app_level_manager.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "app_level_manager.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "app_level_manager.py",
+      "type": "read"
+    },
+    {
+      "source": "cross_session_file_index.json",
+      "target": "add_data_trace_sheets.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "add_data_trace_sheets.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "add_data_trace_sheets.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "add_data_trace_sheets.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "add_data_trace_sheets.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "add_data_trace_sheets.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "add_data_trace_sheets.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "add_data_trace_sheets.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "add_data_trace_sheets.py",
+      "type": "read"
+    },
+    {
+      "source": "add_data_trace_sheets.py",
+      "target": "file_dossiers.json",
+      "type": "write"
+    },
+    {
+      "source": "add_data_trace_sheets.py",
+      "target": "thread_extractions.json",
+      "type": "write"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "code_similarity_index.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "conversation_condensed.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "cross_session_file_index.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "emergency_contexts.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "file_genealogy.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass1_content_ref.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass2_behaviors.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass3_intent.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass4_importance.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_classifications.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_priority_messages.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_vs_python_comparison.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_condensed.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_tier4.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "tier2plus_messages.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "tier4_priority_messages.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "user_messages_tier2plus.json",
+      "target": "analyze_data_flow.py",
+      "type": "read"
+    },
+    {
+      "source": "analyze_data_flow.py",
+      "target": "enriched_session.json",
+      "type": "write"
+    },
+    {
+      "source": "analyze_data_flow.py",
+      "target": "grounded_markers.json",
+      "type": "write"
+    },
+    {
+      "source": "analyze_data_flow.py",
+      "target": "session_metadata.json",
+      "type": "write"
+    },
+    {
+      "source": "analyze_data_flow.py",
+      "target": "thread_extractions.json",
+      "type": "write"
+    },
+    {
+      "source": "analyze_data_flow.py",
+      "target": "tier4_priority_messages.json",
+      "type": "write"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "batch_phase3a.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "batch_phase3a.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "batch_phase3a.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "batch_phase3a.py",
+      "type": "read"
+    },
+    {
+      "source": "batch_runner_checkpoint.json",
+      "target": "batch_runner.py",
+      "type": "read"
+    },
+    {
+      "source": "batch_runner.py",
+      "target": "batch_runner_checkpoint.json",
+      "type": "write"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "conversation_condensed.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "emergency_contexts.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "file_genealogy.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_classifications.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_condensed.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_tier4.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "tier2plus_messages.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "tier4_priority_messages.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "user_messages_tier2plus.json",
+      "target": "data_lifecycle.py",
+      "type": "read"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "cross_session_file_index.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "extract_dashboard_data.py",
+      "type": "read"
+    },
+    {
+      "source": "extract_dashboard_data.py",
+      "target": "dashboard_data.json",
+      "type": "write"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "cross_session_file_index.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "extract_viz_data.py",
+      "type": "read"
+    },
+    {
+      "source": "extract_viz_data.py",
+      "target": "dashboard_data.json",
+      "type": "write"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "code_similarity_index.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "conversation_condensed.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "cross_session_file_index.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "emergency_contexts.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_condensed.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_tier4.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "tier2plus_messages.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "tier4_priority_messages.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "user_messages_tier2plus.json",
+      "target": "generate_pipeline_excel.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "server.py",
+      "type": "read"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "file_genealogy.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "health_check_report.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_condensed.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_tier4.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "pipeline_health_check.py",
+      "type": "read"
+    },
+    {
+      "source": "pipeline_health_check.py",
+      "target": "health_check_report.json",
+      "type": "write"
+    },
+    {
+      "source": "pipeline_health_check.py",
+      "target": "idea_graph.json",
+      "type": "write"
+    },
+    {
+      "source": "batch_runner_checkpoint.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "pipeline_status.py",
+      "type": "read"
+    },
+    {
+      "source": "pipeline_status.py",
+      "target": "batch_runner_checkpoint.json",
+      "type": "write"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "code_similarity_index.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "conversation_condensed.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "cross_session_file_index.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "emergency_contexts.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session_v2.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "file_genealogy.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass1_content_ref.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass2_behaviors.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass3_intent.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "llm_pass4_importance.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_classifications.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_priority_messages.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_vs_python_comparison.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_condensed.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "safe_tier4.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "tier2plus_messages.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "tier4_priority_messages.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "user_messages_tier2plus.json",
+      "target": "positioning_analyzer.py",
+      "type": "read"
+    },
+    {
+      "source": "positioning_analyzer.py",
+      "target": "enriched_session.json",
+      "type": "write"
+    },
+    {
+      "source": "positioning_analyzer.py",
+      "target": "grounded_markers.json",
+      "type": "write"
+    },
+    {
+      "source": "positioning_analyzer.py",
+      "target": "session_metadata.json",
+      "type": "write"
+    },
+    {
+      "source": "positioning_analyzer.py",
+      "target": "thread_extractions.json",
+      "type": "write"
+    },
+    {
+      "source": "positioning_analyzer.py",
+      "target": "tier4_priority_messages.json",
+      "type": "write"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "opus_classifications.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "run_pipeline.py",
+      "type": "read"
+    },
+    {
+      "source": "claude_md_analysis.json",
+      "target": "schema_contracts.py",
+      "type": "read"
+    },
+    {
+      "source": "enriched_session.json",
+      "target": "schema_contracts.py",
+      "type": "read"
+    },
+    {
+      "source": "explorer_notes.json",
+      "target": "schema_contracts.py",
+      "type": "read"
+    },
+    {
+      "source": "file_dossiers.json",
+      "target": "schema_contracts.py",
+      "type": "read"
+    },
+    {
+      "source": "geological_notes.json",
+      "target": "schema_contracts.py",
+      "type": "read"
+    },
+    {
+      "source": "grounded_markers.json",
+      "target": "schema_contracts.py",
+      "type": "read"
+    },
+    {
+      "source": "idea_graph.json",
+      "target": "schema_contracts.py",
+      "type": "read"
+    },
+    {
+      "source": "semantic_primitives.json",
+      "target": "schema_contracts.py",
+      "type": "read"
+    },
+    {
+      "source": "session_metadata.json",
+      "target": "schema_contracts.py",
+      "type": "read"
+    },
+    {
+      "source": "synthesis.json",
+      "target": "schema_contracts.py",
+      "type": "read"
+    },
+    {
+      "source": "thread_extractions.json",
+      "target": "schema_contracts.py",
+      "type": "read"
+    }
+  ]
+};
+init(GRAPH_DATA);
 
-<div class="output-row">
-  <div class="file">idea_graph.json</div>
-  <div class="file">synthesis.json</div>
-  <div class="file">grounded_markers.json</div>
-  <div class="file">file_genealogy.json</div>
-  <div class="file">code_similarity_index.json (7.9MB)</div>
-</div>
+function init(data) {
+  graphData = data;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
 
-<div class="arrow">▼ ▼ ▼</div>
+  svg = d3.select('#graph')
+    .attr('width', width)
+    .attr('height', height);
 
-<!-- PHASE 3 -->
-<div class="phase p3">
-  <div class="phase-label">
-    <div class="phase-dot"></div>
-    <div class="phase-name">PHASE 3: EVIDENCE COLLECTION + DOSSIERS</div>
-    <div class="phase-meta">15 files &nbsp;•&nbsp; 5,648 lines</div>
-    <div class="phase-cost cost-paid">~$5-10</div>
-  </div>
-  <div class="cards c3">
-    <div class="card">
-      <h4><span class="icon">🐍</span> collect_file_evidence.py <span style="color:var(--tx3);font-weight:400;font-size:11px">(876 lines)</span></h4>
-      <div class="desc">
-        <strong>11 evidence types</strong> from <strong>12 data sources</strong><br>
-        Time-window correlation: <strong>±10 messages</strong> around each file mention<br><br>
-        <span style="font-size:11px;color:var(--tx3)">emotional_arc • geological_character • lineage • explorer_observations • chronological_timeline • code_similarity • graph_context • synthesis_context • claude_md_context • session_context • thread_markers</span>
-      </div>
-      <div class="mono">Phase 3a entry point</div>
-    </div>
-    <div class="card">
-      <h4><span class="icon">🔌</span> 8 Evidence Renderers</h4>
-      <div class="desc">
-        <strong>Plugin pattern</strong> with base class:<br><br>
-        <code>emotional_arc.py</code><br>
-        <code>decision_trace.py</code><br>
-        <code>geological_event.py</code><br>
-        <code>file_timeline.py</code><br>
-        <code>idea_transition.py</code><br>
-        <code>debug_sequence.py</code><br>
-        <code>reaction_log.py</code>
-      </div>
-      <div class="mono"><code>evidence/base.py</code> (166 lines)</div>
-    </div>
-    <div class="card">
-      <h4><span class="icon">🤖</span> File Mapper + Dossiers</h4>
-      <div class="desc">
-        <strong>generate_dossiers.py</strong> (1,130 lines)<br>
-        Per-file dossiers with <strong>20+ fields:</strong><br><br>
-        story_arc, confidence, warnings, key_decisions, related_files, claude_behavior, significance, grounded_markers, idea_graph_nodes, source_messages
-      </div>
-      <div class="mono"><code>file-mapper.md</code> agent</div>
-    </div>
-  </div>
-</div>
+  g = svg.append('g');
 
-<div class="output-row">
-  <div class="file">file_dossiers.json</div>
-  <div class="file">file_evidence/{file}_evidence.json (per file)</div>
-  <div class="file">claude_md_analysis.json</div>
-  <div class="file">viewer.html</div>
-</div>
+  // Zoom
+  const zoom = d3.zoom()
+    .scaleExtent([0.2, 8])
+    .on('zoom', (e) => g.attr('transform', e.transform));
+  svg.call(zoom);
+  svg.call(zoom.transform, d3.zoomIdentity.translate(width/2, height/2).scale(0.7));
 
-<div class="arrow">▼ ▼ ▼</div>
+  // Arrow markers
+  const defs = svg.append('defs');
+  ['read','write'].forEach(type => {
+    defs.append('marker')
+      .attr('id', 'arrow-'+type)
+      .attr('viewBox','0 0 10 10')
+      .attr('refX', 20)
+      .attr('refY', 5)
+      .attr('markerWidth', 5)
+      .attr('markerHeight', 5)
+      .attr('orient','auto')
+      .append('path')
+      .attr('d','M0,0 L10,5 L0,10 Z')
+      .attr('fill', type==='read' ? '#34d399' : '#f87171')
+      .attr('opacity', 0.4);
+  });
 
-<!-- PHASE 4a -->
-<div class="phase p4">
-  <div class="phase-label">
-    <div class="phase-dot"></div>
-    <div class="phase-name">PHASE 4a: CROSS-SESSION AGGREGATION</div>
-    <div class="phase-meta">1 file &nbsp;•&nbsp; 765 lines</div>
-    <div class="phase-cost cost-free">$0</div>
-  </div>
-  <div class="cards c2" style="grid-template-columns:2fr 1fr">
-    <div class="card">
-      <h4><span class="icon">🐍</span> aggregate_dossiers.py <span style="color:var(--tx3);font-weight:400;font-size:11px">(765 lines)</span></h4>
-      <div class="desc">
-        <strong>Read</strong> all 298 session file_dossiers.json<br>
-        <strong>Normalize</strong> 2 incompatible schemas (dict vs list)<br>
-        <strong>Merge</strong> warnings, decisions, confidence history, story arcs per file<br>
-        <strong>Enrich</strong> with code similarity (14,176 matches)<br>
-        <strong>Enrich</strong> with genealogy families (18 families)<br>
-        <strong>Join</strong> frustration peaks with file mentions (±5 msg window)<br>
-        <strong>Load</strong> cross-session evidence from file_evidence/ dirs<br>
-        <strong>Promote</strong> files appearing in 3+ sessions → hyperdoc_inputs/
-      </div>
-      <div class="mono">Pure Python, no LLM calls</div>
-    </div>
-    <div class="card" style="display:flex;flex-direction:column;justify-content:center;text-align:center">
-      <div style="font-size:48px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--p4)">492</div>
-      <div style="font-size:13px;color:var(--tx2);margin-top:4px">hyperdoc inputs generated</div>
-      <div style="font-size:11px;color:var(--tx3);margin-top:8px">(files with 3+ session appearances)</div>
-    </div>
-  </div>
-</div>
+  // Size nodes by connection count
+  const connCount = {};
+  data.nodes.forEach(n => connCount[n.id] = 0);
+  data.edges.forEach(e => {
+    connCount[e.source] = (connCount[e.source]||0) + 1;
+    connCount[e.target] = (connCount[e.target]||0) + 1;
+  });
 
-<div class="output-row">
-  <div class="file">cross_session_file_index.json</div>
-  <div class="file">hyperdoc_inputs/*.json (492 files)</div>
-</div>
+  // Links
+  link = g.append('g')
+    .selectAll('line')
+    .data(data.edges)
+    .join('line')
+    .attr('class', d => 'link link-' + d.type)
+    .attr('stroke-width', 1)
+    .attr('marker-end', d => 'url(#arrow-' + d.type + ')');
 
-<div class="arrow">▼ ▼ ▼</div>
+  // Nodes
+  node = g.append('g')
+    .selectAll('circle')
+    .data(data.nodes)
+    .join('circle')
+    .attr('r', d => {
+      if (d.type === 'json') return 4 + Math.min((connCount[d.id]||0) * 0.8, 12);
+      return 5 + Math.min((connCount[d.id]||0) * 0.6, 14);
+    })
+    .attr('fill', d => {
+      if (d.type === 'json') return '#1e293b';
+      return PHASE_COLORS[d.phase] || '#475569';
+    })
+    .attr('stroke', d => {
+      if (d.type === 'json') return '#475569';
+      return PHASE_COLORS[d.phase] || '#475569';
+    })
+    .attr('stroke-width', d => d.type === 'json' ? 1.5 : 2)
+    .attr('opacity', 0.9)
+    .style('cursor', 'pointer')
+    .on('click', showInfo)
+    .on('mouseover', highlight)
+    .on('mouseout', unhighlight)
+    .call(d3.drag()
+      .on('start', dragStart)
+      .on('drag', dragging)
+      .on('end', dragEnd));
 
-<!-- PHASE 4b -->
-<div class="phase p4">
-  <div class="phase-label">
-    <div class="phase-dot"></div>
-    <div class="phase-name">PHASE 4b: HYPERDOC WRITING + INSERTION</div>
-    <div class="phase-meta">8 files &nbsp;•&nbsp; 2,697 lines</div>
-    <div class="phase-cost cost-paid">~$20-30</div>
-  </div>
-  <div class="cards c3">
-    <div class="card">
-      <h4><span class="icon">🤖</span> Hyperdoc Writer (Per-File)</h4>
-      <div class="desc">
-        <strong>1 Opus agent per file</strong><br>
-        Reads single file's aggregated dossier<br><br>
-        <strong>Produces 3 outputs:</strong><br>
-        <code>{file}_header.txt</code> — story arc, friction, decisions, warnings, iron rules, Claude behavior, emotional context<br>
-        <code>{file}_inline.json</code> — per-function annotations<br>
-        <code>{file}_footer.txt</code> — version history, metrics, idea subgraphs
-      </div>
-      <div class="mono"><code>hyperdoc-writer-per-file.md</code></div>
-    </div>
-    <div class="card">
-      <h4><span class="icon">🐍</span> Smart Insertion</h4>
-      <div class="desc">
-        <strong>AST-based 3-point insertion:</strong><br><br>
-        <strong style="color:var(--p4)">1. HEADER</strong> — after imports, before first class/function<br>
-        <strong style="color:var(--p4)">2. INLINE</strong> — before each function/class (AST-located)<br>
-        <strong style="color:var(--p4)">3. FOOTER</strong> — at end of file<br><br>
-        Uses <code>ast.parse()</code> to find all def/class locations
-      </div>
-      <div class="mono"><code>insert_hyperdocs_v2.py</code> (355 lines)</div>
-    </div>
-    <div class="card">
-      <h4><span class="icon">📚</span> Layered Accumulation</h4>
-      <div class="desc">
-        <strong>Layered format v2:</strong><br><br>
-        New analysis passes <strong>APPEND</strong> layers<br>
-        Existing content <strong>NEVER replaced</strong><br>
-        Version history maintained<br><br>
-        <strong style="color:var(--p4)">Rule:</strong> Accumulate, never replace
-      </div>
-      <div class="mono"><code>hyperdoc_layers.py</code> (298 lines)</div>
-    </div>
-  </div>
-</div>
+  // Labels (only for well-connected nodes)
+  label = g.append('g')
+    .selectAll('text')
+    .data(data.nodes.filter(n => (connCount[n.id]||0) > 3 || n.type === 'json' && (connCount[n.id]||0) > 5))
+    .join('text')
+    .attr('class', 'node-label')
+    .text(d => d.id.replace('.py','').replace('.json',''))
+    .attr('dy', d => d.type === 'json' ? -10 : -12)
+    .attr('font-size', d => (connCount[d.id]||0) > 8 ? '11px' : '9px');
 
-<div class="arrow">▼ ▼ ▼</div>
+  // Simulation
+  simulation = d3.forceSimulation(data.nodes)
+    .force('link', d3.forceLink(data.edges).id(d => d.id).distance(60).strength(0.3))
+    .force('charge', d3.forceManyBody().strength(-120).distanceMax(400))
+    .force('center', d3.forceCenter(0, 0))
+    .force('collision', d3.forceCollide().radius(d => d.type === 'json' ? 15 : 20))
+    .force('x', d3.forceX().strength(0.03))
+    .force('y', d3.forceY().strength(0.03))
+    .on('tick', tick);
 
-<!-- FINAL OUTPUT -->
-<div style="background:linear-gradient(135deg,var(--p4bg),var(--p1bg));border:2px solid var(--acc);border-radius:14px;padding:28px 32px;text-align:center;margin-top:8px">
-  <div style="font-size:24px;font-weight:800;margin-bottom:8px;background:linear-gradient(135deg,var(--p0),var(--acc),var(--p1));-webkit-background-clip:text;-webkit-text-fill-color:transparent">FINAL OUTPUT</div>
-  <div style="display:flex;justify-content:center;gap:48px;flex-wrap:wrap;margin-top:16px">
-    <div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:800;color:var(--p2)">456</div>
-      <div style="font-size:12px;color:var(--tx2)">Hyperdocs Generated</div>
-    </div>
-    <div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:800;color:var(--p0)">14MB</div>
-      <div style="font-size:12px;color:var(--tx2)">Total Output Size</div>
-    </div>
-    <div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:800;color:var(--p1)">341</div>
-      <div style="font-size:12px;color:var(--tx2)">Enhanced Source Files</div>
-    </div>
-  </div>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx3);margin-top:16px">~/PERMANENT_HYPERDOCS/hyperdocs/</div>
-</div>
+  // Group by phase with radial force
+  simulation.force('radial', d3.forceRadial(d => {
+    if (d.type === 'json') return 120;
+    const r = {0:80, 1:160, 2:240, 3:320, 4:400, 5:460, 6:460, 7:460};
+    return r[d.phase] || 350;
+  }, 0, 0).strength(0.15));
+}
 
-</div><!-- end pipeline -->
+function tick() {
+  link
+    .attr('x1', d => d.source.x)
+    .attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x)
+    .attr('y2', d => d.target.y);
 
-<div class="foot">
-  Hyperdocs Architecture Diagram v2 • 5 phases (0–4) • 87 files • 37,759 lines • 8 agents • Feb 24, 2026<br>
-  Derived from reading actual Python source code — not documentation
-</div>
+  node
+    .attr('cx', d => d.x)
+    .attr('cy', d => d.y);
 
-</div>
+  label
+    .attr('x', d => d.x)
+    .attr('y', d => d.y);
+}
+
+function dragStart(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x; d.fy = d.y;
+}
+function dragging(event, d) { d.fx = event.x; d.fy = event.y; }
+function dragEnd(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  d.fx = null; d.fy = null;
+}
+
+function highlight(event, d) {
+  const connected = new Set();
+  connected.add(d.id);
+  graphData.edges.forEach(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    if (sid === d.id) connected.add(tid);
+    if (tid === d.id) connected.add(sid);
+  });
+
+  node.attr('opacity', n => connected.has(n.id) ? 1 : 0.08);
+  link.attr('stroke-opacity', e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    return (sid === d.id || tid === d.id) ? 0.7 : 0.03;
+  }).attr('stroke-width', e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    return (sid === d.id || tid === d.id) ? 2.5 : 1;
+  });
+  label.attr('opacity', n => connected.has(n.id) ? 1 : 0.1);
+}
+
+function unhighlight() {
+  const visible = activePhase === -1;
+  node.attr('opacity', d => {
+    if (activePhase === -1) return 0.9;
+    if (d.type === 'json') return 0.5;
+    return d.phase === activePhase ? 0.9 : 0.08;
+  });
+  link.attr('stroke-opacity', 0.25).attr('stroke-width', 1);
+  label.attr('opacity', 1);
+}
+
+function showInfo(event, d) {
+  const info = document.getElementById('info');
+  const reads = [];
+  const writes = [];
+
+  graphData.edges.forEach(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    if (tid === d.id && e.type === 'read') reads.push(sid);
+    if (sid === d.id && e.type === 'read') reads.push(tid);
+    if (sid === d.id && e.type === 'write') writes.push(tid);
+    if (tid === d.id && e.type === 'write') writes.push(sid);
+  });
+
+  let html = `<h3 style="color:${PHASE_COLORS[d.phase]||'#e2e8f0'}">${d.id}</h3>`;
+  html += `<div style="color:#8892a8;font-size:11px;margin-bottom:8px">`;
+  if (d.type === 'py') html += `${PHASE_NAMES[d.phase]||'Other'} · ${d.lines} lines`;
+  else html += 'JSON data artifact';
+  html += `</div>`;
+
+  if (reads.length) {
+    html += `<div style="margin-bottom:6px"><strong style="color:#6ee7b7;font-size:11px">READS FROM (${reads.length}):</strong><br>`;
+    reads.forEach(r => html += `<span class="tag read">${r}</span>`);
+    html += '</div>';
+  }
+  if (writes.length) {
+    html += `<div><strong style="color:#fca5a5;font-size:11px">WRITES TO (${writes.length}):</strong><br>`;
+    writes.forEach(w => html += `<span class="tag write">${w}</span>`);
+    html += '</div>';
+  }
+
+  info.innerHTML = html;
+  info.style.display = 'block';
+}
+
+function filterPhase(phase) {
+  activePhase = phase;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  if (phase === -1) {
+    node.attr('opacity', 0.9);
+    link.attr('stroke-opacity', 0.25);
+    label.attr('opacity', 1);
+    return;
+  }
+
+  node.attr('opacity', d => {
+    if (d.type === 'json') {
+      // Show json nodes connected to this phase
+      let connected = false;
+      graphData.edges.forEach(e => {
+        const sid = typeof e.source === 'object' ? e.source.id : e.source;
+        const tid = typeof e.target === 'object' ? e.target.id : e.target;
+        const snode = graphData.nodes.find(n => n.id === sid);
+        const tnode = graphData.nodes.find(n => n.id === tid);
+        if ((sid === d.id || tid === d.id) && ((snode && snode.phase === phase) || (tnode && tnode.phase === phase))) {
+          connected = true;
+        }
+      });
+      return connected ? 0.8 : 0.05;
+    }
+    return d.phase === phase ? 0.9 : 0.05;
+  });
+
+  link.attr('stroke-opacity', e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    const snode = graphData.nodes.find(n => n.id === sid);
+    const tnode = graphData.nodes.find(n => n.id === tid);
+    if ((snode && snode.phase === phase) || (tnode && tnode.phase === phase)) return 0.5;
+    return 0.02;
+  });
+}
+</script>
 </body>
 </html>
