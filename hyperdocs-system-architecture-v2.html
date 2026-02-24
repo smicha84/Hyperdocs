@@ -164,12 +164,11 @@
   </div>
 
   <div class="kpi-row" id="overview">
-    <div class="kpi"><div class="number" style="color:var(--accent)">7</div><div class="label">Pipeline Phases</div></div>
+    <div class="kpi"><div class="number" style="color:var(--accent)">5</div><div class="label">Pipeline Phases</div></div>
     <div class="kpi"><div class="number" style="color:var(--green)">154</div><div class="label">Python Files</div></div>
     <div class="kpi"><div class="number" style="color:var(--purple)">8</div><div class="label">Agent Prompts</div></div>
     <div class="kpi"><div class="number" style="color:var(--green)">298</div><div class="label">Sessions Processed</div></div>
     <div class="kpi"><div class="number" style="color:var(--green)">456</div><div class="label">Hyperdocs Written</div></div>
-    <div class="kpi"><div class="number" style="color:var(--green)">73%</div><div class="label">Credibility</div></div>
   </div>
 
   <!-- PIPELINE FLOW -->
@@ -211,9 +210,6 @@ flowchart TD
     subgraph P4B["PHASE 4b: Hyperdoc Writing + Insertion"]
         M["Hyperdoc Writer Per-File<br/>Opus agents"] --> N["insert_hyperdocs_v2.py"] --> O["hyperdoc_layers.py<br/>Accumulate, never replace"]
     end
-    subgraph P5["PHASE 5: Ground Truth — Python, $0"]
-        P["claim_extractor.py"] --> Q["ground_truth_verifier.py"] --> R["gap_reporter.py"]
-    end
     A --> B
     C --> D & E & F & G
     D & E & F & G --> H & I
@@ -222,7 +218,6 @@ flowchart TD
     L --> L2
     L2 --> NA
     NA --> M
-    O --> P
 
     classDef input fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#e2e8f0
     classDef ph0 fill:#0c2d48,stroke:#38bdf8,stroke-width:1px,color:#e2e8f0
@@ -231,7 +226,6 @@ flowchart TD
     classDef ph3 fill:#2e2408,stroke:#fbbf24,stroke-width:1px,color:#e2e8f0
     classDef ph4a fill:#2e1a08,stroke:#fb923c,stroke-width:1px,color:#e2e8f0
     classDef ph4b fill:#2e1a08,stroke:#fb923c,stroke-width:1px,color:#e2e8f0
-    classDef ph5 fill:#2e0808,stroke:#f87171,stroke-width:1px,color:#e2e8f0
     class A input
     class B,C ph0
     class D,E,F,G ph1
@@ -239,7 +233,6 @@ flowchart TD
     class L,L2 ph3
     class NA ph4a
     class M,N,O ph4b
-    class P,Q,R ph5
       </pre>
     </div>
   </section>
@@ -309,16 +302,6 @@ flowchart TD
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: ~$20-30/session (per-file Opus agents) + $0 insertion</div>
       </div>
 
-      <div class="phase-card p5">
-        <h3><span class="badge">P5</span> Ground Truth Verification</h3>
-        <p>Extracts verifiable claims from Phase 2 synthesis, checks against filesystem reality (AST checks, regex scans, 6 check types), reports credibility gaps. The gap = the lie.</p>
-        <div class="files"><code>claim_extractor.py</code> <code>ground_truth_verifier.py</code> <code>gap_reporter.py</code></div>
-        <div class="io"><strong>Input:</strong> Phase 2 synthesis + filesystem reality</div>
-        <div class="io"><strong>Output:</strong> ground_truth_verification.json per session</div>
-        <div class="status working">Working &mdash; 274/298 sessions, 73% credibility</div>
-        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:4px">Cost: $0 (pure Python, AST checks)</div>
-      </div>
-
     </div>
   </section>
 
@@ -354,8 +337,7 @@ flowchart TD
           <tr><td style="color:var(--p2)"><strong>P2</strong></td><td><code>idea_graph.json</code> <code>synthesis.json</code> <code>grounded_markers.json</code></td><td>3</td></tr>
           <tr><td style="color:var(--p3)"><strong>P3</strong></td><td><code>file_dossiers.json</code> <code>claude_md_analysis.json</code></td><td>2</td></tr>
           <tr><td style="color:var(--p4)"><strong>P4a</strong></td><td><code>cross_session_file_index.json</code> <code>hyperdoc_inputs/*.json</code> (per promoted file)</td><td>2+</td></tr>
-          <tr><td style="color:var(--p5)"><strong>P5</strong></td><td><code>ground_truth_verification.json</code></td><td>1</td></tr>
-          <tr style="background:var(--surface2)"><td><strong>Total</strong></td><td>Up to 16+ structured JSON files per session + cross-session aggregation outputs</td><td><strong>16+</strong></td></tr>
+          <tr style="background:var(--surface2)"><td><strong>Total</strong></td><td>Up to 14+ structured JSON files per session + cross-session aggregation outputs</td><td><strong>14+</strong></td></tr>
         </tbody>
       </table>
     </div>
@@ -402,7 +384,7 @@ flowchart TD
   </section>
 
   <div style="text-align:center; margin-top:56px; color:var(--text-dim); font-size:12px; font-family:var(--font-mono);">
-    Hyperdocs System Architecture v2 &bull; 7 phases, 154 files, 8 agents &bull; Feb 24, 2026
+    Hyperdocs System Architecture v2 &bull; 5 phases (0&ndash;4), 154 files, 8 agents &bull; Feb 24, 2026
   </div>
 
 </div>

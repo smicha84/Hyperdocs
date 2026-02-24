@@ -173,11 +173,10 @@
 
 <div class="kpi-row">
   <div class="kpi"><div class="num" style="color:var(--red)">15</div><div class="lbl">Root Problems</div></div>
-  <div class="kpi"><div class="num" style="color:var(--green)">9</div><div class="lbl">Solved</div></div>
+  <div class="kpi"><div class="num" style="color:var(--green)">8</div><div class="lbl">Solved</div></div>
   <div class="kpi"><div class="num" style="color:var(--red)">7</div><div class="lbl">Unsolved</div></div>
   <div class="kpi"><div class="num" style="color:var(--amber)">11</div><div class="lbl">New Problems</div></div>
   <div class="kpi"><div class="num" style="color:var(--cyan)">6</div><div class="lbl">Emergent Wins</div></div>
-  <div class="kpi"><div class="num" style="color:var(--green)">73%</div><div class="lbl">Ground Truth</div></div>
 </div>
 
 <!-- EVIDENCE BASE -->
@@ -297,12 +296,6 @@ flowchart TD
         <td><span class="tag solved">SOLVED</span></td>
       </tr>
       <tr>
-        <td><strong>No ground truth</strong></td>
-        <td>Phase 5: <code>claim_extractor.py</code> &rarr; <code>ground_truth_verifier.py</code> (AST checks, regex scans, 6 check types) &rarr; <code>gap_reporter.py</code>. The gap between claims and reality is now computable.</td>
-        <td>274/298 sessions verified. 73% credibility across 22,812 checks.<small>Source: <code>completeness_report.json</code></small></td>
-        <td><span class="tag solved">SOLVED</span></td>
-      </tr>
-      <tr>
         <td><strong>Dead code / duplicates</strong></td>
         <td><code>code_similarity.py</code> &mdash; fingerprint-based index. 10 pattern types detect partial extractions, structural siblings, import twins, function clones, evolution pairs, dead copies, and more.</td>
         <td>341 files indexed. 57,970 pairwise comparisons. 14,176 non-trivial matches. 7.9MB index.<small>Source: <code>code_similarity_index.json</code></small></td>
@@ -323,7 +316,7 @@ flowchart TD
       <tr>
         <td><strong>End-to-end automation</strong></td>
         <td><code>tools/run_pipeline.py</code> &mdash; master orchestrator runs all phases sequentially with error handling per session.</td>
-        <td>Single command: <code>python3 tools/run_pipeline.py SESSION_ID</code>. Runs P0 &rarr; P1 &rarr; P2 &rarr; P3 &rarr; P4a &rarr; P4b &rarr; P5.<small>Source: <code>~/Hyperdocs/tools/run_pipeline.py</code></small></td>
+        <td>Single command: <code>python3 tools/run_pipeline.py SESSION_ID --full</code>. Runs P0 &rarr; Opus Classify &rarr; P1 &rarr; Normalize &rarr; P2 &rarr; P3.<small>Source: <code>~/Hyperdocs/tools/run_pipeline.py</code></small></td>
         <td><span class="tag solved">SOLVED</span></td>
       </tr>
     </tbody>
