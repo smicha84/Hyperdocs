@@ -21,7 +21,7 @@ from pathlib import Path
 from datetime import datetime
 
 # Paths
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
+PROJECT_ROOT = Path.home()
 HYPERDOCS_DIR = Path(__file__).resolve().parent.parent / "output" / "hyperdocs"
 ENHANCED_DIR = Path(__file__).resolve().parent.parent / "output" / "enhanced_files_archive"
 HOOKS_DIR = PROJECT_ROOT / ".claude" / "hooks"
