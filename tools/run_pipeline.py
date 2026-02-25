@@ -266,6 +266,16 @@ def run_phase_2(session_id, force=False):
         json.dump(gm, f, indent=2)
     print(f"  grounded_markers.json: {os.path.getsize(gm_path):,} bytes")
 
+    # File genealogy (non-fatal — warns and continues if it fails)
+    ok_gen = run_script(
+        REPO_ROOT / "phase_2_synthesis" / "file_genealogy.py",
+        session_id,
+        description="Phase 2d: File Genealogy Detection",
+    )
+    if not ok_gen:
+        print("  WARNING: file_genealogy.py failed — continuing without genealogy")
+        logger.warning("file_genealogy.py failed — continuing without genealogy")
+
     return True
 
 
