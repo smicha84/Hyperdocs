@@ -29,11 +29,12 @@ def _collapse_preview(text: str) -> str:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 try:
-    from config import get_session_output_dir
+    from config import get_session_output_dir, INDEXES_DIR
     OUT_DIR = get_session_output_dir()
 except ImportError:
     SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
     OUT_DIR = Path(os.getenv("HYPERDOCS_OUTPUT_DIR", "./output")) / f"session_{SESSION_ID[:8]}"
+    INDEXES_DIR = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "indexes"
 
 # Prefer enriched_session_v2.json (has LLM pass results) over v1
 INPUT_V2 = OUT_DIR / "enriched_session_v2.json"
@@ -278,3 +279,90 @@ if opus_cls_path.exists():
 else:
     print("\nNote: No opus_classifications.json found. "
           "Run opus_classifier.py to enable Opus-filtered agent data.")
+
+# ── 11. Code similarity context — filtered to session-mentioned files ──
+# Loads the pre-computed code_similarity_index.json and filters to only
+# matches where both files appear in this session's file_mention_counts.
+# This gives Phase 1 agents awareness of file relationships (dead copies,
+# evolution pairs, function clones, etc.) without the full 7.7 MB index.
+from datetime import datetime, timezone
+
+code_sim_index_path = INDEXES_DIR / "code_similarity_index.json"
+session_files = set(stats.get("file_mention_counts", {}).keys())
+
+if code_sim_index_path.exists() and session_files:
+    try:
+        with open(code_sim_index_path) as f:
+            sim_index = json.load(f)
+
+        # Filter matches: both file_a and file_b must be in session's file set
+        filtered_matches = [
+            m for m in sim_index.get("matches", [])
+            if m["file_a"] in session_files and m["file_b"] in session_files
+        ]
+
+        # Collect file_stats for each session-mentioned file
+        all_file_stats = sim_index.get("file_stats", {})
+        filtered_file_stats = {
+            fname: all_file_stats[fname]
+            for fname in session_files
+            if fname in all_file_stats
+        }
+
+        code_sim_context = {
+            "session_id": stats.get("session_id", ""),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "source_index": "code_similarity_index.json",
+            "session_files_count": len(session_files),
+            "matches_included": len(filtered_matches),
+            "matches": filtered_matches,
+            "file_stats": filtered_file_stats,
+        }
+
+        code_sim_file = OUT_DIR / "code_similarity_context.json"
+        with open(code_sim_file, "w") as f:
+            json.dump(code_sim_context, f, indent=2, default=str)
+        logger.info(f"  code_similarity_context.json: {len(filtered_matches)} matches "
+                    f"for {len(session_files)} session files "
+                    f"({len(filtered_file_stats)} with stats)")
+    except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
+        logger.error(f"  Warning: Code similarity context generation failed: {e}")
+        # Write empty context so downstream doesn't need to handle missing file
+        code_sim_context = {
+            "session_id": stats.get("session_id", ""),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "source_index": "code_similarity_index.json",
+            "session_files_count": len(session_files),
+            "matches_included": 0,
+            "matches": [],
+            "file_stats": {},
+            "error": str(e),
+        }
+        with open(OUT_DIR / "code_similarity_context.json", "w") as f:
+            json.dump(code_sim_context, f, indent=2, default=str)
+elif not code_sim_index_path.exists():
+    logger.warning(f"  code_similarity_index.json not found at {code_sim_index_path} — skipping")
+    code_sim_context = {
+        "session_id": stats.get("session_id", ""),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "source_index": "code_similarity_index.json",
+        "session_files_count": len(session_files),
+        "matches_included": 0,
+        "matches": [],
+        "file_stats": {},
+    }
+    with open(OUT_DIR / "code_similarity_context.json", "w") as f:
+        json.dump(code_sim_context, f, indent=2, default=str)
+else:
+    logger.info("  No files mentioned in session — skipping code similarity context")
+    code_sim_context = {
+        "session_id": stats.get("session_id", ""),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "source_index": "code_similarity_index.json",
+        "session_files_count": 0,
+        "matches_included": 0,
+        "matches": [],
+        "file_stats": {},
+    }
+    with open(OUT_DIR / "code_similarity_context.json", "w") as f:
+        json.dump(code_sim_context, f, indent=2, default=str)
