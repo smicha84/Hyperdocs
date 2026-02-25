@@ -47,10 +47,7 @@ PHASE_LABELS = {
     "4b": "PHASE 4b : HYPERDOC WRITING + INSERTION",
 }
 
-OPTIONAL_SCRIPTS = {
-    "phase_0_prep/opus_classifier.py",
-    "phase_0_prep/build_opus_messages.py",
-}
+OPTIONAL_SCRIPTS = set()  # No fallbacks. Every script is part of the pipeline.
 
 # Pipeline scripts in execution order (--full mode).
 # This is the source of truth for what the schematic shows.

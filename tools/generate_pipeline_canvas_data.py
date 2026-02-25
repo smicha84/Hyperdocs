@@ -380,64 +380,122 @@ def generate():
     nodes.extend(data_nodes)
     nodes_by_id.update(data_nodes_by_id)
 
-    # ── Compute layout ──
+    # ── Compute layout — phase columns with sub-cluster rows ──
     print("Computing layout positions...")
+
+    # Import sub-cluster assignments from the full schematic generator
+    from tools.generate_full_schematic import SUB_CLUSTERS
+
+    # Critical path scripts — these form the horizontal spine
+    CRITICAL_PATH = {
+        "phase_0_prep/enrich_session.py",
+        "phase_0_prep/llm_pass_runner.py",
+        "phase_0_prep/merge_llm_results.py",
+        "phase_0_prep/opus_classifier.py",
+        "phase_0_prep/build_opus_messages.py",
+        "phase_0_prep/prepare_agent_data.py",
+        "phase_1_extraction/opus_phase1.py",
+        "phase_2_synthesis/backfill_phase2.py",
+        "phase_2_synthesis/file_genealogy.py",
+        "phase_3_hyperdoc_writing/collect_file_evidence.py",
+        "phase_3_hyperdoc_writing/generate_dossiers.py",
+        "phase_3_hyperdoc_writing/generate_viewer.py",
+        "phase_4a_aggregation/aggregate_dossiers.py",
+        "phase_4_insertion/insert_hyperdocs_v2.py",
+        "phase_4_insertion/hyperdoc_layers.py",
+    }
+
+    # Sub-cluster ordering within each phase
+    CLUSTER_ORDER = {
+        "0": ["Core", "LLM Passes", "Opus Path", "Libraries", "Batch"],
+        "1": ["Primary", "Fallback", "Batch"],
+        "2": ["Synthesis"],
+        "3": ["Evidence Collection", "Evidence Renderers", "Output"],
+        "4a": ["Aggregation"],
+        "4b": ["Insertion"],
+        "tools": ["Orchestrators", "Validators", "Scanners", "Generators", "Utilities"],
+    }
+
+    # Group scripts by phase > sub-cluster, and data by phase
     script_groups = {}
     data_groups = {}
     for node in nodes:
         if node["type"] == "data":
             data_groups.setdefault(node["phase_id"], []).append(node)
         else:
-            script_groups.setdefault(node["phase_id"], []).append(node)
+            pid = node["phase_id"]
+            sc_info = SUB_CLUSTERS.get(node["id"], None)
+            sc_name = sc_info[1] if sc_info else "Other"
+            script_groups.setdefault(pid, {}).setdefault(sc_name, []).append(node)
 
-    type_order = {"core": 0, "batch": 1, "support": 2, "config": 3}
-    for pid in script_groups:
-        script_groups[pid].sort(key=lambda n: (type_order.get(n["type"], 9), n["label"]))
     for pid in data_groups:
         data_groups[pid].sort(key=lambda n: n["label"])
 
     phases = []
-    script_col_width = 260
-    data_col_width = 190
-    col_gap = 16
-    container_pad = 10
+    script_col_width = 230
+    data_col_width = 180
+    col_gap = 20
+    container_pad = 14
+    node_h = 44
+    data_h = 32
     node_spacing = 52
+    cluster_gap = 20
     header_height = 50
 
+    # Spine Y — the critical path runs along this horizontal line
+    spine_y = 200
+
     for phase_id in ["0", "1", "2", "3", "4a", "4b", "tools"]:
-        scripts = script_groups.get(phase_id, [])
+        clusters = script_groups.get(phase_id, {})
         data = data_groups.get(phase_id, [])
-        if not scripts and not data:
+        if not clusters and not data:
             continue
 
         order = PHASE_ORDER.get(phase_id, 99)
         colors = DARK_PHASE_COLORS.get(phase_id, DARK_PHASE_COLORS["tools"])
-        label = PHASE_LABELS.get(phase_id, "TOOLS / UTILITIES" if phase_id == "tools" else f"Phase {phase_id}")
+        label = PHASE_LABELS.get(phase_id,
+                                 "TOOLS / UTILITIES" if phase_id == "tools"
+                                 else f"Phase {phase_id}")
+
+        # Layout scripts: sub-clusters stacked vertically, critical path near spine
+        cluster_names = CLUSTER_ORDER.get(phase_id, sorted(clusters.keys()))
+        container_x = 40 + order * (script_col_width + data_col_width + col_gap + container_pad * 2 + 50)
+
+        # First pass: position scripts in sub-cluster rows
+        cur_y = header_height + 10
+        for sc_name in cluster_names:
+            sc_scripts = clusters.get(sc_name, [])
+            if not sc_scripts:
+                continue
+            # Sort: critical path scripts first, then alphabetical
+            sc_scripts.sort(key=lambda n: (0 if n["id"] in CRITICAL_PATH else 1, n["label"]))
+            for node in sc_scripts:
+                node["x"] = container_x + container_pad
+                node["y"] = cur_y
+                node["width"] = script_col_width
+                node["height"] = node_h
+                cur_y += node_spacing
+            cur_y += cluster_gap  # Gap between clusters
+
+        # Position data files in a column to the right
+        data_x = container_x + container_pad + script_col_width + col_gap
+        data_y = header_height + 10
+        for node in data:
+            node["x"] = data_x
+            node["y"] = data_y
+            node["width"] = data_col_width
+            node["height"] = data_h
+            data_y += node_spacing - 8  # Tighter spacing for data
 
         container_width = container_pad + script_col_width + col_gap + data_col_width + container_pad
-        row_count = max(len(scripts), len(data))
-        container_height = header_height + row_count * node_spacing + 20
-        container_x = 40 + order * (container_width + 40)
-        container_y = 40
+        container_height = max(cur_y, data_y) + 20
 
         phases.append({
             "id": f"phase_{phase_id}",
             "label": label, "order": order, "color": colors,
-            "x": container_x, "y": container_y,
+            "x": container_x, "y": 0,
             "width": container_width, "height": container_height,
         })
-
-        for idx, node in enumerate(scripts):
-            node["x"] = container_x + container_pad
-            node["y"] = container_y + header_height + idx * node_spacing
-            node["width"] = script_col_width
-            node["height"] = 44
-
-        for idx, node in enumerate(data):
-            node["x"] = container_x + container_pad + script_col_width + col_gap
-            node["y"] = container_y + header_height + idx * node_spacing
-            node["width"] = data_col_width
-            node["height"] = 32
 
     # ── Write output ──
     output = {

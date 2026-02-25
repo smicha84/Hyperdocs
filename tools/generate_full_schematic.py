@@ -319,14 +319,17 @@ def build_graph_data():
 
 
 def build_elk_graph(graph_data):
-    """Build a flat ELK graph — all nodes at root level, edges at root.
+    """Build a flat ELK graph with layer hints for phase ordering.
 
-    ELK's bundled JS requires edges to be owned by the LCA of their endpoints.
-    With a flat graph, all edges are at root level, avoiding hierarchy issues.
-    Phase/cluster groupings are rendered visually after layout using node metadata.
+    Uses elk.position to give ELK a preferred X position per node based on
+    its phase. Combined with the layered algorithm's edge-direction-based
+    layer assignment, this produces a clean P0→P1→P2→P3→P4a→P4b→Tools ordering.
     """
     scripts = graph_data["scripts"]
     data_files = graph_data["data_files"]
+
+    # Phase → preferred X position (spread out to hint ordering)
+    PHASE_X = {"0": 0, "1": 600, "2": 1200, "3": 1800, "4a": 2400, "4b": 3000, "tools": 3600}
 
     # Collect evidence renderer scripts for collapsed group node
     evidence_renderers = [s for s in scripts.values() if s["is_evidence_renderer"]]
@@ -338,42 +341,57 @@ def build_elk_graph(graph_data):
     for rel_path, script in scripts.items():
         if script["id"] in evidence_renderer_ids:
             continue
+        px = PHASE_X.get(script["phase_id"], 3600)
         children.append({
             "id": script["id"],
             "width": 220,
-            "height": 40,
+            "height": 36,
             "labels": [{"text": script["label"]}],
+            "layoutOptions": {
+                "elk.position": f"({px}, 0)",
+            },
         })
 
-    # Evidence renderers collapsed group node
+    # Evidence renderers collapsed group node — partition 3 (Phase 3)
     if evidence_renderers:
         children.append({
             "id": "evidence_renderers_group",
             "width": 240,
-            "height": 40,
+            "height": 36,
             "labels": [{"text": f"Evidence Renderers ({len(evidence_renderers)})"}],
+            "layoutOptions": {
+                "elk.position": "(1800, 0)",
+            },
         })
 
-    # Non-bus data file nodes
+    # Non-bus data file nodes — position hint matches writer's phase
     for fname, df in data_files.items():
         if df["is_bus"]:
             continue
+        px = PHASE_X.get(df["phase_id"], 3600)
         children.append({
             "id": df["id"],
-            "width": 200,
-            "height": 32,
+            "width": 190,
+            "height": 28,
             "labels": [{"text": df["label"]}],
+            "layoutOptions": {
+                "elk.position": f"({px}, 0)",
+            },
         })
 
-    # Bus data file nodes
+    # Bus data file nodes — position hint matches writer's phase
     for fname, df in data_files.items():
         if not df["is_bus"]:
             continue
+        px = PHASE_X.get(df["phase_id"], 0)
         children.append({
             "id": df["id"],
-            "width": 200,
-            "height": 32,
+            "width": 190,
+            "height": 28,
             "labels": [{"text": df["label"]}],
+            "layoutOptions": {
+                "elk.position": f"({px}, 0)",
+            },
         })
 
     # Build all edges at root level
@@ -382,7 +400,6 @@ def build_elk_graph(graph_data):
 
     def add_edge(src, tgt, etype, data_file):
         nonlocal eid
-        # Remap evidence renderer edges to group node
         if src in evidence_renderer_ids:
             src = "evidence_renderers_group"
         if tgt in evidence_renderer_ids:
@@ -410,7 +427,6 @@ def build_elk_graph(graph_data):
             seen.add(key)
             unique_edges.append(edge)
 
-    # Re-number
     for i, edge in enumerate(unique_edges):
         edge["id"] = f"e{i}"
 
@@ -421,16 +437,32 @@ def build_elk_graph(graph_data):
         "layoutOptions": {
             "elk.algorithm": "layered",
             "elk.direction": "RIGHT",
-            "elk.spacing.nodeNode": "20",
-            "elk.spacing.edgeNode": "16",
-            "elk.spacing.edgeEdge": "10",
-            "elk.layered.spacing.nodeNodeBetweenLayers": "60",
+            "elk.layered.layering.strategy": "INTERACTIVE",
+            "elk.spacing.nodeNode": "14",
+            "elk.spacing.edgeNode": "12",
+            "elk.spacing.edgeEdge": "8",
+            "elk.layered.spacing.nodeNodeBetweenLayers": "50",
             "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
             "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
             "elk.padding": "[top=30,left=30,bottom=30,right=30]",
             "elk.edgeRouting": "ORTHOGONAL",
         },
     }
+
+
+def extract_docstring(rel_path):
+    """Extract the module docstring from a Python file."""
+    filepath = REPO_ROOT / rel_path
+    if not filepath.exists():
+        return ""
+    try:
+        source = filepath.read_text(encoding="utf-8", errors="replace")
+        import ast
+        tree = ast.parse(source)
+        docstring = ast.get_docstring(tree)
+        return docstring or ""
+    except Exception:
+        return ""
 
 
 def build_node_metadata(graph_data):
@@ -454,11 +486,19 @@ def build_node_metadata(graph_data):
             "cluster": s["sub_cluster"],
             "reads": s["reads"],
             "writes": s["writes"],
-            "optional": s["optional"],
             "nodeType": "script",
+            "doc": extract_docstring(rel_path),
         }
     # Evidence renderers group
     if evidence_renderers:
+        child_docs = []
+        for er in evidence_renderers:
+            doc = extract_docstring(er["rel_path"])
+            name = Path(er["rel_path"]).stem
+            if doc:
+                child_docs.append(f"{name}: {doc.split(chr(10))[0]}")
+            else:
+                child_docs.append(name)
         node_info["evidence_renderers_group"] = {
             "label": f"Evidence Renderers ({len(evidence_renderers)})",
             "relPath": "phase_3_hyperdoc_writing/evidence/*",
@@ -466,9 +506,9 @@ def build_node_metadata(graph_data):
             "cluster": "Evidence Renderers",
             "reads": [],
             "writes": [],
-            "optional": False,
             "nodeType": "evidence_group",
             "children": [s["rel_path"] for s in evidence_renderers],
+            "doc": "7 specialized renderers that extract and format specific evidence types from session data:\\n" + "\\n".join(child_docs),
         }
 
     for fname, df in data_files.items():
@@ -536,6 +576,42 @@ def generate_html(elk_graph, graph_data):
     edge_type_list = {}
     for (src, tgt), etype in edge_types.items():
         edge_type_list[f"{src}|{tgt}"] = etype
+
+    # Build critical path animation data — the full pipeline in execution order.
+    # No fallbacks. Every step feeds the next.
+    critical_path_scripts = [
+        "phase_0_prep/enrich_session.py",
+        "phase_0_prep/llm_pass_runner.py",
+        "phase_0_prep/merge_llm_results.py",
+        "phase_0_prep/opus_classifier.py",
+        "phase_0_prep/build_opus_messages.py",
+        "phase_0_prep/prepare_agent_data.py",
+        "phase_1_extraction/opus_phase1.py",
+        "phase_2_synthesis/backfill_phase2.py",
+        "phase_2_synthesis/file_genealogy.py",
+        "phase_3_hyperdoc_writing/collect_file_evidence.py",
+        "phase_3_hyperdoc_writing/generate_dossiers.py",
+        "phase_3_hyperdoc_writing/generate_viewer.py",
+        "phase_4a_aggregation/aggregate_dossiers.py",
+        "phase_4_insertion/insert_hyperdocs_v2.py",
+        "phase_4_insertion/hyperdoc_layers.py",
+    ]
+    critical_path = []
+    for rel_path in critical_path_scripts:
+        s = scripts.get(rel_path)
+        if not s:
+            continue
+        write_ids = [safe_id(f"data_{w}") for w in s["writes"]
+                     if safe_id(f"data_{w}") in {df["id"] for df in data_files.values()}]
+        read_ids = [safe_id(f"data_{r}") for r in s["reads"]
+                    if safe_id(f"data_{r}") in {df["id"] for df in data_files.values()}]
+        critical_path.append({
+            "script": s["id"],
+            "label": s["label"],
+            "writes": write_ids,
+            "reads": read_ids,
+        })
+    critical_path_json = json.dumps(critical_path)
 
     graph_json = json.dumps(elk_graph)
     node_info_json = json.dumps(node_info)
@@ -621,6 +697,35 @@ header .stats {{ font-size:11px; color:var(--text-dim); margin-top:2px; }}
   position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
   font-size:14px; color:var(--text-dim); z-index:300;
 }}
+/* Animation */
+@keyframes pulse {{
+  0%,100% {{ filter:brightness(1) drop-shadow(0 0 0px transparent); }}
+  50% {{ filter:brightness(1.4) drop-shadow(0 0 8px currentColor); }}
+}}
+@keyframes march {{
+  to {{ stroke-dashoffset: -20; }}
+}}
+.anim-active {{ opacity:1 !important; animation: pulse 1s ease-in-out infinite; }}
+.anim-trail {{ opacity:0.85 !important; }}
+.anim-trail-spot {{ opacity:0.15 !important; }}
+.anim-edge path {{ animation: march 0.6s linear infinite !important; stroke-dasharray: 8 4 !important; stroke-width:2.5 !important; opacity:1 !important; }}
+.anim-edge-trail {{ opacity:0.5 !important; }}
+.anim-edge-trail path {{ stroke-width:2 !important; }}
+#step-indicator {{
+  position:fixed; bottom:48px; left:50%; transform:translateX(-50%);
+  background:var(--surface); border:1px solid var(--border-hi); border-radius:8px;
+  padding:8px 16px; font-size:12px; font-family:var(--mono); z-index:200;
+  display:none; box-shadow:0 4px 12px rgba(0,0,0,.3); text-align:center;
+  min-width:280px;
+}}
+#step-indicator.vis {{ display:block; }}
+#step-indicator .step-label {{ color:var(--text); font-weight:600; }}
+#step-indicator .step-desc {{ color:var(--text-dim); font-size:11px; margin-top:2px; }}
+#step-indicator .step-dots {{ margin-top:4px; display:flex; gap:4px; justify-content:center; }}
+#step-indicator .dot {{ width:8px; height:8px; border-radius:50%; background:var(--text-muted); }}
+#step-indicator .dot.done {{ background:var(--text-dim); }}
+#step-indicator .dot.cur {{ background:#58a6ff; box-shadow:0 0 6px #58a6ff; }}
+.anim-btn {{ border-left:1px solid var(--border); padding-left:8px !important; margin-left:2px; }}
 </style>
 </head>
 <body>
@@ -636,6 +741,10 @@ header .stats {{ font-size:11px; color:var(--text-dim); margin-top:2px; }}
     <button class="zbtn" onclick="zi()">+</button>
     <button class="zbtn" onclick="zo()">&minus;</button>
     <button class="zbtn" onclick="zf()">&#8634;</button>
+    <button id="bp" class="anim-btn" onclick="animPlay()">&#9654; Play</button>
+    <button id="bpa" style="display:none" class="anim-btn" onclick="animPause()">&#9646;&#9646; Pause</button>
+    <button id="bs" class="anim-btn" onclick="animStep()">&#9654;&#9654; Step</button>
+    <button id="bm" class="anim-btn" onclick="animMode()">Trail</button>
   </div>
 </header>
 
@@ -644,6 +753,12 @@ header .stats {{ font-size:11px; color:var(--text-dim); margin-top:2px; }}
 <div id="info">
   <button class="x" onclick="ci()">&times;</button>
   <div id="ic"></div>
+</div>
+
+<div id="step-indicator">
+  <div class="step-label" id="si-label"></div>
+  <div class="step-desc" id="si-desc"></div>
+  <div class="step-dots" id="si-dots"></div>
 </div>
 
 <div id="legend">
@@ -668,9 +783,14 @@ const ET={edge_type_json};
 const GR={grouping_json};
 const PC={phase_colors_json};
 const PL={phase_labels_json};
+const CP={critical_path_json};
 
 let svgEl,tx=0,ty=0,sc=1,pan=false,px=0,py=0;
 let show={{tools:true,data:true,bus:true}};
+
+// ── Animation State ─────────────────────────────────────────
+let anim={{playing:false, step:-1, timer:null, mode:'trail', trail:new Set()}};
+const ANIM_DELAY=1500;
 
 async function run(){{
   const elk=new ELK();
@@ -868,107 +988,120 @@ function render(laid){{
 }}
 
 function drawGroups(mg,ns,pos){{
-  // Compute bounding boxes per phase and per (phase,cluster)
-  const phaseBB={{}};
-  const clusterBB={{}};
+  // Column-stripe approach: compute X range per phase, draw full-height stripes
+  // with a header bar at the top. No overlapping bounding boxes.
+
+  // Global Y bounds
+  let globalY1=Infinity, globalY2=-Infinity;
+  for(const p of Object.values(pos)){{
+    globalY1=Math.min(globalY1,p.y);
+    globalY2=Math.max(globalY2,p.y+p.h);
+  }}
+
+  // Compute X range per phase
+  const phaseX={{}};
   for(const[nid,gr] of Object.entries(GR)){{
     const p=pos[nid];
     if(!p)continue;
     const ph=gr.phase;
-    const cl=gr.cluster;
-    const pad=12;
-
-    // Phase bounding box
-    if(ph&&ph!=='bus'){{
-      if(!phaseBB[ph])phaseBB[ph]={{x1:p.x-pad,y1:p.y-pad,x2:p.x+p.w+pad,y2:p.y+p.h+pad}};
-      else{{
-        phaseBB[ph].x1=Math.min(phaseBB[ph].x1,p.x-pad);
-        phaseBB[ph].y1=Math.min(phaseBB[ph].y1,p.y-pad);
-        phaseBB[ph].x2=Math.max(phaseBB[ph].x2,p.x+p.w+pad);
-        phaseBB[ph].y2=Math.max(phaseBB[ph].y2,p.y+p.h+pad);
-      }}
-    }}
-
-    // Bus bounding box
-    if(ph==='bus'){{
-      if(!phaseBB['bus'])phaseBB['bus']={{x1:p.x-pad,y1:p.y-pad,x2:p.x+p.w+pad,y2:p.y+p.h+pad}};
-      else{{
-        phaseBB['bus'].x1=Math.min(phaseBB['bus'].x1,p.x-pad);
-        phaseBB['bus'].y1=Math.min(phaseBB['bus'].y1,p.y-pad);
-        phaseBB['bus'].x2=Math.max(phaseBB['bus'].x2,p.x+p.w+pad);
-        phaseBB['bus'].y2=Math.max(phaseBB['bus'].y2,p.y+p.h+pad);
-      }}
-    }}
-
-    // Cluster bounding box (within phase)
-    if(ph&&cl){{
-      const ck=ph+'|'+cl;
-      if(!clusterBB[ck])clusterBB[ck]={{x1:p.x-6,y1:p.y-6,x2:p.x+p.w+6,y2:p.y+p.h+6,phase:ph,cluster:cl}};
-      else{{
-        clusterBB[ck].x1=Math.min(clusterBB[ck].x1,p.x-6);
-        clusterBB[ck].y1=Math.min(clusterBB[ck].y1,p.y-6);
-        clusterBB[ck].x2=Math.max(clusterBB[ck].x2,p.x+p.w+6);
-        clusterBB[ck].y2=Math.max(clusterBB[ck].y2,p.y+p.h+6);
-      }}
+    if(!ph)continue;
+    if(!phaseX[ph])phaseX[ph]={{x1:p.x,x2:p.x+p.w}};
+    else{{
+      phaseX[ph].x1=Math.min(phaseX[ph].x1,p.x);
+      phaseX[ph].x2=Math.max(phaseX[ph].x2,p.x+p.w);
     }}
   }}
 
-  // Draw phase backgrounds
-  for(const[ph,bb] of Object.entries(phaseBB)){{
+  const headerH=28;
+  const stripePad=10;
+  const stripeTop=globalY1-headerH-stripePad;
+  const stripeBot=globalY2+stripePad;
+  const phaseOrder=['0','1','2','3','4a','4b','tools','bus'];
+
+  for(const ph of phaseOrder){{
+    const xr=phaseX[ph];
+    if(!xr)continue;
     const col=PC[ph]||'#6b7280';
     const g=document.createElementNS(ns,'g');
     g.setAttribute('class','phase-grp');
     g.setAttribute('data-phase',ph);
 
-    const rect=document.createElementNS(ns,'rect');
-    rect.setAttribute('x',bb.x1-8);
-    rect.setAttribute('y',bb.y1-24);
-    rect.setAttribute('width',bb.x2-bb.x1+16);
-    rect.setAttribute('height',bb.y2-bb.y1+32);
-    rect.setAttribute('rx','8');
-    rect.setAttribute('fill',col+'12');
-    rect.setAttribute('stroke',col+'50');
-    rect.setAttribute('stroke-width','1.5');
-    g.appendChild(rect);
+    const sx=xr.x1-stripePad;
+    const sw=xr.x2-xr.x1+stripePad*2;
 
+    // Full-height subtle vertical stripe
+    const stripe=document.createElementNS(ns,'rect');
+    stripe.setAttribute('x',sx);
+    stripe.setAttribute('y',stripeTop);
+    stripe.setAttribute('width',sw);
+    stripe.setAttribute('height',stripeBot-stripeTop);
+    stripe.setAttribute('fill',col+'08');
+    stripe.setAttribute('stroke','none');
+    g.appendChild(stripe);
+
+    // Header bar at top of stripe
+    const hdr=document.createElementNS(ns,'rect');
+    hdr.setAttribute('x',sx);
+    hdr.setAttribute('y',stripeTop);
+    hdr.setAttribute('width',sw);
+    hdr.setAttribute('height',headerH);
+    hdr.setAttribute('fill',col+'25');
+    hdr.setAttribute('stroke','none');
+    g.appendChild(hdr);
+
+    // Vertical separator line at right edge
+    const sep=document.createElementNS(ns,'line');
+    sep.setAttribute('x1',sx+sw);
+    sep.setAttribute('y1',stripeTop);
+    sep.setAttribute('x2',sx+sw);
+    sep.setAttribute('y2',stripeBot);
+    sep.setAttribute('stroke',col+'20');
+    sep.setAttribute('stroke-width','1');
+    g.appendChild(sep);
+
+    // Phase label in header
     const lbl=document.createElementNS(ns,'text');
-    lbl.setAttribute('x',bb.x1);
-    lbl.setAttribute('y',bb.y1-12);
-    lbl.setAttribute('font-size','13');
+    lbl.setAttribute('x',sx+8);
+    lbl.setAttribute('y',stripeTop+headerH/2);
+    lbl.setAttribute('dominant-baseline','central');
+    lbl.setAttribute('font-size','11');
     lbl.setAttribute('font-weight','700');
     lbl.setAttribute('font-family',"var(--font)");
     lbl.setAttribute('fill',col);
-    lbl.setAttribute('letter-spacing','0.5');
-    lbl.textContent=ph==='bus'?'Core Session Data Bus':(PL[ph]||('Phase '+ph));
+    lbl.setAttribute('letter-spacing','0.3');
+    const labelText=ph==='bus'?'Session Data Bus':(PL[ph]||('Phase '+ph));
+    // Truncate if wider than stripe
+    lbl.textContent=labelText;
     g.appendChild(lbl);
 
     mg.appendChild(g);
   }}
 
-  // Draw cluster outlines (subtle)
-  for(const[ck,bb] of Object.entries(clusterBB)){{
-    const col=PC[bb.phase]||'#6b7280';
-    const rect=document.createElementNS(ns,'rect');
-    rect.setAttribute('x',bb.x1-4);
-    rect.setAttribute('y',bb.y1-14);
-    rect.setAttribute('width',bb.x2-bb.x1+8);
-    rect.setAttribute('height',bb.y2-bb.y1+18);
-    rect.setAttribute('rx','4');
-    rect.setAttribute('fill',col+'06');
-    rect.setAttribute('stroke',col+'28');
-    rect.setAttribute('stroke-width','0.8');
-    rect.setAttribute('stroke-dasharray','4 3');
-    mg.appendChild(rect);
+  // Cluster labels: small text above the first node in each cluster
+  const clusterFirst={{}};
+  for(const[nid,gr] of Object.entries(GR)){{
+    const p=pos[nid];
+    if(!p)continue;
+    const ph=gr.phase;
+    const cl=gr.cluster;
+    if(!ph||!cl)continue;
+    const ck=ph+'|'+cl;
+    if(!clusterFirst[ck]||p.y<clusterFirst[ck].y){{
+      clusterFirst[ck]={{x:p.x,y:p.y,phase:ph,cluster:cl}};
+    }}
+  }}
 
+  for(const[ck,cf] of Object.entries(clusterFirst)){{
+    const col=PC[cf.phase]||'#6b7280';
     const lbl=document.createElementNS(ns,'text');
-    lbl.setAttribute('x',bb.x1);
-    lbl.setAttribute('y',bb.y1-4);
-    lbl.setAttribute('font-size','10');
+    lbl.setAttribute('x',cf.x);
+    lbl.setAttribute('y',cf.y-6);
+    lbl.setAttribute('font-size','8');
     lbl.setAttribute('font-weight','600');
     lbl.setAttribute('font-family',"var(--font)");
-    lbl.setAttribute('fill',col+'70');
+    lbl.setAttribute('fill',col+'60');
     lbl.setAttribute('letter-spacing','0.3');
-    lbl.textContent=bb.cluster;
+    lbl.textContent=cf.cluster;
     mg.appendChild(lbl);
   }}
 }}
@@ -1003,8 +1136,11 @@ function si(nid){{
   let h='<h3>'+i.label+'</h3>';
   if(i.nodeType==='script'||i.nodeType==='evidence_group'){{
     h+='<div class="m">Phase: '+i.phase+' &middot; '+i.cluster+'</div>';
-    h+='<div class="m">'+i.relPath+'</div>';
-    if(i.optional)h+='<div class="m" style="color:#fbbf24">Optional</div>';
+    h+='<div class="m" style="font-family:var(--mono);font-size:10px;opacity:0.7">'+i.relPath+'</div>';
+    if(i.doc){{
+      const docHtml=i.doc.replace(/\\n/g,'<br>').replace(/</g,'&lt;');
+      h+='<div style="margin:8px 0;padding:8px;background:var(--surface2);border-radius:4px;font-size:11px;line-height:1.5;color:var(--text);border-left:3px solid '+(PC[i.phase]||'#6b7280')+'">'+docHtml+'</div>';
+    }}
     if(i.children)h+='<div class="fl"><strong>Contains:</strong><br>'+i.children.map(c=>'<span>'+c.split('/').pop()+'</span>').join('')+'</div>';
     if(i.reads&&i.reads.length)h+='<div class="fl"><strong>Reads:</strong><br>'+i.reads.map(f=>'<span>'+f+'</span>').join('')+'</div>';
     if(i.writes&&i.writes.length)h+='<div class="fl"><strong>Writes:</strong><br>'+i.writes.map(f=>'<span>'+f+'</span>').join('')+'</div>';
@@ -1098,6 +1234,153 @@ document.addEventListener('keydown',e=>{{
   if(e.key==='-')zo();
   if(e.key==='0')zf();
 }});
+
+// ── Animation Functions ─────────────────────────────────────
+function animPlay(){{
+  if(anim.step>=CP.length-1)animReset();
+  anim.playing=true;
+  document.getElementById('bp').style.display='none';
+  document.getElementById('bpa').style.display='';
+  document.getElementById('step-indicator').classList.add('vis');
+  if(anim.step<0)animAdvance();
+  anim.timer=setInterval(()=>{{
+    if(anim.step>=CP.length-1){{animPause();return;}}
+    animAdvance();
+  }},ANIM_DELAY);
+}}
+
+function animPause(){{
+  anim.playing=false;
+  if(anim.timer){{clearInterval(anim.timer);anim.timer=null;}}
+  document.getElementById('bp').style.display='';
+  document.getElementById('bp').textContent=anim.step>=CP.length-1?'\\u25B6 Replay':'\\u25B6 Play';
+  document.getElementById('bpa').style.display='none';
+}}
+
+function animStep(){{
+  if(anim.playing)animPause();
+  if(anim.step>=CP.length-1)animReset();
+  document.getElementById('step-indicator').classList.add('vis');
+  animAdvance();
+}}
+
+function animReset(){{
+  anim.playing=false;
+  if(anim.timer){{clearInterval(anim.timer);anim.timer=null;}}
+  anim.step=-1;
+  anim.trail.clear();
+  // Clear all animation classes
+  document.querySelectorAll('.anim-active,.anim-trail,.anim-trail-spot,.anim-edge,.anim-edge-trail,.dimmed,.hi,.hi-edge').forEach(el=>{{
+    el.classList.remove('anim-active','anim-trail','anim-trail-spot','anim-edge','anim-edge-trail','dimmed','hi','hi-edge');
+  }});
+  document.getElementById('step-indicator').classList.remove('vis');
+  document.getElementById('bp').style.display='';
+  document.getElementById('bp').textContent='\\u25B6 Play';
+  document.getElementById('bpa').style.display='none';
+}}
+
+function animMode(){{
+  anim.mode=anim.mode==='trail'?'spot':'trail';
+  document.getElementById('bm').textContent=anim.mode==='trail'?'Trail':'Spot';
+  // Re-render current state if mid-animation
+  if(anim.step>=0)animRender();
+}}
+
+function animAdvance(){{
+  anim.step++;
+  if(anim.step>=CP.length){{animPause();return;}}
+  const s=CP[anim.step];
+
+  // Add current step nodes to trail
+  anim.trail.add(s.script);
+  for(const w of s.writes)anim.trail.add(w);
+  for(const r of s.reads)anim.trail.add(r);
+
+  animRender();
+  animPanTo(s.script);
+  animUpdateIndicator();
+}}
+
+function animRender(){{
+  const s=CP[anim.step];
+  const currentSet=new Set([s.script,...s.writes]);
+  const nodes=document.querySelectorAll('.node');
+  const edges=document.querySelectorAll('.edge');
+
+  // Classify nodes
+  nodes.forEach(n=>{{
+    const id=n.getAttribute('data-id');
+    n.classList.remove('anim-active','anim-trail','anim-trail-spot','dimmed','hi','hi-edge');
+    if(currentSet.has(id)){{
+      n.classList.add('anim-active');
+    }}else if(anim.trail.has(id)){{
+      n.classList.add(anim.mode==='trail'?'anim-trail':'anim-trail-spot');
+    }}else{{
+      n.classList.add('dimmed');
+    }}
+  }});
+
+  // Classify edges: active if both endpoints in trail
+  edges.forEach(e=>{{
+    const src=e.getAttribute('data-src'), tgt=e.getAttribute('data-tgt');
+    e.classList.remove('anim-edge','anim-edge-trail','dimmed','hi-edge');
+    const srcInCurrent=currentSet.has(src), tgtInCurrent=currentSet.has(tgt);
+    const srcInTrail=anim.trail.has(src), tgtInTrail=anim.trail.has(tgt);
+    if((srcInCurrent||tgtInCurrent)&&srcInTrail&&tgtInTrail){{
+      e.classList.add('anim-edge');
+    }}else if(srcInTrail&&tgtInTrail&&anim.mode==='trail'){{
+      e.classList.add('anim-edge-trail');
+    }}else{{
+      e.classList.add('dimmed');
+    }}
+  }});
+}}
+
+function animPanTo(nodeId){{
+  const el=document.querySelector('[data-id="'+nodeId+'"]');
+  if(!el)return;
+  const rect=el.querySelector('rect');
+  if(!rect)return;
+  const nx=parseFloat(rect.getAttribute('x'));
+  const ny=parseFloat(rect.getAttribute('y'));
+  const nw=parseFloat(rect.getAttribute('width'));
+  const nh=parseFloat(rect.getAttribute('height'));
+  const cv=document.getElementById('canvas');
+  const cw=cv.clientWidth, ch=cv.clientHeight;
+  // Center the node in view
+  const targetX=cw/2-(nx+nw/2)*sc;
+  const targetY=ch/2-(ny+nh/2)*sc;
+  // Smooth pan
+  const startX=tx, startY=ty;
+  const dx=targetX-startX, dy=targetY-startY;
+  let t0=null;
+  function step(ts){{
+    if(!t0)t0=ts;
+    const p=Math.min((ts-t0)/400,1);
+    const ease=p<0.5?2*p*p:(1-Math.pow(-2*p+2,2)/2);
+    tx=startX+dx*ease;
+    ty=startY+dy*ease;
+    at();
+    if(p<1)requestAnimationFrame(step);
+  }}
+  requestAnimationFrame(step);
+}}
+
+function animUpdateIndicator(){{
+  const s=CP[anim.step];
+  const total=CP.length;
+  document.getElementById('si-label').textContent='Step '+(anim.step+1)+'/'+total+': '+s.label;
+  const nw=s.writes.length;
+  document.getElementById('si-desc').textContent=nw>0?(nw+' file'+(nw>1?'s':'')+' produced'):'Final output';
+  // Dots
+  const dots=document.getElementById('si-dots');
+  dots.innerHTML='';
+  for(let i=0;i<total;i++){{
+    const d=document.createElement('span');
+    d.className='dot'+(i<anim.step?' done':'')+(i===anim.step?' cur':'');
+    dots.appendChild(d);
+  }}
+}}
 
 run();
 </script>
