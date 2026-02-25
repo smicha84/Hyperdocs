@@ -1,8 +1,18 @@
-"""Tests for ground_truth_verifier.py — truncation and code quality checks."""
+"""Tests for ground_truth_verifier.py — truncation and code quality checks.
+
+NOTE: Tests obsolete/phase_5_ground_truth code. Skipped in CI.
+Will be removed when obsolete/ is cleaned up (Sprint 5).
+"""
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "obsolete" / "phase_5_ground_truth"))
+import pytest
+
+_OBSOLETE_PATH = Path(__file__).resolve().parent.parent / "obsolete" / "phase_5_ground_truth"
+if not _OBSOLETE_PATH.exists():
+    pytest.skip("obsolete/phase_5_ground_truth not found (expected after cleanup)", allow_module_level=True)
+
+sys.path.insert(0, str(_OBSOLETE_PATH))
 from ground_truth_verifier import check_truncation_patterns, check_bare_excepts, check_unsafe_api_access
 
 

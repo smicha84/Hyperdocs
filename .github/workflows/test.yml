@@ -9,26 +9,39 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Install package
         run: |
-          pip install pytest anthropic python-dotenv
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
 
       - name: Run tests
         run: python -m pytest tests/ -v
 
-      - name: Run pipeline health check (import verification only)
+      - name: Verify CLI
+        run: |
+          hyperdocs --version
+          hyperdocs --help
+          hyperdocs status
+
+      - name: Verify config imports
         run: python -c "
           import sys
           sys.path.insert(0, '.')
           from config import STORE_DIR, SESSIONS_STORE_DIR, OUTPUT_DIR
           print(f'config.py imports OK: STORE_DIR={STORE_DIR}')
           "
+
+      - name: Verify Python module entry point
+        run: python -m hyperdocs --version

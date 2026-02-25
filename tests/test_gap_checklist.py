@@ -1,8 +1,19 @@
-"""Tests for gap_checklist.py — the convergence thermometer."""
+"""Tests for gap_checklist.py — the convergence thermometer.
+
+NOTE: Tests obsolete/ code. Skipped in CI.
+Will be removed when obsolete/ is cleaned up (Sprint 5).
+"""
 import json
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "obsolete"))
+
+import pytest
+
+_OBSOLETE_PATH = Path(__file__).resolve().parent.parent / "obsolete"
+if not _OBSOLETE_PATH.exists():
+    pytest.skip("obsolete/ not found (expected after cleanup)", allow_module_level=True)
+
+sys.path.insert(0, str(_OBSOLETE_PATH))
 from gap_checklist import (
     check_enum_coverage,
     check_count_threshold,

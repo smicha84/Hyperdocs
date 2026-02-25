@@ -1,8 +1,18 @@
-"""Tests for iterate.py — gap classification logic."""
+"""Tests for iterate.py — gap classification logic.
+
+NOTE: Tests obsolete/ code. Skipped in CI.
+Will be removed when obsolete/ is cleaned up (Sprint 5).
+"""
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "obsolete"))
+import pytest
+
+_OBSOLETE_PATH = Path(__file__).resolve().parent.parent / "obsolete"
+if not _OBSOLETE_PATH.exists():
+    pytest.skip("obsolete/ not found (expected after cleanup)", allow_module_level=True)
+
+sys.path.insert(0, str(_OBSOLETE_PATH))
 from iterate import classify_gaps
 
 

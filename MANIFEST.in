@@ -1,0 +1,7 @@
+include .env.example
+include commands/hyperdocs.md
+include requirements.txt
+include GAP_TRACKER.md
+recursive-include phase_1_extraction *.md
+recursive-include phase_2_synthesis *.md
+recursive-include phase_3_hyperdoc_writing *.md
