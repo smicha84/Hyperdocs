@@ -42,24 +42,6 @@ PHASE0_IO = {
         ],
     },
 
-    "phase_0_prep/deterministic_prep.py": {
-        "reads": [
-            # Source JSONL chat history file (via ClaudeSessionReader.load_session_file)
-            "{CHAT_DIR}/*.jsonl",
-        ],
-        "writes": [
-            "{session}/enriched_session.json",
-        ],
-        "imports_from": [
-            "phase_0_prep.claude_session_reader",   # ClaudeSessionReader
-            "phase_0_prep.geological_reader",        # GeologicalReader
-            "phase_0_prep.metadata_extractor",       # MetadataExtractor
-            "phase_0_prep.message_filter",           # MessageFilter
-            "phase_0_prep.claude_behavior_analyzer", # ClaudeBehaviorAnalyzer
-            "config",                                # SESSION_ID, get_session_file, get_session_output_dir
-        ],
-    },
-
     # =========================================================================
     # Sub-extractors used by enrich_session / deterministic_prep (library mode)
     # =========================================================================
@@ -190,28 +172,6 @@ PHASE0_IO = {
     # Batch orchestrators (run LLM passes across all sessions)
     # =========================================================================
 
-    "phase_0_prep/batch_llm_orchestrator.py": {
-        "reads": [
-            # Duplicate detection manifest
-            "{INDEXES_DIR}/duplicate_manifest.json",
-            # Per-session enriched data (existence check + load)
-            "{session}/enriched_session.json",
-            # Pass 1 output (checked for Pass 3 dependency)
-            "{session}/llm_pass1_content_ref.json",
-            # Batch status for resume capability
-            "batch_llm_status.json",
-        ],
-        "writes": [
-            "batch_llm_status.json",
-        ],
-        "imports_from": [
-            "config",                          # OUTPUT_DIR, SESSIONS_STORE_DIR, INDEXES_DIR
-            "phase_0_prep.prompts",            # PASS_CONFIGS
-            "phase_0_prep.llm_pass_runner",    # find_session_dir, load_enriched_session, run_pass
-            "phase_0_prep.merge_llm_results",  # merge_session
-        ],
-    },
-
     "phase_0_prep/batch_p0_llm.py": {
         "reads": [
             # Duplicate detection manifest
@@ -284,30 +244,10 @@ PHASE0_IO = {
         ],
         "writes": [
             "{session}/opus_priority_messages.json",
-            "{session}/opus_extended_messages.json",
-            "{session}/safe_opus_priority.json",
         ],
         "imports_from": [
             "config",           # get_session_output_dir, SESSION_ID
             "tools.log_config", # get_logger
-        ],
-    },
-
-    "phase_0_prep/build_opus_filtered.py": {
-        "reads": [
-            # Opus classification results
-            "{session}/opus_classifications.json",
-            # Enriched session (prefers v2, falls back to v1)
-            "{session}/enriched_session_v2.json",
-            "{session}/enriched_session.json",
-        ],
-        "writes": [
-            "{session}/opus_priority_messages.json",
-            "{session}/opus_extended_messages.json",
-            "{session}/safe_opus_priority.json",
-        ],
-        "imports_from": [
-            "config",  # get_session_output_dir, SESSION_ID
         ],
     },
 
@@ -341,166 +281,6 @@ PHASE0_IO = {
             "config",                              # get_session_output_dir
             "tools.log_config",                    # get_logger
             "phase_0_prep.build_opus_messages",    # build_opus_filtered (called as function)
-        ],
-    },
-
-    # =========================================================================
-    # Schema normalization and validation
-    # =========================================================================
-
-    "phase_0_prep/schema_normalizer.py": {
-        "reads": [
-            # 9 agent-produced JSON files per session
-            "{session}/thread_extractions.json",
-            "{session}/geological_notes.json",
-            "{session}/semantic_primitives.json",
-            "{session}/explorer_notes.json",
-            "{session}/idea_graph.json",
-            "{session}/synthesis.json",
-            "{session}/grounded_markers.json",
-            "{session}/file_dossiers.json",
-            "{session}/claude_md_analysis.json",
-        ],
-        "writes": [
-            # Same 9 files (normalized via atomic tempfile + rename)
-            "{session}/thread_extractions.json",
-            "{session}/geological_notes.json",
-            "{session}/semantic_primitives.json",
-            "{session}/explorer_notes.json",
-            "{session}/idea_graph.json",
-            "{session}/synthesis.json",
-            "{session}/grounded_markers.json",
-            "{session}/file_dossiers.json",
-            "{session}/claude_md_analysis.json",
-            # Backup of originals before normalization
-            "{session}/backups/{filename}",
-            # Global normalization log
-            "{INDEXES_DIR}/normalization_log.json",
-        ],
-        "imports_from": [
-            "tools.log_config",  # get_logger
-        ],
-    },
-
-    "phase_0_prep/schema_validator.py": {
-        "reads": [
-            # 9 agent-produced JSON files per session (same as schema_normalizer)
-            "{session}/thread_extractions.json",
-            "{session}/geological_notes.json",
-            "{session}/semantic_primitives.json",
-            "{session}/explorer_notes.json",
-            "{session}/idea_graph.json",
-            "{session}/synthesis.json",
-            "{session}/grounded_markers.json",
-            "{session}/file_dossiers.json",
-            "{session}/claude_md_analysis.json",
-        ],
-        "writes": [
-            # Writes via schema_normalizer.normalize_file when validate_and_normalize is called
-            # (same 9 files, normalized in-place)
-        ],
-        "imports_from": [
-            "phase_0_prep.schema_normalizer",  # NORMALIZERS
-            "tools.log_config",                # get_logger
-        ],
-    },
-
-    "phase_0_prep/post_agent_normalize.py": {
-        "reads": [
-            # 9 agent-produced JSON files per session
-            "{session}/thread_extractions.json",
-            "{session}/geological_notes.json",
-            "{session}/semantic_primitives.json",
-            "{session}/explorer_notes.json",
-            "{session}/idea_graph.json",
-            "{session}/synthesis.json",
-            "{session}/grounded_markers.json",
-            "{session}/file_dossiers.json",
-            "{session}/claude_md_analysis.json",
-        ],
-        "writes": [
-            # Same 9 files (normalized via normalize_file atomic write)
-            "{session}/thread_extractions.json",
-            "{session}/geological_notes.json",
-            "{session}/semantic_primitives.json",
-            "{session}/explorer_notes.json",
-            "{session}/idea_graph.json",
-            "{session}/synthesis.json",
-            "{session}/grounded_markers.json",
-            "{session}/file_dossiers.json",
-            "{session}/claude_md_analysis.json",
-        ],
-        "imports_from": [
-            "phase_0_prep.schema_normalizer",  # NORMALIZERS, normalize_file
-            "phase_0_prep.schema_validator",    # CANONICAL_DATA_KEYS, validate_file
-        ],
-    },
-
-    "phase_0_prep/normalize_agent_output.py": {
-        "reads": [
-            # 9 agent-produced JSON files per session (identical to post_agent_normalize.py)
-            "{session}/thread_extractions.json",
-            "{session}/geological_notes.json",
-            "{session}/semantic_primitives.json",
-            "{session}/explorer_notes.json",
-            "{session}/idea_graph.json",
-            "{session}/synthesis.json",
-            "{session}/grounded_markers.json",
-            "{session}/file_dossiers.json",
-            "{session}/claude_md_analysis.json",
-        ],
-        "writes": [
-            # Same 9 files (normalized via normalize_file atomic write)
-            "{session}/thread_extractions.json",
-            "{session}/geological_notes.json",
-            "{session}/semantic_primitives.json",
-            "{session}/explorer_notes.json",
-            "{session}/idea_graph.json",
-            "{session}/synthesis.json",
-            "{session}/grounded_markers.json",
-            "{session}/file_dossiers.json",
-            "{session}/claude_md_analysis.json",
-        ],
-        "imports_from": [
-            "phase_0_prep.schema_normalizer",  # NORMALIZERS, normalize_file
-            "phase_0_prep.schema_validator",    # CANONICAL_DATA_KEYS, validate_file
-            "tools.log_config",                # get_logger
-        ],
-    },
-
-    # =========================================================================
-    # Quality scanning
-    # =========================================================================
-
-    "phase_0_prep/completeness_scanner.py": {
-        "reads": [
-            # All expected pipeline files per session (field-level inspection)
-            "{session}/enriched_session.json",
-            "{session}/session_metadata.json",
-            "{session}/safe_condensed.json",
-            "{session}/safe_tier4.json",
-            "{session}/tier2plus_messages.json",
-            "{session}/tier4_priority_messages.json",
-            "{session}/user_messages_tier2plus.json",
-            "{session}/conversation_condensed.json",
-            "{session}/emergency_contexts.json",
-            "{session}/thread_extractions.json",
-            "{session}/geological_notes.json",
-            "{session}/semantic_primitives.json",
-            "{session}/explorer_notes.json",
-            "{session}/idea_graph.json",
-            "{session}/synthesis.json",
-            "{session}/grounded_markers.json",
-            "{session}/file_dossiers.json",
-            "{session}/claude_md_analysis.json",
-            "{session}/ground_truth_verification.json",
-            "{session}/file_genealogy.json",
-        ],
-        "writes": [
-            "{INDEXES_DIR}/completeness_report.json",
-        ],
-        "imports_from": [
-            "tools.log_config",  # get_logger
         ],
     },
 

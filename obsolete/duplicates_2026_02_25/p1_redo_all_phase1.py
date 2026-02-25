@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Opus Phase 1 — Runs 4 sequential Opus agents on a session.
+Phase 1 Full Redo Orchestrator — Reprocesses ALL sessions through Phase 1.
 
 Uses the Anthropic API directly (one call at a time). For each session:
   1. Thread Analyst pass → thread_extractions.json
@@ -16,9 +16,9 @@ Progress is written to ~/PERMANENT_HYPERDOCS/indexes/phase1_redo_progress.json
 which the tracking HTML reads.
 
 Usage:
-    python3 opus_phase1.py                  # process all sessions
-    python3 opus_phase1.py --start-from 50  # resume from session 50
-    python3 opus_phase1.py --session session_0012ebed  # one session
+    python3 redo_all_phase1.py                  # process all sessions
+    python3 redo_all_phase1.py --start-from 50  # resume from session 50
+    python3 redo_all_phase1.py --session session_0012ebed  # one session
 
 CHANGE LOG — Prompt & Config Fixes
 ====================================
@@ -68,10 +68,10 @@ Round 5 (Feb 11): JSON recovery + prompt hardening
 
   Iter 5: Running...
 """
-
 from tools.log_config import get_logger
 
-logger = get_logger("phase1.opus_phase1")
+logger = get_logger("phase1.redo_all_phase1")
+
 
 import json
 import os
@@ -95,13 +95,27 @@ except ImportError:
 MODEL = "claude-opus-4-6"
 MAX_TOKENS = 128000     # Hard API limit for claude-opus-4-6 output
 
-from config import load_env
-load_env()
+# Load API key from .env file — check multiple locations
+ENV_CANDIDATES = [
+    REPO / ".env",
+    REPO.parent.parent.parent.parent.parent / ".env",  # project root
+    Path.home() / "Hyperdocs" / ".env",
+]
+for env_path in ENV_CANDIDATES:
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, val = line.split("=", 1)
+                if key.strip() not in os.environ:  # don't override existing
+                    os.environ[key.strip()] = val.strip()
+        break  # use first found
 
 client = anthropic.Anthropic()
 
 # Schema normalizer — standardizes the 886 JSON schema variants across sessions
-from tools.schema_normalizer import NORMALIZERS, normalize_file
+sys.path.insert(0, str(REPO / "phase_0_prep"))
+from schema_normalizer import NORMALIZERS, normalize_file
 
 # ── Duplicate detection ────────────────────────────────────────────────
 # Same logic as batch_phase0_reprocess.py — skip sessions that are copies

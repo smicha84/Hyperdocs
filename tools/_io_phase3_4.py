@@ -57,7 +57,7 @@ PHASE3_4_IO = {
             "grounded_markers.json",
             "file_dossiers.json",
             "claude_md_analysis.json",
-            "hyperdoc_blocks/*.txt",  # load_text() reads from hyperdoc_blocks/
+            "hyperdoc_blocks/*_hyperdoc.txt",  # load_text() reads from hyperdoc_blocks/
         ],
         "writes": [
             "{BASE}/pipeline_viewer.html",
@@ -99,19 +99,6 @@ PHASE3_4_IO = {
             "claude_md_analysis.json",
         ],
         "imports_from": ["tools.json_io", "tools.log_config"],
-    },
-    "phase_3_hyperdoc_writing/generate_remaining_hyperdocs.py": {
-        "reads": [
-            "{BASE}/file_dossiers.json",
-            "{BASE}/grounded_markers.json",
-            "{V5}/{filename}.py",  # source code files for insertion
-        ],
-        "writes": [
-            "{BASE}/hyperdoc_blocks/{filename_stem}_hyperdoc.txt",
-            "{BASE}/hyperdoc_previews/{filename}.py",
-            "{BASE}/hyperdoc_code_files/{filename}.py",
-        ],
-        "imports_from": ["config"],
     },
     # =========================================================================
     # phase_3_hyperdoc_writing/evidence/  (renderer submodules)
@@ -192,51 +179,7 @@ PHASE3_4_IO = {
     # =========================================================================
     # phase_4_insertion/
     # =========================================================================
-    "phase_4_insertion/hyperdoc_store_init.py": {
-        "reads": [
-            "{BASE}/file_dossiers.json",
-            "{BASE}/hyperdoc_v2/{filename}_header.txt",
-            "{BASE}/hyperdoc_v2/{filename}_inline.json",
-            "{BASE}/hyperdoc_v2/{filename}_footer.txt",
-        ],
-        "writes": [
-            "hyperdoc_store/{filename}/v1_{date}.json",
-            "hyperdoc_store/{filename}/current_header.txt",
-            "hyperdoc_store/{filename}/current_inline.json",
-            "hyperdoc_store/{filename}/current_footer.txt",
-            "hyperdoc_store/_index.json",
-        ],
-        "imports_from": [],
-    },
-    "phase_4_insertion/init_hyperdoc_store.py": {
-        "reads": [
-            "{BASE}/file_dossiers.json",
-            "{BASE}/hyperdoc_v2/{filename}_header.txt",
-            "{BASE}/hyperdoc_v2/{filename}_inline.json",
-            "{BASE}/hyperdoc_v2/{filename}_footer.txt",
-        ],
-        "writes": [
-            "hyperdoc_store/{filename}/v1_{date}.json",
-            "hyperdoc_store/{filename}/current_header.txt",
-            "hyperdoc_store/{filename}/current_inline.json",
-            "hyperdoc_store/{filename}/current_footer.txt",
-            "hyperdoc_store/_index.json",
-        ],
-        "imports_from": [],
-    },
     "phase_4_insertion/insert_hyperdocs_v2.py": {
-        "reads": [
-            "{V5_CODE}/{filename}.py",               # source code files
-            "{BASE}/hyperdoc_v2/{filename}_header.txt",
-            "{BASE}/hyperdoc_v2/{filename}_inline.json",
-            "{BASE}/hyperdoc_v2/{filename}_footer.txt",
-        ],
-        "writes": [
-            "{BASE}/hyperdoc_previews_v2/{filename}.py",
-        ],
-        "imports_from": ["config"],
-    },
-    "phase_4_insertion/insert_hyperdocs_3part.py": {
         "reads": [
             "{V5_CODE}/{filename}.py",               # source code files
             "{BASE}/hyperdoc_v2/{filename}_header.txt",
@@ -251,7 +194,7 @@ PHASE3_4_IO = {
     "phase_4_insertion/insert_hyperdocs.py": {
         "reads": [
             "{V5_CODE}/{source_file}.py",            # source code files
-            "{BASE}/hyperdoc_blocks/{block_file}.txt",
+            "{BASE}/hyperdoc_blocks/{block_file}_hyperdoc.txt",
         ],
         "writes": [
             "{BASE}/hyperdoc_previews/{source_file}.py",
@@ -267,28 +210,6 @@ PHASE3_4_IO = {
             "~/PERMANENT_HYPERDOCS/hyperdocs/{stem}_hyperdoc.json",  # save/append/migrate
         ],
         "imports_from": ["config"],
-    },
-    "phase_4_insertion/insert_from_json.py": {
-        "reads": [
-            "output/hyperdocs/*_hyperdoc.json",                      # all hyperdoc JSONs
-            # Source files found via find_source_file() searching:
-            # ~/*, ~/.claude/hooks/*, apps/**/*, archive/**/*, output/**/*
-            "{source_file}.py",                                      # various source code files
-            "{source_file}.md",                                      # non-Python source files
-            "{source_file}.html",
-            "{source_file}.js",
-            "{source_file}.json",
-            "{source_file}.toml",
-            "{source_file}.txt",
-        ],
-        "writes": [
-            "output/enhanced_files_archive/{filename}.py",
-            "output/enhanced_files_archive/{parent}__{filename}.py",
-            "output/enhanced_files_archive/{filename}.md",           # non-python enhanced
-            "output/enhanced_files_archive/{filename}.html",
-            "output/enhanced_files_archive/{filename}.json.hyperdoc.md",  # JSON companion
-        ],
-        "imports_from": [],
     },
     "phase_4_insertion/insert_from_phase4b.py": {
         "reads": [
@@ -315,24 +236,4 @@ PHASE3_4_IO = {
     # =========================================================================
     # phase_4_hyperdoc_writing/
     # =========================================================================
-    "phase_4_hyperdoc_writing/aggregate_dossiers.py": {
-        "reads": [
-            "output/session_*/file_dossiers.json",
-            "output/code_similarity_index.json",
-            "~/PERMANENT_HYPERDOCS/indexes/code_similarity_index.json",
-            "output/session_*/file_genealogy.json",
-            "~/PERMANENT_HYPERDOCS/sessions/session_*/file_genealogy.json",
-            "output/session_*/session_metadata.json",
-            "output/session_*/enriched_session.json",
-            "output/session_*/enriched_session_v2.json",
-            "output/session_*/file_evidence/*_evidence.json",
-            "~/PERMANENT_HYPERDOCS/sessions/session_*/file_evidence/*_evidence.json",
-        ],
-        "writes": [
-            "output/cross_session_file_index.json",
-            "output/hyperdoc_inputs/{safe_filename}.json",
-            "~/PERMANENT_HYPERDOCS/hyperdoc_inputs/{safe_filename}.json",
-        ],
-        "imports_from": ["tools.file_lock"],
-    },
 }

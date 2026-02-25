@@ -176,35 +176,6 @@ TOOLS_IO = {
         ],
     },
 
-    # ── tools/extract_viz_data.py ─────────────────────────────────
-    "tools/extract_viz_data.py": {
-        "reads": [
-            # extract_file_data: HYPERDOCS.glob("*_hyperdoc.json") -> f.read_text() -> json.loads
-            "tools/hyperdocs/*_hyperdoc.json",
-            # extract_session_data: session dirs -> (sd / "session_metadata.json").read_text() -> json.loads
-            "tools/session_*/session_metadata.json",
-            # checks existence of 11 phase output files per session dir
-            "tools/session_*/enriched_session.json",
-            "tools/session_*/thread_extractions.json",
-            "tools/session_*/geological_notes.json",
-            "tools/session_*/semantic_primitives.json",
-            "tools/session_*/explorer_notes.json",
-            "tools/session_*/idea_graph.json",
-            "tools/session_*/synthesis.json",
-            "tools/session_*/grounded_markers.json",
-            "tools/session_*/file_dossiers.json",
-            "tools/session_*/claude_md_analysis.json",
-            # extract_idea_graphs: (sd / "idea_graph.json").read_text() -> json.loads
-            # compute_aggregates: (BASE / "enhanced_files").glob("*.py") for count
-            "tools/enhanced_files/*.py",
-        ],
-        "writes": [
-            # main: out_path.write_text(json.dumps(dashboard_data))
-            "tools/dashboard_data.json",
-        ],
-        "imports_from": [],
-    },
-
     # ── tools/extract_dashboard_data.py ───────────────────────────
     "tools/extract_dashboard_data.py": {
         "reads": [
@@ -330,20 +301,6 @@ TOOLS_IO = {
             "tools.log_config",
             "tools.json_io",
         ],
-    },
-
-    # ── tools/positioning_analyzer.py ─────────────────────────────
-    "tools/positioning_analyzer.py": {
-        "reads": [
-            # discover_python_files: os.walk(REPO) scanning all .py files
-            # extract_io_from_source: filepath.read_text() for each .py file
-            "**/*.py",
-        ],
-        "writes": [
-            # analyze: open(OUTPUT_FILE, 'w') -> json.dump
-            "positioning_analysis.json",
-        ],
-        "imports_from": [],
     },
 
     # ── tools/analyze_data_flow.py ────────────────────────────────
@@ -487,6 +444,131 @@ TOOLS_IO = {
         "imports_from": [
             "tools.generate_schematic",
             "tools.analyze_data_flow",
+        ],
+    },
+
+    # ── tools/schema_normalizer.py ────────────────────────────────
+    "tools/schema_normalizer.py": {
+        "reads": [
+            # 9 agent-produced JSON files per session
+            "{session}/thread_extractions.json",
+            "{session}/geological_notes.json",
+            "{session}/semantic_primitives.json",
+            "{session}/explorer_notes.json",
+            "{session}/idea_graph.json",
+            "{session}/synthesis.json",
+            "{session}/grounded_markers.json",
+            "{session}/file_dossiers.json",
+            "{session}/claude_md_analysis.json",
+        ],
+        "writes": [
+            # Same 9 files (normalized via atomic tempfile + rename)
+            "{session}/thread_extractions.json",
+            "{session}/geological_notes.json",
+            "{session}/semantic_primitives.json",
+            "{session}/explorer_notes.json",
+            "{session}/idea_graph.json",
+            "{session}/synthesis.json",
+            "{session}/grounded_markers.json",
+            "{session}/file_dossiers.json",
+            "{session}/claude_md_analysis.json",
+            # Backup of originals before normalization
+            "{session}/backups/{filename}",
+            # Global normalization log
+            "{INDEXES_DIR}/normalization_log.json",
+        ],
+        "imports_from": [
+            "tools.log_config",  # get_logger
+        ],
+    },
+
+    # ── tools/schema_validator.py ─────────────────────────────────
+    "tools/schema_validator.py": {
+        "reads": [
+            # 9 agent-produced JSON files per session (same as schema_normalizer)
+            "{session}/thread_extractions.json",
+            "{session}/geological_notes.json",
+            "{session}/semantic_primitives.json",
+            "{session}/explorer_notes.json",
+            "{session}/idea_graph.json",
+            "{session}/synthesis.json",
+            "{session}/grounded_markers.json",
+            "{session}/file_dossiers.json",
+            "{session}/claude_md_analysis.json",
+        ],
+        "writes": [
+            # Writes via schema_normalizer.normalize_file when validate_and_normalize is called
+            # (same 9 files, normalized in-place)
+        ],
+        "imports_from": [
+            "tools.schema_normalizer",  # NORMALIZERS
+            "tools.log_config",         # get_logger
+        ],
+    },
+
+    # ── tools/normalize_agent_output.py ───────────────────────────
+    "tools/normalize_agent_output.py": {
+        "reads": [
+            # 9 agent-produced JSON files per session
+            "{session}/thread_extractions.json",
+            "{session}/geological_notes.json",
+            "{session}/semantic_primitives.json",
+            "{session}/explorer_notes.json",
+            "{session}/idea_graph.json",
+            "{session}/synthesis.json",
+            "{session}/grounded_markers.json",
+            "{session}/file_dossiers.json",
+            "{session}/claude_md_analysis.json",
+        ],
+        "writes": [
+            # Same 9 files (normalized via normalize_file atomic write)
+            "{session}/thread_extractions.json",
+            "{session}/geological_notes.json",
+            "{session}/semantic_primitives.json",
+            "{session}/explorer_notes.json",
+            "{session}/idea_graph.json",
+            "{session}/synthesis.json",
+            "{session}/grounded_markers.json",
+            "{session}/file_dossiers.json",
+            "{session}/claude_md_analysis.json",
+        ],
+        "imports_from": [
+            "tools.schema_normalizer",  # NORMALIZERS, normalize_file
+            "tools.schema_validator",   # CANONICAL_DATA_KEYS, validate_file
+            "tools.log_config",         # get_logger
+        ],
+    },
+
+    # ── tools/completeness_scanner.py ─────────────────────────────
+    "tools/completeness_scanner.py": {
+        "reads": [
+            # All expected pipeline files per session (field-level inspection)
+            "{session}/enriched_session.json",
+            "{session}/session_metadata.json",
+            "{session}/safe_condensed.json",
+            "{session}/safe_tier4.json",
+            "{session}/tier2plus_messages.json",
+            "{session}/tier4_priority_messages.json",
+            "{session}/user_messages_tier2plus.json",
+            "{session}/conversation_condensed.json",
+            "{session}/emergency_contexts.json",
+            "{session}/thread_extractions.json",
+            "{session}/geological_notes.json",
+            "{session}/semantic_primitives.json",
+            "{session}/explorer_notes.json",
+            "{session}/idea_graph.json",
+            "{session}/synthesis.json",
+            "{session}/grounded_markers.json",
+            "{session}/file_dossiers.json",
+            "{session}/claude_md_analysis.json",
+            "{session}/ground_truth_verification.json",
+            "{session}/file_genealogy.json",
+        ],
+        "writes": [
+            "{INDEXES_DIR}/completeness_report.json",
+        ],
+        "imports_from": [
+            "tools.log_config",  # get_logger
         ],
     },
 }

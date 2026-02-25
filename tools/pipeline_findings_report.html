@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Structural Findings — Hyperdocs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-body: 'Space Grotesk', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    --bg: #0a0a0a;
+    --surface: #131315;
+    --surface2: #1a1a1e;
+    --surface-elevated: #1e1e24;
+    --border: rgba(255,255,255,0.06);
+    --border-bright: rgba(255,255,255,0.12);
+    --text: #e0e0e0;
+    --text-dim: #777;
+    --accent: #f87171;
+    --accent-dim: rgba(248,113,113,0.1);
+    --cyan: #22d3ee;
+    --cyan-dim: rgba(34,211,238,0.08);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.08);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.08);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167,139,250,0.08);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.08);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --surface2: #f5f5f5;
+      --surface-elevated: #ffffff;
+      --border: rgba(0,0,0,0.07);
+      --border-bright: rgba(0,0,0,0.14);
+      --text: #1a1a1a;
+      --text-dim: #888;
+      --accent: #dc2626;
+      --accent-dim: rgba(220,38,38,0.06);
+      --cyan: #0891b2;
+      --cyan-dim: rgba(8,145,178,0.06);
+      --amber: #d97706;
+      --amber-dim: rgba(217,119,6,0.06);
+      --green: #16a34a;
+      --green-dim: rgba(22,163,74,0.06);
+      --purple: #7c3aed;
+      --purple-dim: rgba(124,58,237,0.06);
+      --red: #dc2626;
+      --red-dim: rgba(220,38,38,0.06);
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse at 30% 0%, var(--accent-dim) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, var(--cyan-dim) 0%, transparent 40%);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.7;
+    padding: 0 20px 80px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  header {
+    padding: 60px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  header .sub {
+    color: var(--text-dim);
+    font-size: 15px;
+  }
+
+  /* KPI cards */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    animation: fadeUp 0.5s ease both;
+  }
+  .kpi:nth-child(2) { animation-delay: 0.08s; }
+  .kpi:nth-child(3) { animation-delay: 0.16s; }
+  .kpi:nth-child(4) { animation-delay: 0.24s; }
+  .kpi .num {
+    font-size: 36px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .kpi .label {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .kpi.warn .num { color: var(--amber); }
+  .kpi.danger .num { color: var(--accent); }
+  .kpi.info .num { color: var(--cyan); }
+  .kpi.ok .num { color: var(--green); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .kpi, .finding, tr { animation: none !important; }
+  }
+
+  /* Sections */
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.5s ease both;
+  }
+  .finding h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .finding h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 28px 0 12px;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+  .finding p {
+    margin-bottom: 14px;
+    font-size: 15px;
+  }
+  .finding p + p { margin-top: 0; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .tag-danger { background: var(--red-dim); color: var(--red); }
+  .tag-warn { background: var(--amber-dim); color: var(--amber); }
+  .tag-ok { background: var(--green-dim); color: var(--green); }
+  .tag-info { background: var(--cyan-dim); color: var(--cyan); }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: var(--surface2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 16px 0;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  thead { position: sticky; top: 0; z-index: 2; }
+  th {
+    background: var(--surface2);
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border-bright);
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  tr:hover td { background: var(--accent-dim); }
+  td code { font-size: 12px; }
+
+  /* Writer list inside cells */
+  .writer-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .writer-list li {
+    padding: 2px 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .writer-list li .phase-badge {
+    display: inline-block;
+    width: 20px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 3px;
+    padding: 1px 0;
+    margin-right: 4px;
+  }
+  .p0 { background: var(--cyan-dim); color: var(--cyan); }
+  .p1 { background: var(--purple-dim); color: var(--purple); }
+  .p2 { background: var(--green-dim); color: var(--green); }
+  .p3 { background: var(--amber-dim); color: var(--amber); }
+  .p4 { background: var(--red-dim); color: var(--red); }
+  .pt { background: rgba(255,255,255,0.05); color: var(--text-dim); }
+
+  .verdict {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+  }
+  .verdict-ok { background: var(--green-dim); color: var(--green); }
+  .verdict-warn { background: var(--amber-dim); color: var(--amber); }
+  .verdict-danger { background: var(--red-dim); color: var(--red); }
+
+  .arrow { color: var(--text-dim); margin: 0 4px; }
+
+  .callout {
+    background: var(--surface2);
+    border-left: 3px solid var(--amber);
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout.callout-danger { border-left-color: var(--accent); }
+  .callout.callout-info { border-left-color: var(--cyan); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Pipeline Structural Findings</h1>
+  <p class="sub">Analysis of the Hyperdocs I/O manifest &mdash; 66 scripts, 64 data files, 361 edges &mdash; generated 2026-02-25</p>
+</header>
+
+<div class="kpi-row">
+  <div class="kpi danger">
+    <div class="num">11</div>
+    <div class="label">Data files with multiple writers</div>
+  </div>
+  <div class="kpi warn">
+    <div class="num">5</div>
+    <div class="label">Scripts violating phase boundaries</div>
+  </div>
+  <div class="kpi info">
+    <div class="num">4</div>
+    <div class="label">Duplicate Phase 2 implementations</div>
+  </div>
+  <div class="kpi ok">
+    <div class="num">6</div>
+    <div class="label">Intentional multi-writer patterns</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- FINDING 1 -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+
+<div class="finding" style="animation-delay:0.3s">
+  <h2><span class="tag tag-danger">Finding 1</span> Multiple Writers to the Same Data File</h2>
+
+  <p>Eleven data files in the pipeline are written by more than one script. When two scripts write to the same file, only one script's output survives at runtime. If both scripts run during a pipeline execution, the second writer silently overwrites the first writer's output. Whether this is a problem depends on the intent: some multi-writer patterns are by design, while others represent duplicate implementations that should be consolidated.</p>
+
+  <p>The eleven multi-writer data files fall into three categories, analyzed below.</p>
+
+  <!-- ─── Category A: Schema normalizers ─── -->
+  <h3>Category A: Schema Normalizers (Intentional)</h3>
+
+  <p>Two scripts in <code>phase_0_prep/</code> &mdash; <code>schema_normalizer.py</code> and <code>normalize_agent_output.py</code> &mdash; both read and write the same nine JSON files. These nine files are the primary outputs of the Opus extraction agents in Phases 1 through 3:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data file</th><th>Primary producer</th><th>Schema normalizers</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><code>thread_extractions.json</code></td><td><code>opus_phase1.py</code> (P1), <code>extract_threads.py</code> (P1)</td><td>Both</td><td><span class="verdict verdict-ok">Intentional</span></td></tr>
+        <tr><td><code>geological_notes.json</code></td><td><code>opus_phase1.py</code> (P1)</td><td>Both</td><td><span class="verdict verdict-ok">Intentional</span></td></tr>
+        <tr><td><code>semantic_primitives.json</code></td><td><code>opus_phase1.py</code> (P1), <code>tag_semantic_primitives.py</code> (P1)</td><td>Both</td><td><span class="verdict verdict-ok">Intentional</span></td></tr>
+        <tr><td><code>explorer_notes.json</code></td><td><code>opus_phase1.py</code> (P1)</td><td>Both</td><td><span class="verdict verdict-ok">Intentional</span></td></tr>
+        <tr><td><code>idea_graph.json</code></td><td>4 Phase 2 scripts + <code>run_pipeline.py</code></td><td>Both</td><td><span class="verdict verdict-ok">Intentional</span></td></tr>
+        <tr><td><code>synthesis.json</code></td><td>4 Phase 2 scripts + <code>run_pipeline.py</code></td><td>Both</td><td><span class="verdict verdict-ok">Intentional</span></td></tr>
+        <tr><td><code>grounded_markers.json</code></td><td>4 Phase 2 scripts + <code>run_pipeline.py</code></td><td>Both</td><td><span class="verdict verdict-ok">Intentional</span></td></tr>
+        <tr><td><code>file_dossiers.json</code></td><td><code>generate_dossiers.py</code> (P3)</td><td>Both</td><td><span class="verdict verdict-ok">Intentional</span></td></tr>
+        <tr><td><code>claude_md_analysis.json</code></td><td><code>generate_dossiers.py</code> (P3)</td><td>Both</td><td><span class="verdict verdict-ok">Intentional</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>This is a deliberate pipeline pattern. LLM agents produce JSON output with inconsistent schemas &mdash; the same semantic data filed under different key names, arrays where dicts are expected, missing required fields. The schema normalizers run <em>after</em> agent output is complete, read each file, apply canonical transformations (key renaming, structure flattening, field injection), and write the file back in place. They create atomic backups before writing, and they log every transformation to <code>normalization_log.json</code>.</p>
+
+  <p>The fact that there are two separate normalizer scripts doing the same job to the same files (<code>schema_normalizer.py</code> and <code>normalize_agent_output.py</code>) is itself a duplicate that was flagged and resolved earlier in this session &mdash; they were near-identical, with <code>normalize_agent_output.py</code> being the version with structured logging. The older <code>post_agent_normalize.py</code> was moved to obsolete.</p>
+
+  <div class="callout callout-info">
+    <strong>Note:</strong> While the normalizer pattern is intentional, having two normalizer scripts that do the same thing (<code>schema_normalizer.py</code> and <code>normalize_agent_output.py</code>) is still redundant. They were identified as a duplicate pair earlier, but both were kept because they have slightly different import chains. Consolidating them into one canonical normalizer would simplify the pipeline.
+  </div>
+
+  <!-- ─── Category B: Phase 2 duplicates ─── -->
+  <h3>Category B: Four Duplicate Phase 2 Implementations (Problem)</h3>
+
+  <p>Three data files &mdash; <code>idea_graph.json</code>, <code>synthesis.json</code>, and <code>grounded_markers.json</code> &mdash; are each written by <strong>five separate scripts</strong>. Four of these are in <code>phase_2_synthesis/</code>, plus <code>tools/run_pipeline.py</code> which contains an inline implementation of the same logic.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Script</th><th>Type</th><th>Lines</th><th>Uses json_io</th><th>Uses log_config</th><th>Invocation</th></tr></thead>
+      <tbody>
+        <tr><td><code>backfill_phase2.py</code></td><td><span class="tag tag-ok">core</span></td><td>~580</td><td>Yes</td><td>Yes</td><td>CLI with session args</td></tr>
+        <tr><td><code>batch_p2_generator.py</code></td><td><span class="tag tag-warn">batch</span></td><td>~480</td><td>No</td><td>No</td><td>Iterates all sessions</td></tr>
+        <tr><td><code>batch_phase2_processor.py</code></td><td><span class="tag tag-warn">batch</span></td><td>~550</td><td>No</td><td>No</td><td>Iterates all sessions</td></tr>
+        <tr><td><code>build_phase2_outputs.py</code></td><td><span class="tag tag-info">support</span></td><td>~560</td><td>Yes</td><td>Yes</td><td>CLI with session args</td></tr>
+        <tr><td><code>run_pipeline.py</code></td><td><span class="tag tag-info">tool</span></td><td>~320</td><td>No</td><td>Yes</td><td>Full pipeline runner</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>All five scripts read the same five Phase 1 input files (<code>thread_extractions.json</code>, <code>geological_notes.json</code>, <code>semantic_primitives.json</code>, <code>explorer_notes.json</code>, and <code>session_metadata.json</code>), perform synthesis analysis, and write the same three output files. Despite having identical I/O signatures, the code is <strong>not identical</strong>. Diffs between the four Phase 2 scripts range from 234 lines (the closest pair: <code>backfill_phase2.py</code> vs <code>batch_p2_generator.py</code>) to 1,161 lines (the most divergent pair: <code>backfill_phase2.py</code> vs <code>batch_phase2_processor.py</code>). They represent four separate attempts at implementing Phase 2 synthesis, written at different times, that were never consolidated into a single canonical version.</p>
+
+  <div class="callout callout-danger">
+    <strong>Recommendation:</strong> Consolidate to a single canonical implementation. The strongest candidate is <code>backfill_phase2.py</code> because it uses the standard pipeline utilities (<code>tools.json_io</code> for file I/O and <code>tools.log_config</code> for structured logging), while <code>batch_p2_generator.py</code> and <code>batch_phase2_processor.py</code> use raw <code>print()</code> statements and inline <code>json.load()</code> calls. The batch orchestration pattern (iterating all sessions) should be handled by a separate runner script that calls the canonical implementation, not by duplicating the synthesis logic.
+  </div>
+
+  <!-- ─── Category C: Other multi-writers ─── -->
+  <h3>Category C: Other Multi-Writer Patterns</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data file</th><th>Writers</th><th>Explanation</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>claude_md_analysis.json</code><br><code>file_dossiers.json</code></td>
+          <td>
+            <ul class="writer-list">
+              <li><span class="phase-badge p3">P3</span> generate_dossiers.py</li>
+              <li><span class="phase-badge p0">P0</span> normalize_agent_output.py</li>
+              <li><span class="phase-badge p0">P0</span> schema_normalizer.py</li>
+            </ul>
+          </td>
+          <td>Phase 3 creates these files from scratch. The Phase 0 normalizers then repair their schemas after the fact. This is the same intentional normalize-in-place pattern described in Category A.</td>
+          <td><span class="verdict verdict-ok">Intentional</span></td>
+        </tr>
+        <tr>
+          <td><code>hyperdoc_blocks/*_hyperdoc.txt</code></td>
+          <td>
+            <ul class="writer-list">
+              <li><span class="phase-badge p3">P3</span> write_hyperdocs.py</li>
+              <li><span class="phase-badge p3">P3</span> write_more_hyperdocs.py</li>
+            </ul>
+          </td>
+          <td>Both scripts generate hyperdoc text blocks for insertion into source code. <code>write_hyperdocs.py</code> processes an initial set of files; <code>write_more_hyperdocs.py</code> handles the remaining files that weren't covered. They write to the same output directory but target different source files, so they do not overwrite each other's output.</td>
+          <td><span class="verdict verdict-ok">Intentional</span></td>
+        </tr>
+        <tr>
+          <td><code>pipeline_complete_anatomy.xlsx</code></td>
+          <td>
+            <ul class="writer-list">
+              <li><span class="phase-badge pt">T</span> generate_pipeline_excel.py</li>
+              <li><span class="phase-badge pt">T</span> add_data_trace_sheets.py</li>
+            </ul>
+          </td>
+          <td><code>generate_pipeline_excel.py</code> creates the workbook with the main anatomy sheets. <code>add_data_trace_sheets.py</code> then opens the same workbook and appends additional trace sheets to it. This is a sequential create-then-augment pattern, not a conflict.</td>
+          <td><span class="verdict verdict-ok">Intentional</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- FINDING 2 -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+
+<div class="finding" style="animation-delay:0.5s">
+  <h2><span class="tag tag-warn">Finding 2</span> Phase Boundary Violations</h2>
+
+  <p>Five scripts read data files that are produced by phases that run <em>after</em> them in the pipeline sequence. A script in Phase 0 cannot meaningfully run during Phase 0 if it requires output from Phase 1, Phase 2, or Phase 3. These scripts are misplaced in the directory structure &mdash; they live in <code>phase_0_prep/</code> or <code>phase_1_extraction/</code>, but they functionally operate as post-processing utilities that should run after all extraction and synthesis phases are complete.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Script</th><th>Directory</th><th>Reads from Phases</th><th>What it does</th><th>Should be in</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>completeness_scanner.py</code></td>
+          <td><code>phase_0_prep/</code></td>
+          <td><span class="phase-badge p1">P1</span> <span class="phase-badge p2">P2</span> <span class="phase-badge p3">P3</span></td>
+          <td>Reads 20 different pipeline output files across all phases and checks every field for completeness. Produces a quality report. This is a full-pipeline QA tool that cannot run until the entire pipeline has finished processing a session.</td>
+          <td><code>tools/</code></td>
+        </tr>
+        <tr>
+          <td><code>schema_normalizer.py</code></td>
+          <td><code>phase_0_prep/</code></td>
+          <td><span class="phase-badge p1">P1</span> <span class="phase-badge p2">P2</span> <span class="phase-badge p3">P3</span></td>
+          <td>Reads and rewrites 9 agent-produced JSON files to enforce canonical schemas. The files it normalizes are produced by Phase 1 agents (<code>opus_phase1.py</code>), Phase 2 synthesizers (<code>backfill_phase2.py</code>), and Phase 3 dossier generators (<code>generate_dossiers.py</code>). It must run after those phases complete.</td>
+          <td><code>tools/</code></td>
+        </tr>
+        <tr>
+          <td><code>normalize_agent_output.py</code></td>
+          <td><code>phase_0_prep/</code></td>
+          <td><span class="phase-badge p1">P1</span> <span class="phase-badge p2">P2</span> <span class="phase-badge p3">P3</span></td>
+          <td>Near-identical to <code>schema_normalizer.py</code>. Reads and rewrites the same 9 files. This is the logging-enabled version of the same normalizer. Both scripts exist because they were duplicated rather than consolidated.</td>
+          <td><code>tools/</code></td>
+        </tr>
+        <tr>
+          <td><code>schema_validator.py</code></td>
+          <td><code>phase_0_prep/</code></td>
+          <td><span class="phase-badge p1">P1</span> <span class="phase-badge p2">P2</span> <span class="phase-badge p3">P3</span></td>
+          <td>Validates the 9 agent-produced JSON files against canonical schemas. Delegates to <code>schema_normalizer.py</code> for repairs when validation fails. Like the normalizers, it requires all agent output to exist before it can run.</td>
+          <td><code>tools/</code></td>
+        </tr>
+        <tr>
+          <td><code>interactive_batch_runner.py</code></td>
+          <td><code>phase_1_extraction/</code></td>
+          <td><span class="phase-badge p2">P2</span></td>
+          <td>A batch orchestrator that scans all session directories and reports progress. It checks for the existence of Phase 2 output files (<code>idea_graph.json</code>, <code>synthesis.json</code>, <code>grounded_markers.json</code>) to determine which sessions are fully processed. These are existence checks for progress reporting, not data reads for processing.</td>
+          <td>Acceptable in <code>phase_1_extraction/</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Why This Matters</h3>
+
+  <p>The pipeline is designed to run in sequential phases: Phase 0 prepares raw data, Phase 1 extracts structure via LLM agents, Phase 2 synthesizes connections, Phase 3 writes dossiers, and Phase 4 aggregates and inserts hyperdocs. Each phase depends only on the outputs of prior phases. This sequential dependency chain is what makes the pipeline predictable and debuggable.</p>
+
+  <p>When a script lives in <code>phase_0_prep/</code> but reads from Phase 3, it violates this contract. Anyone looking at the directory structure would reasonably assume that all scripts in <code>phase_0_prep/</code> can run during Phase 0 &mdash; that is, before any LLM agents have been invoked. The four violating scripts cannot. They silently fail or produce empty results if run during actual Phase 0 processing, because the files they read from do not yet exist.</p>
+
+  <p>The <code>interactive_batch_runner.py</code> case is less severe. It lives in <code>phase_1_extraction/</code> and reads Phase 2 files, but only to check whether they exist (for progress reporting). It does not process their contents. This is a pragmatic batch tool that needs visibility into later phases to report overall pipeline progress, and placing it in Phase 1 is defensible since its primary function is orchestrating Phase 1 extraction runs.</p>
+
+  <h3>The Root Cause</h3>
+
+  <p>The four misplaced scripts &mdash; <code>completeness_scanner.py</code>, <code>schema_normalizer.py</code>, <code>normalize_agent_output.py</code>, and <code>schema_validator.py</code> &mdash; were all written as utilities for working with agent output. They ended up in <code>phase_0_prep/</code> because the schema normalization logic was originally developed alongside the Phase 0 enrichment code, and the completeness scanner was built to validate Phase 0's output before it evolved to check all phases. As the pipeline grew, these scripts accumulated dependencies on later phases without being relocated.</p>
+
+  <div class="callout">
+    <strong>Recommendation:</strong> Move <code>completeness_scanner.py</code>, <code>schema_normalizer.py</code>, <code>normalize_agent_output.py</code>, and <code>schema_validator.py</code> from <code>phase_0_prep/</code> to <code>tools/</code>. They are cross-phase utilities, not Phase 0 processing steps. This change is purely organizational &mdash; the code itself does not need to change, only the file location and any import paths that reference them. Update <code>phase_0_prep/__init__.py</code> if it exports these modules, and update any scripts that import from <code>phase_0_prep.schema_normalizer</code> to import from <code>tools.schema_normalizer</code> instead.
+  </div>
+
+</div>
+
+<footer style="text-align:center;padding:40px 0;color:var(--text-dim);font-size:13px;">
+  Generated from hand-curated I/O manifest &mdash; 4 Opus agents read every pipeline file line by line
+</footer>
+
+</body>
+</html>
