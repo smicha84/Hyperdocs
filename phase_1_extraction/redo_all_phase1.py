@@ -163,22 +163,7 @@ DUPLICATE_SKIP_IDS = _build_duplicate_skip_ids()
 
 # ── Agent Prompts ───────────────────────────────────────────────────────
 
-def thread_analyst_prompt(session_id, safe_condensed, safe_tier4, session_metadata, code_similarity_context=None):
-    code_sim_section = ""
-    if code_similarity_context and code_similarity_context.get("matches_included", 0) > 0:
-        code_sim_section = f"""
-=== code_similarity_context.json (file relationships) ===
-{json.dumps(code_similarity_context, indent=2)}
-
-NOTE: This shows code similarity relationships between files mentioned in this session.
-Pattern types: dead_copy (>90% identical, one is redundant), evolution_pair (60-90% similar,
-version drift), function_clone (>50% shared functions), partial_extraction (one is subset
-of other), template_variant (same structure, different content), import_twin (same ecosystem,
-different purpose), interface_mismatch (same function names, diverged implementations).
-Use file relationships to group related threads — e.g., messages about dead copies or
-evolution pairs likely belong to the same software/code thread.
-"""
-
+def thread_analyst_prompt(session_id, safe_condensed, safe_tier4, session_metadata):
     return f"""You are the Thread Analyst for the Hyperdocs pipeline. Extract 6 analytical threads from session {session_id}.
 
 CRITICAL: Only reference msg_index values that actually appear in the input data.
@@ -194,7 +179,7 @@ INPUT DATA:
 
 === safe_condensed.json (all messages, metadata only) ===
 {json.dumps(safe_condensed, indent=2)}
-{code_sim_section}
+
 OUTPUT: Return ONLY valid JSON with this EXACT structure (no markdown, no explanation):
 {{
   "session_id": "{session_id}",
@@ -214,23 +199,7 @@ OUTPUT: Return ONLY valid JSON with this EXACT structure (no markdown, no explan
 IMPORTANT: Return ONLY the JSON. No markdown code fences. No explanation text."""
 
 
-def geological_reader_prompt(session_id, safe_condensed, safe_tier4, session_metadata, code_similarity_context=None):
-    code_sim_section = ""
-    if code_similarity_context and code_similarity_context.get("matches_included", 0) > 0:
-        code_sim_section = f"""
-=== code_similarity_context.json (file relationships) ===
-{json.dumps(code_similarity_context, indent=2)}
-
-NOTE: This shows code similarity relationships between files mentioned in this session.
-Pattern types: dead_copy (>90% identical, one is redundant), evolution_pair (60-90% similar,
-version drift), function_clone (>50% shared functions), partial_extraction (one is subset
-of other), template_variant (same structure, different content), import_twin (same ecosystem,
-different purpose), interface_mismatch (same function names, diverged implementations).
-File relationship patterns are geological signals: dead_copy = fossilized layer, evolution_pair =
-sedimentation drift, function_clone = mineral vein across strata. Use these to identify
-geological phases where file duplication or divergence occurred.
-"""
-
+def geological_reader_prompt(session_id, safe_condensed, safe_tier4, session_metadata):
     return f"""You are the Geological Reader for the Hyperdocs pipeline. Perform multi-resolution analysis of session {session_id}.
 
 RULES:
@@ -248,7 +217,7 @@ INPUT DATA:
 
 === safe_condensed.json ===
 {json.dumps(safe_condensed, indent=2)}
-{code_sim_section}
+
 OUTPUT: Return ONLY valid JSON with this EXACT structure:
 {{
   "session_id": "{session_id}",
@@ -294,26 +263,10 @@ def _build_tier2plus(safe_condensed, safe_tier4):
     return tier2plus
 
 
-def primitives_tagger_prompt(session_id, safe_condensed, safe_tier4, session_metadata, subset_indices=None, code_similarity_context=None):
+def primitives_tagger_prompt(session_id, safe_condensed, safe_tier4, session_metadata, subset_indices=None):
     tier2plus = _build_tier2plus(safe_condensed, safe_tier4)
     if subset_indices is not None:
         tier2plus = [m for m in tier2plus if m["i"] in subset_indices]
-
-    code_sim_section = ""
-    if code_similarity_context and code_similarity_context.get("matches_included", 0) > 0:
-        code_sim_section = f"""
-=== code_similarity_context.json (file relationships) ===
-{json.dumps(code_similarity_context, indent=2)}
-
-NOTE: This shows code similarity relationships between files mentioned in this session.
-Pattern types: dead_copy (>90% identical, one is redundant), evolution_pair (60-90% similar,
-version drift), function_clone (>50% shared functions), partial_extraction (one is subset
-of other), template_variant (same structure, different content), import_twin (same ecosystem,
-different purpose), interface_mismatch (same function names, diverged implementations).
-Use file relationship patterns to inform tagging — e.g., messages about dead copies may indicate
-cleanup intent, evolution pairs suggest refactoring action_vector, and function clones may
-indicate maintainability intent_marker.
-"""
 
     return f"""You are the Primitives Tagger for the Hyperdocs pipeline. Tag ALL of the following tier 2+ messages with the 7 semantic primitives for session {session_id}.
 
@@ -354,7 +307,7 @@ INPUT DATA:
 
 === TIER 2+ MESSAGES ONLY ({len(tier2plus)} messages to tag) ===
 {json.dumps(tier2plus, indent=2)}
-{code_sim_section}
+
 IMPORTANT: You MUST tag ALL {len(tier2plus)} messages above. Do not stop early. Do not truncate.
 
 OUTPUT: Return ONLY valid JSON:
@@ -372,24 +325,7 @@ Return ONLY JSON."""
 
 
 def explorer_verification_prompt(session_id, safe_condensed, safe_tier4, session_metadata,
-                                  thread_extractions, geological_notes, semantic_primitives,
-                                  code_similarity_context=None):
-    code_sim_section = ""
-    if code_similarity_context and code_similarity_context.get("matches_included", 0) > 0:
-        code_sim_section = f"""
-=== code_similarity_context.json (file relationships) ===
-{json.dumps(code_similarity_context, indent=2)}
-
-NOTE: This shows code similarity relationships between files mentioned in this session.
-Pattern types: dead_copy (>90% identical, one is redundant), evolution_pair (60-90% similar,
-version drift), function_clone (>50% shared functions), partial_extraction (one is subset
-of other), template_variant (same structure, different content), import_twin (same ecosystem,
-different purpose), interface_mismatch (same function names, diverged implementations).
-VERIFICATION: Check whether the other agents correctly identified dead copies and evolution
-pairs. Flag any dead_copy files that the Thread Analyst treated as independent work. Flag
-any evolution_pairs the Geological Reader missed as geological drift signals.
-"""
-
+                                  thread_extractions, geological_notes, semantic_primitives):
     return f"""You are the Free Explorer AND Verification Agent for the Hyperdocs pipeline.
 
 Your job has TWO parts for session {session_id}:
@@ -428,7 +364,7 @@ INPUT DATA:
 
 === semantic_primitives.json (from Primitives Tagger) ===
 {json.dumps(semantic_primitives, indent=2)}
-{code_sim_section}
+
 OUTPUT: Return ONLY valid JSON:
 {{
   "session_id": "{session_id}",
@@ -545,8 +481,7 @@ def call_opus(prompt, max_retries=3):
 def load_session_data(session_dir):
     """Load the safe input files for a session."""
     files = {}
-    for fname in ["safe_condensed.json", "safe_tier4.json", "session_metadata.json",
-                  "code_similarity_context.json"]:
+    for fname in ["safe_condensed.json", "safe_tier4.json", "session_metadata.json"]:
         fpath = session_dir / fname
         if fpath.exists():
             with open(fpath) as f:
@@ -624,7 +559,6 @@ def _make_chunk_data(data, chunk_msgs):
         "safe_condensed": {"messages": chunk_msgs, "count": len(chunk_msgs)},
         "safe_tier4": data["safe_tier4"],  # tier4 is small, send in full
         "session_metadata": data["session_metadata"],
-        "code_similarity_context": data.get("code_similarity_context", {}),
     }
     return chunk_data
 
@@ -698,8 +632,7 @@ def process_session(session_dir, progress):
         for ci, chunk in enumerate(chunks):
             chunk_data = _make_chunk_data(data, chunk)
             prompt = _prepend_commitments(thread_analyst_prompt(
-                session_id, chunk_data["safe_condensed"], chunk_data["safe_tier4"], chunk_data["session_metadata"],
-                code_similarity_context=chunk_data.get("code_similarity_context")
+                session_id, chunk_data["safe_condensed"], chunk_data["safe_tier4"], chunk_data["session_metadata"]
             ))
             r = call_opus(prompt)
             if r:
@@ -708,8 +641,7 @@ def process_session(session_dir, progress):
         thread_result = _merge_thread_results(chunk_results) if chunk_results else None
     else:
         prompt = _prepend_commitments(thread_analyst_prompt(
-            session_id, data["safe_condensed"], data["safe_tier4"], data["session_metadata"],
-            code_similarity_context=data.get("code_similarity_context")
+            session_id, data["safe_condensed"], data["safe_tier4"], data["session_metadata"]
         ))
         thread_result = call_opus(prompt)
     dt = time.time() - t0
@@ -733,8 +665,7 @@ def process_session(session_dir, progress):
         for ci, chunk in enumerate(chunks):
             chunk_data = _make_chunk_data(data, chunk)
             prompt = _prepend_commitments(geological_reader_prompt(
-                session_id, chunk_data["safe_condensed"], chunk_data["safe_tier4"], chunk_data["session_metadata"],
-                code_similarity_context=chunk_data.get("code_similarity_context")
+                session_id, chunk_data["safe_condensed"], chunk_data["safe_tier4"], chunk_data["session_metadata"]
             ))
             r = call_opus(prompt)
             if r:
@@ -743,8 +674,7 @@ def process_session(session_dir, progress):
         geo_result = _merge_geo_results(chunk_results) if chunk_results else None
     else:
         prompt = _prepend_commitments(geological_reader_prompt(
-            session_id, data["safe_condensed"], data["safe_tier4"], data["session_metadata"],
-            code_similarity_context=data.get("code_similarity_context")
+            session_id, data["safe_condensed"], data["safe_tier4"], data["session_metadata"]
         ))
         geo_result = call_opus(prompt)
     dt = time.time() - t0
@@ -771,8 +701,7 @@ def process_session(session_dir, progress):
         for ci, chunk in enumerate(chunks):
             chunk_data = _make_chunk_data(data, chunk)
             prompt = _prepend_commitments(primitives_tagger_prompt(
-                session_id, chunk_data["safe_condensed"], chunk_data["safe_tier4"], chunk_data["session_metadata"],
-                code_similarity_context=chunk_data.get("code_similarity_context")
+                session_id, chunk_data["safe_condensed"], chunk_data["safe_tier4"], chunk_data["session_metadata"]
             ))
             r = call_opus(prompt)
             if r:
@@ -783,8 +712,7 @@ def process_session(session_dir, progress):
     else:
         all_expected_indices = {m["i"] for m in tier2plus_all}
         prompt = _prepend_commitments(primitives_tagger_prompt(
-            session_id, data["safe_condensed"], data["safe_tier4"], data["session_metadata"],
-            code_similarity_context=data.get("code_similarity_context")
+            session_id, data["safe_condensed"], data["safe_tier4"], data["session_metadata"]
         ))
         prim_result = call_opus(prompt)
 
@@ -803,8 +731,7 @@ def process_session(session_dir, progress):
                 t1 = time.time()
                 cont_prompt = _prepend_commitments(primitives_tagger_prompt(
                     session_id, data["safe_condensed"], data["safe_tier4"],
-                    data["session_metadata"], subset_indices=remaining_indices,
-                    code_similarity_context=data.get("code_similarity_context")
+                    data["session_metadata"], subset_indices=remaining_indices
                 ))
                 cont_result = call_opus(cont_prompt)
                 dt += time.time() - t1
@@ -842,8 +769,7 @@ def process_session(session_dir, progress):
     t0 = time.time()
     prompt = _prepend_commitments(explorer_verification_prompt(
         session_id, data["safe_condensed"], data["safe_tier4"], data["session_metadata"],
-        thread_data, geo_data, prim_data,
-        code_similarity_context=data.get("code_similarity_context")
+        thread_data, geo_data, prim_data
     ))
     explorer_result = call_opus(prompt)
     dt = time.time() - t0
