@@ -91,21 +91,8 @@ except ImportError:
 MODEL = "claude-opus-4-6"
 MAX_TOKENS = 128000     # Hard API limit for claude-opus-4-6 output
 
-# Load API key from .env file — check multiple locations
-ENV_CANDIDATES = [
-    REPO / ".env",
-    REPO.parent.parent.parent.parent.parent / ".env",  # project root
-    Path.home() / "Hyperdocs" / ".env",
-]
-for env_path in ENV_CANDIDATES:
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, val = line.split("=", 1)
-                if key.strip() not in os.environ:  # don't override existing
-                    os.environ[key.strip()] = val.strip()
-        break  # use first found
+from config import load_env
+load_env()
 
 client = anthropic.Anthropic()
 

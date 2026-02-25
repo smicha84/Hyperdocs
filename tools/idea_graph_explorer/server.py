@@ -32,25 +32,12 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 from typing import Optional, Dict, List
 
-# ── .env loading (follows llm_pass_runner.py pattern) ───────────────
+# ── .env loading ───────────────────────────────────────────────
 
-_REPO = Path(__file__).resolve().parent
-_PROJECT_ROOT = _REPO.parent.parent
-
-_ENV_CANDIDATES = [
-    _PROJECT_ROOT / ".env",
-    _PROJECT_ROOT / ".claude" / "hooks" / "hyperdoc" / "hyperdocs_3" / ".env",
-    Path.home() / "Hyperdocs" / ".env",
-]
-for _env_path in _ENV_CANDIDATES:
-    if _env_path.exists():
-        for _line in _env_path.read_text().splitlines():
-            _line = _line.strip()
-            if _line and not _line.startswith("#") and "=" in _line:
-                _key, _val = _line.split("=", 1)
-                if _key.strip() not in os.environ:
-                    os.environ[_key.strip()] = _val.strip()
-        break
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(_PROJECT_ROOT))
+from config import load_env
+load_env()
 
 # ── Imports after env setup ─────────────────────────────────────────
 

@@ -906,14 +906,10 @@ def main():
         # LLM mode — requires API key
         anthropic_sdk = _lazy_import_anthropic()
 
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+        from config import load_env
+        load_env()
         api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            env_file = Path(__file__).resolve().parents[2] / ".env"
-            if env_file.exists():
-                for line in env_file.read_text().splitlines():
-                    if line.startswith("ANTHROPIC_API_KEY="):
-                        api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
-                        break
         if not api_key:
             print("ERROR: ANTHROPIC_API_KEY not set. Set it as an environment variable or in .env")
             sys.exit(1)
