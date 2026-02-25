@@ -66,7 +66,7 @@ PHASE_NUM_TO_ID = {0: "0", 1: "1", 2: "2", 3: "3", 4: "4a", -1: "tools"}
 EXCLUDED_DIRS = {
     "v5_compat", "output", "__pycache__", ".git", "commands",
     "obsolete", "archive_originals", "standby", "idea_graph_explorer",
-    "system_file_report", "hyperdoc_previews", "evidence",
+    "system_file_report", "hyperdoc_previews",
 }
 
 PIPELINE_SCRIPTS_SET = set(PIPELINE_SCRIPTS)
@@ -245,8 +245,10 @@ def generate():
         # I/O from hand-curated manifest
         if rel_path in COMPLETE_IO:
             manifest_hits += 1
-            raw_reads = COMPLETE_IO[rel_path].get("reads", [])
-            raw_writes = COMPLETE_IO[rel_path].get("writes", [])
+            entry = COMPLETE_IO[rel_path]
+            # Handle both lowercase and uppercase keys (different agents used different casing)
+            raw_reads = entry.get("reads", entry.get("READS", []))
+            raw_writes = entry.get("writes", entry.get("WRITES", []))
         else:
             manifest_misses.append(rel_path)
             raw_reads = []

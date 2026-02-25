@@ -861,3 +861,37 @@ fatal: could not read Username for 'https://github.com': Device not configured
 ............                                                             [100%]
 84 passed in 1.37s
 [2026-02-25 12:30:00] Tests passed.
+[main 0b53ad3] Auto-sync:  31 files changed, 4980 insertions(+), 560 deletions(-)
+ 31 files changed, 4980 insertions(+), 560 deletions(-)
+ create mode 100644 "Pipeline Structural Findings \342\200\224 Hyperdocs.pdf"
+ rename {phase_1_extraction => obsolete/duplicates_2026_02_25}/batch_orchestrator.py (100%)
+ rename {phase_2_synthesis => obsolete/duplicates_2026_02_25}/batch_p2_generator.py (100%)
+ rename {phase_2_synthesis => obsolete/duplicates_2026_02_25}/batch_phase2_processor.py (100%)
+ rename {phase_0_prep => obsolete/duplicates_2026_02_25}/build_opus_filtered.py (100%)
+ create mode 100644 obsolete/duplicates_2026_02_25/build_phase2_outputs.py
+ rename {phase_0_prep => obsolete/duplicates_2026_02_25}/deterministic_prep.py (100%)
+ rename {tools => obsolete/duplicates_2026_02_25}/extract_viz_data.py (100%)
+ rename {phase_3_hyperdoc_writing => obsolete/duplicates_2026_02_25}/generate_remaining_hyperdocs.py (100%)
+ rename {phase_4_insertion => obsolete/duplicates_2026_02_25}/hyperdoc_store_init.py (100%)
+ create mode 100644 obsolete/duplicates_2026_02_25/init_hyperdoc_store.py
+ create mode 100644 obsolete/duplicates_2026_02_25/insert_from_json.py
+ create mode 100644 obsolete/duplicates_2026_02_25/insert_hyperdocs_3part.py
+ rename phase_0_prep/batch_llm_orchestrator.py => obsolete/duplicates_2026_02_25/p0_batch_llm_orchestrator.py (100%)
+ rename phase_1_extraction/batch_llm_orchestrator.py => obsolete/duplicates_2026_02_25/p1_batch_llm_orchestrator.py (100%)
+ create mode 100644 obsolete/duplicates_2026_02_25/p1_redo_all_phase1.py
+ rename phase_4_hyperdoc_writing/aggregate_dossiers.py => obsolete/duplicates_2026_02_25/phase_4hw_aggregate_dossiers.py (100%)
+ rename {tools => obsolete/duplicates_2026_02_25}/positioning_analyzer.py (100%)
+ rename {phase_0_prep => obsolete/duplicates_2026_02_25}/post_agent_normalize.py (100%)
+ rename {phase_1_extraction => obsolete/duplicates_2026_02_25}/tag_primitives.py (100%)
+ create mode 100644 tools/completeness_scanner.py
+ create mode 100644 tools/normalize_agent_output.py
+ create mode 100644 tools/pipeline_findings_report.html
+ create mode 100644 tools/schema_normalizer.py
+ create mode 100644 tools/schema_validator.py
+fatal: could not read Username for 'https://github.com': Device not configured
+[2026-02-25 12:30:00] ERROR: git push failed
+[2026-02-25 13:30:00] Running tests...
+........................................................................ [ 85%]
+............                                                             [100%]
+84 passed in 1.90s
+[2026-02-25 13:30:00] Tests passed.
