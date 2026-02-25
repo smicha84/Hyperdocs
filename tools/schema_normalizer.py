@@ -764,7 +764,7 @@ def main():
     logger.info(f"{'DRY RUN — ' if args.dry_run else ''}Schema Normalizer")
     logger.info(f"Sessions: {len(session_dirs)}")
     logger.info(f"File types: {len(NORMALIZERS)}")
-    logger.info()
+    logger.info("")
 
     totals = Counter()
     per_file_totals = {fn: Counter() for fn in NORMALIZERS}
@@ -784,7 +784,7 @@ def main():
     logger.info("RESULTS")
     logger.info("=" * 70)
     logger.info(f"\nOverall: {dict(totals)}")
-    logger.info()
+    logger.info("")
     for filename in NORMALIZERS:
         counts = per_file_totals[filename]
         logger.info(f"  {filename:<36s}  {dict(counts)}")
