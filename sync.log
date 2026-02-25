@@ -788,3 +788,20 @@ fatal: could not read Username for 'https://github.com': Device not configured
 ............                                                             [100%]
 84 passed in 2.44s
 [2026-02-25 03:30:00] Tests passed.
+[main 24207d7] Auto-sync:  14 files changed, 508 insertions(+), 13 deletions(-)
+ 14 files changed, 508 insertions(+), 13 deletions(-)
+ create mode 100644 Dockerfile
+ create mode 100644 "Hyperdocs Commercial Readiness Report \342\200\224 February 25, 2026.pdf"
+ create mode 100644 MANIFEST.in
+ create mode 100644 QUICKSTART.md
+ create mode 100644 TROUBLESHOOTING.md
+ create mode 100644 hyperdocs/__init__.py
+ create mode 100644 hyperdocs/__main__.py
+ create mode 100644 hyperdocs/cli.py
+fatal: could not read Username for 'https://github.com': Device not configured
+[2026-02-25 03:30:00] ERROR: git push failed
+[2026-02-25 04:30:01] Running tests...
+........................................................................ [ 85%]
+............                                                             [100%]
+84 passed in 1.59s
+[2026-02-25 04:30:01] Tests passed.
