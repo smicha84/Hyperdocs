@@ -4,7 +4,7 @@ Semantic Primitives Tagger (standalone)
 Tags tier 4 priority messages with the 7 Semantic Primitives.
 
 NOTE: This is the standalone/deterministic tagger. The Phase 1 batch pipeline
-uses the Opus-based tagger in phase1_redo_orchestrator.py instead. This file
+uses the Opus-based tagger in opus_phase1.py instead. This file
 is kept for single-session processing and as a reference implementation.
 
 Primitives:

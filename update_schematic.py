@@ -40,7 +40,7 @@ KEY_SCRIPTS = [
     "phase_0_prep/prepare_agent_data.py",
     "phase_0_prep/opus_classifier.py",
     "phase_0_prep/build_opus_messages.py",
-    "phase_1_extraction/redo_all_phase1.py",
+    "phase_1_extraction/opus_phase1.py",
     "phase_2_synthesis/backfill_phase2.py",
     "phase_2_synthesis/file_genealogy.py",
     "phase_2_synthesis/code_similarity.py",

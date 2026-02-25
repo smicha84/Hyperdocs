@@ -60,7 +60,7 @@ PIPELINE_SCRIPTS = [
     "phase_0_prep/opus_classifier.py",
     "phase_0_prep/build_opus_messages.py",
     "phase_0_prep/schema_normalizer.py",
-    "phase_1_extraction/redo_all_phase1.py",
+    "phase_1_extraction/opus_phase1.py",
     "phase_1_extraction/extract_threads.py",
     "phase_2_synthesis/backfill_phase2.py",
     "phase_2_synthesis/file_genealogy.py",
@@ -119,7 +119,7 @@ VERIFIED_IO = {
             "normalization_log.json",
         ],
     },
-    "phase_1_extraction/redo_all_phase1.py": {
+    "phase_1_extraction/opus_phase1.py": {
         "reads": ["safe_condensed.json", "safe_tier4.json", "session_metadata.json"],
         "writes": [
             "thread_extractions.json", "geological_notes.json",

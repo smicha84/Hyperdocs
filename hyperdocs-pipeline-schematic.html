@@ -177,7 +177,7 @@ graph TD
   end
 
   subgraph P1["PHASE 1 : EXTRACTION (Opus Agents)"]
-    phase_1_extraction_redo_all_phase1_py["redo_all_phase1.py"]
+    phase_1_extraction_opus_phase1_py["opus_phase1.py"]
     phase_1_extraction_extract_threads_py["extract_threads.py"]
     phase1_redo_progress_json(["phase1_redo_progress.json"])
   end
@@ -234,11 +234,11 @@ graph TD
   phase_0_prep_schema_normalizer_py --> file_dossiers_json
   phase_0_prep_schema_normalizer_py --> claude_md_analysis_json
   phase_0_prep_schema_normalizer_py --> normalization_log_json
-  phase_1_extraction_redo_all_phase1_py --> thread_extractions_json
-  phase_1_extraction_redo_all_phase1_py --> geological_notes_json
-  phase_1_extraction_redo_all_phase1_py --> semantic_primitives_json
-  phase_1_extraction_redo_all_phase1_py --> explorer_notes_json
-  phase_1_extraction_redo_all_phase1_py --> phase1_redo_progress_json
+  phase_1_extraction_opus_phase1_py --> thread_extractions_json
+  phase_1_extraction_opus_phase1_py --> geological_notes_json
+  phase_1_extraction_opus_phase1_py --> semantic_primitives_json
+  phase_1_extraction_opus_phase1_py --> explorer_notes_json
+  phase_1_extraction_opus_phase1_py --> phase1_redo_progress_json
   phase_1_extraction_extract_threads_py --> thread_extractions_json
   phase_2_synthesis_backfill_phase2_py --> idea_graph_json
   phase_2_synthesis_backfill_phase2_py --> synthesis_json
@@ -254,9 +254,9 @@ graph TD
   phase_4_insertion_hyperdoc_layers_py --> x_hyperdoc_json
 
   %% Read edges: data file -.-> script (cross-phase)
-  safe_condensed_json -.-> phase_1_extraction_redo_all_phase1_py
-  safe_tier4_json -.-> phase_1_extraction_redo_all_phase1_py
-  session_metadata_json -.-> phase_1_extraction_redo_all_phase1_py
+  safe_condensed_json -.-> phase_1_extraction_opus_phase1_py
+  safe_tier4_json -.-> phase_1_extraction_opus_phase1_py
+  session_metadata_json -.-> phase_1_extraction_opus_phase1_py
   opus_priority_messages_json -.-> phase_1_extraction_extract_threads_py
   tier4_priority_messages_json -.-> phase_1_extraction_extract_threads_py
   session_metadata_json -.-> phase_2_synthesis_backfill_phase2_py
