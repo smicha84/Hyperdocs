@@ -374,7 +374,7 @@ def main():
     logger.info("File Genealogy Detector")
     logger.info("=" * 60)
     logger.info(f"Output dir: {OUT_DIR}")
-    logger.info()
+    logger.info("")
 
     # Load data
     thread_data = load_json(OUT_DIR / "thread_extractions.json")
@@ -404,7 +404,7 @@ def main():
     # Step 5: Cluster into families
     all_links = idea_links + temporal_links + name_links
     logger.info(f"Total links: {len(all_links)}")
-    logger.info()
+    logger.info("")
 
     families, standalone = cluster_into_families(all_links, timelines)
 

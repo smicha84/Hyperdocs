@@ -112,7 +112,7 @@ def main():
 
     logger.info(f"Batch Runner: {len(sessions)} sessions")
     logger.info(f"Checkpoint: {CHECKPOINT_FILE}")
-    logger.info()
+    logger.info("")
 
     total_time = 0
     for i, sid in enumerate(sessions, 1):

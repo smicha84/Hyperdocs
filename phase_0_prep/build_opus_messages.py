@@ -247,7 +247,7 @@ def main():
     logger.info("Build Opus-Filtered Message Files")
     logger.info("=" * 60)
     logger.info(f"Session: {session_dir}")
-    logger.info()
+    logger.info("")
 
     result = build_opus_filtered(session_dir)
     if result:

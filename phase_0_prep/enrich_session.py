@@ -286,7 +286,7 @@ def main():
     logger.info(f"Session:  {SESSION_ID}")
     logger.info(f"File:     {SESSION_FILE}")
     logger.info(f"Output:   {OUTPUT_DIR}")
-    logger.info()
+    logger.info("")
 
     # ── Step 1: Load session ───────────────────────────────────────────
     if SESSION_FILE is None or not SESSION_FILE.exists():
@@ -607,7 +607,7 @@ def main():
     file_size_mb = output_file.stat().st_size / (1024 * 1024)
 
     # ── Step 5: Print summary ──────────────────────────────────────────
-    logger.info()
+    logger.info("")
     logger.info("=" * 60)
     logger.info("Phase 0 Complete")
     logger.info("=" * 60)

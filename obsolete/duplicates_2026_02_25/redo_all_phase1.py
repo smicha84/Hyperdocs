@@ -852,7 +852,7 @@ def main():
     total = len(session_dirs)
     logger.info(f"Sessions to process: {total}")
     logger.info(f"Starting from: {args.start_from}")
-    logger.info()
+    logger.info("")
 
     # Initialize progress
     progress = {
@@ -890,7 +890,7 @@ def main():
     with open(PROGRESS_FILE, "w") as f:
         json.dump(progress, f, indent=2, default=str)
 
-    logger.info()
+    logger.info("")
     logger.info("=" * 70)
     logger.info(f"Phase 1 Full Redo — Complete")
     logger.info(f"  Sessions: {total}")

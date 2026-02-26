@@ -750,10 +750,18 @@ def main():
     parser.add_argument("--session", type=str, help="Normalize a single session directory name")
     args = parser.parse_args()
 
-    sessions_dir = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "sessions"
+    # Respect HYPERDOCS_OUTPUT_DIR if set (pipeline runner sets this)
+    output_dir = os.getenv("HYPERDOCS_OUTPUT_DIR")
+    if output_dir:
+        sessions_dir = Path(output_dir)
+    else:
+        sessions_dir = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS"))) / "sessions"
 
     if args.session:
         target = sessions_dir / args.session
+        if not target.exists():
+            # Try with session_ prefix
+            target = sessions_dir / f"session_{args.session[:8]}"
         if not target.exists():
             logger.info(f"Session not found: {target}")
             sys.exit(1)

@@ -133,7 +133,7 @@ def main():
     )
 
     logger.info(f"Sessions to reprocess: {len(session_dirs)}")
-    logger.info()
+    logger.info("")
 
     success = 0
     failed = 0
@@ -211,7 +211,7 @@ def main():
     with open(log_path, "w") as f:
         json.dump(log, f, indent=2)
 
-    logger.info()
+    logger.info("")
     logger.info("=" * 70)
     logger.info(f"Batch Phase 0 Reprocessor — Complete")
     logger.info(f"  Success: {success}/{len(session_dirs)}")

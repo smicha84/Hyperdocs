@@ -436,7 +436,7 @@ def main():
     logger.info(f"=== Batch P2 Generator ===")
     logger.info(f"Base: {BASE}")
     logger.info(f"Sessions: {len(SESSIONS)}")
-    logger.info()
+    logger.info("")
 
     total_wrote = 0
     total_skipped = 0

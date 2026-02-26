@@ -364,7 +364,7 @@ def main():
     # Count short user messages in batch
     short_user = sum(1 for m in batch if m.get("role") == "user" and m.get("content_length", 0) < 50)
     logger.info(f"Short user messages (< 50 chars): {short_user}")
-    logger.info()
+    logger.info("")
 
     if args.dry_run:
         logger.info("=== DRY RUN — Messages that would be classified ===")
@@ -429,7 +429,7 @@ def main():
                 logger.info(f"  msg {u['msg_index']}: python_tier={u['python_tier']} → opus={u['opus_importance']}")
                 logger.info(f"    {u['content_preview']}")
                 logger.info(f"    Reason: {u['opus_reason']}")
-                logger.info()
+                logger.info("")
 
         comp_path = session_dir / "opus_vs_python_comparison.json"
         with open(comp_path, "w") as f:

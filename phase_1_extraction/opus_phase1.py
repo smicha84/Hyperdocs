@@ -86,7 +86,13 @@ import anthropic
 REPO = Path(__file__).resolve().parent.parent  # hyperdocs_3 root
 try:
     from config import SESSIONS_STORE_DIR, INDEXES_DIR
-    SESSIONS_DIR = SESSIONS_STORE_DIR
+    # Use HYPERDOCS_OUTPUT_DIR if set (pipeline runner sets this),
+    # otherwise use the permanent sessions directory
+    _output_dir = os.getenv("HYPERDOCS_OUTPUT_DIR")
+    if _output_dir:
+        SESSIONS_DIR = Path(_output_dir)
+    else:
+        SESSIONS_DIR = SESSIONS_STORE_DIR
     PROGRESS_FILE = INDEXES_DIR / "phase1_redo_progress.json"
 except ImportError:
     _STORE = Path(os.getenv("HYPERDOCS_STORE_DIR", str(Path.home() / "PERMANENT_HYPERDOCS")))
@@ -373,7 +379,191 @@ OUTPUT: Return ONLY valid JSON:
 Return ONLY JSON. No markdown. No explanation."""
 
 
-# ── Processing ──────────────────────────────────────────────────────────
+# ── Validation + Retry Wrapper ──────────────────────────────────────────
+
+# Expected top-level keys per pass
+PASS_SCHEMAS = {
+    "thread_analyst": {"required_keys": ["threads"], "required_type": dict},
+    "geological_reader": {"required_keys": ["micro", "meso", "macro"], "required_type": dict},
+    "primitives_tagger": {"required_keys": ["tagged_messages"], "required_type": dict},
+    "explorer": {"required_keys": ["observations"], "required_type": dict},
+}
+
+
+def validated_opus_call(prompt, pass_name, max_attempts=3):
+    """Call Opus, validate the response against the expected schema, retry with feedback if wrong.
+
+    Returns (parsed_result, raw_text) or (None, None) after all attempts exhausted.
+    """
+    schema = PASS_SCHEMAS.get(pass_name, {})
+    required_keys = schema.get("required_keys", [])
+    required_type = schema.get("required_type", dict)
+    last_raw_text = None
+
+    for attempt in range(max_attempts):
+        if attempt == 0:
+            current_prompt = prompt
+        else:
+            # Build corrective prompt based on what went wrong
+            current_prompt = _build_correction_prompt(prompt, pass_name, last_raw_text, last_error)
+
+        result, raw_text = _call_opus_raw(current_prompt)
+        last_raw_text = raw_text
+
+        # Case 1: No response at all
+        if result is None and not raw_text:
+            last_error = "empty_response"
+            logger.error(f"    [{pass_name}] Attempt {attempt+1}: No response from Opus")
+            continue
+
+        # Case 2: Got text but couldn't parse JSON
+        if result is None and raw_text:
+            last_error = "json_parse_failed"
+            logger.error(f"    [{pass_name}] Attempt {attempt+1}: JSON parse failed ({len(raw_text)} chars)")
+            continue
+
+        # Case 3: Parsed but wrong type (e.g., got list instead of dict)
+        if not isinstance(result, required_type):
+            last_error = "wrong_type"
+            logger.error(f"    [{pass_name}] Attempt {attempt+1}: Expected {required_type.__name__}, got {type(result).__name__}")
+            # Try to recover: if we got a list and expected dict, wrap it
+            if isinstance(result, list) and required_type == dict and required_keys:
+                result = {required_keys[0]: result}
+                logger.info(f"    [{pass_name}] Recovered: wrapped list as {{{required_keys[0]}: [...]}}")
+                return result, raw_text
+            continue
+
+        # Case 4: Parsed but missing required keys
+        missing = [k for k in required_keys if k not in result]
+        if missing:
+            last_error = f"missing_keys:{','.join(missing)}"
+            logger.error(f"    [{pass_name}] Attempt {attempt+1}: Missing keys: {missing}")
+            continue
+
+        # Case 5: Valid
+        logger.info(f"    [{pass_name}] Valid response ({len(raw_text)} chars)")
+        return result, raw_text
+
+    logger.error(f"    [{pass_name}] All {max_attempts} attempts failed")
+    return None, last_raw_text
+
+
+def _build_correction_prompt(original_prompt, pass_name, raw_text, error_type):
+    """Build a follow-up prompt telling Opus what went wrong."""
+    if error_type == "empty_response":
+        return original_prompt + """
+
+IMPORTANT: Your previous attempt returned no output. You MUST return valid JSON.
+Do not use only thinking — you must produce a text response with the JSON."""
+
+    if error_type == "json_parse_failed" and raw_text:
+        # Show Opus what it returned so it can fix it
+        preview = raw_text[:2000]
+        return f"""Your previous response was not valid JSON. Here is what you returned (first 2000 chars):
+
+{preview}
+
+Please fix the JSON and return ONLY the corrected, complete JSON. No markdown fences. No explanation.
+Make sure all strings are properly closed and all brackets are matched."""
+
+    if error_type and error_type.startswith("missing_keys:"):
+        keys = error_type.split(":")[1]
+        return original_prompt + f"""
+
+IMPORTANT: Your previous response was valid JSON but was missing required keys: {keys}.
+Make sure your response includes ALL required keys in the schema shown above."""
+
+    if error_type == "wrong_type":
+        return original_prompt + """
+
+IMPORTANT: Your previous response was a JSON array [...] but the required format is a JSON object {...}.
+Return a JSON object with the exact structure shown in the OUTPUT section above."""
+
+    return original_prompt
+
+
+# ── Raw API Call ───────────────────────────────────────────────────────
+
+def _call_opus_raw(prompt, max_retries=3):
+    """Make a single Opus API call. Returns (parsed_json, raw_text) or (None, raw_text) or (None, None)."""
+    for attempt in range(max_retries):
+        try:
+            text_parts = []
+            with client.beta.messages.stream(
+                model=MODEL,
+                max_tokens=MAX_TOKENS,
+                thinking={"type": "adaptive"},
+                betas=["context-1m-2025-08-07"],
+                messages=[{"role": "user", "content": prompt}],
+                timeout=300.0,
+            ) as stream:
+                for event in stream:
+                    if hasattr(event, 'type'):
+                        if event.type == 'content_block_delta' and hasattr(event, 'delta'):
+                            if event.delta.type == 'text_delta':
+                                text_parts.append(event.delta.text)
+
+            text = ''.join(text_parts).strip()
+            if not text:
+                return None, None
+
+            # Strip markdown code fences
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+                if text.endswith("```"):
+                    text = text[:-3]
+                if text.startswith("json\n"):
+                    text = text[5:]
+                text = text.strip()
+
+            try:
+                return json.loads(text), text
+            except json.JSONDecodeError:
+                # Try extracting outermost {}
+                try:
+                    start = text.index("{")
+                    end = text.rindex("}") + 1
+                    return json.loads(text[start:end]), text
+                except (ValueError, json.JSONDecodeError):
+                    pass
+                # Try fixing trailing commas
+                try:
+                    candidate = text[text.index("{"):text.rindex("}") + 1]
+                    import re as _re
+                    candidate = _re.sub(r',\s*([}\]])', r'\1', candidate)
+                    return json.loads(candidate), text
+                except (ValueError, json.JSONDecodeError):
+                    pass
+                # Try adding closing braces for truncated JSON
+                try:
+                    candidate = text[text.index("{"):]
+                    opens = candidate.count("{") - candidate.count("}")
+                    candidate += "}" * opens
+                    opens_b = candidate.count("[") - candidate.count("]")
+                    candidate += "]" * opens_b
+                    return json.loads(candidate), text
+                except (ValueError, json.JSONDecodeError):
+                    return None, text
+
+        except anthropic.APIError as e:
+            is_transient = 'overloaded' in str(e).lower() or 'rate' in str(e).lower() or '529' in str(e)
+            if is_transient and attempt < max_retries - 1:
+                wait = 30 * (attempt + 1)
+                logger.info(f"    API overloaded, retrying in {wait}s...")
+                time.sleep(wait)
+                continue
+            logger.error(f"    API error: {e}")
+            return None, None
+        except (OSError, ConnectionError, RuntimeError) as e:
+            if attempt < max_retries - 1:
+                logger.info(f"    Connection error, retrying in 10s: {e}")
+                time.sleep(10)
+                continue
+            return None, None
+    return None, None
+
+
+# ── Legacy wrapper (used by process_session) ───────────────────────────
 
 def call_opus(prompt, max_retries=3):
     """Make a single Opus API call with extended thinking via streaming.
@@ -400,7 +590,11 @@ def call_opus(prompt, max_retries=3):
 
             text = ''.join(text_parts).strip()
             if not text:
-                logger.info("    No text in response")
+                logger.error(f"    No text in response (stream produced {len(text_parts)} text parts)")
+                if attempt < max_retries - 1:
+                    logger.info(f"    Retrying ({attempt + 1}/{max_retries})...")
+                    time.sleep(5)
+                    continue
                 return None
             # Strip markdown code fences if present
             if text.startswith("```"):
@@ -411,7 +605,9 @@ def call_opus(prompt, max_retries=3):
                 if text.startswith("json\n"):
                     text = text[5:]
                 text = text.strip()
-            return json.loads(text)
+            parsed = json.loads(text)
+            logger.info(f"    Parsed {type(parsed).__name__}, {len(text)} chars")
+            return parsed
         except json.JSONDecodeError as e:
             logger.error(f"    JSON parse error: {e}")
             # Try progressively aggressive JSON extraction
@@ -629,7 +825,7 @@ def process_session(session_dir, progress):
         prompt = _prepend_commitments(thread_analyst_prompt(
             session_id, data["safe_condensed"], data["safe_tier4"], data["session_metadata"]
         ))
-        thread_result = call_opus(prompt)
+        thread_result, _ = validated_opus_call(prompt, "thread_analyst")
     dt = time.time() - t0
     if thread_result:
         with open(session_dir / "thread_extractions.json", "w") as f:
@@ -639,9 +835,12 @@ def process_session(session_dir, progress):
         results["passes"]["thread_analyst"] = {"status": "ok", "entries": n_entries, "time": round(dt)}
         logger.info(f" {n_entries} entries ({dt:.0f}s)")
     else:
-        results["passes"]["thread_analyst"] = {"status": "failed", "time": round(dt)}
-        results["errors"].append("thread_analyst failed")
-        logger.error(f" FAILED ({dt:.0f}s)")
+        empty = {"threads": {}, "session_id": session_id, "status": "no_results"}
+        with open(session_dir / "thread_extractions.json", "w") as f:
+            json.dump(empty, f, indent=2)
+        results["passes"]["thread_analyst"] = {"status": "empty", "time": round(dt)}
+        results["errors"].append("thread_analyst: no results from Opus — wrote empty file")
+        logger.error(f" No results — wrote empty thread_extractions.json ({dt:.0f}s)")
 
     # ── Pass 2: Geological Reader ──
     logger.info(f"    Geological Reader...", end="", flush=True)
@@ -662,7 +861,7 @@ def process_session(session_dir, progress):
         prompt = _prepend_commitments(geological_reader_prompt(
             session_id, data["safe_condensed"], data["safe_tier4"], data["session_metadata"]
         ))
-        geo_result = call_opus(prompt)
+        geo_result, _ = validated_opus_call(prompt, "geological_reader")
     dt = time.time() - t0
     if geo_result:
         with open(session_dir / "geological_notes.json", "w") as f:
@@ -671,9 +870,12 @@ def process_session(session_dir, progress):
         results["passes"]["geological_reader"] = {"status": "ok", "observations": n_obs, "time": round(dt)}
         logger.info(f" {n_obs} observations ({dt:.0f}s)")
     else:
-        results["passes"]["geological_reader"] = {"status": "failed", "time": round(dt)}
-        results["errors"].append("geological_reader failed")
-        logger.error(f" FAILED ({dt:.0f}s)")
+        empty = {"micro": [], "meso": [], "macro": [], "session_id": session_id, "status": "no_results"}
+        with open(session_dir / "geological_notes.json", "w") as f:
+            json.dump(empty, f, indent=2)
+        results["passes"]["geological_reader"] = {"status": "empty", "time": round(dt)}
+        results["errors"].append("geological_reader: no results from Opus — wrote empty file")
+        logger.error(f" No results — wrote empty geological_notes.json ({dt:.0f}s)")
 
     # ── Pass 3: Primitives Tagger ──
     logger.info(f"    Primitives Tagger...", end="", flush=True)
@@ -700,7 +902,7 @@ def process_session(session_dir, progress):
         prompt = _prepend_commitments(primitives_tagger_prompt(
             session_id, data["safe_condensed"], data["safe_tier4"], data["session_metadata"]
         ))
-        prim_result = call_opus(prompt)
+        prim_result, _ = validated_opus_call(prompt, "primitives_tagger")
 
         # Continuation loop for single-prompt sessions
         if prim_result:
@@ -740,9 +942,12 @@ def process_session(session_dir, progress):
         results["passes"]["primitives_tagger"] = {"status": "ok", "tagged": n_tagged, "expected": expected_count, "time": round(dt)}
         logger.info(f" {n_tagged}/{expected_count} tagged ({dt:.0f}s)")
     else:
-        results["passes"]["primitives_tagger"] = {"status": "failed", "time": round(dt)}
-        results["errors"].append("primitives_tagger failed")
-        logger.error(f" FAILED ({dt:.0f}s)")
+        # Write empty result so downstream phases have a file to read
+        empty_result = {"tagged_messages": [], "session_id": session_id, "status": "no_results"}
+        with open(session_dir / "semantic_primitives.json", "w") as f:
+            json.dump(empty_result, f, indent=2)
+        results["passes"]["primitives_tagger"] = {"status": "empty", "tagged": 0, "expected": expected_count, "time": round(dt)}
+        logger.error(f" No results from Opus — wrote empty semantic_primitives.json ({dt:.0f}s)")
 
     # ── Pass 4: Free Explorer + Verification (LAST) ──
     # Reads merged outputs from passes 1-3 + session data.
@@ -757,7 +962,7 @@ def process_session(session_dir, progress):
         session_id, data["safe_condensed"], data["safe_tier4"], data["session_metadata"],
         thread_data, geo_data, prim_data
     ))
-    explorer_result = call_opus(prompt)
+    explorer_result, _ = validated_opus_call(prompt, "explorer")
     dt = time.time() - t0
     if explorer_result:
         with open(session_dir / "explorer_notes.json", "w") as f:
@@ -769,8 +974,12 @@ def process_session(session_dir, progress):
         results["verification"] = verification
         logger.info(f" {n_obs} obs, quality={quality} ({dt:.0f}s)")
     else:
-        results["passes"]["explorer"] = {"status": "failed", "time": round(dt)}
-        results["errors"].append("explorer failed")
+        empty = {"observations": [], "verification": {}, "session_id": session_id, "status": "no_results"}
+        with open(session_dir / "explorer_notes.json", "w") as f:
+            json.dump(empty, f, indent=2)
+        results["passes"]["explorer"] = {"status": "empty", "time": round(dt)}
+        results["errors"].append("explorer: no results from Opus — wrote empty file")
+        logger.error(f" No results — wrote empty explorer_notes.json ({dt:.0f}s)")
         logger.error(f" FAILED ({dt:.0f}s)")
 
     return results

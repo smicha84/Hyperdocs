@@ -13,6 +13,20 @@ import os
 import sys
 from pathlib import Path
 
+
+def load_env():
+    """Load .env file from repo root or home directory."""
+    try:
+        from dotenv import load_dotenv
+        repo_env = Path(__file__).resolve().parent / ".env"
+        if repo_env.exists():
+            load_dotenv(repo_env)
+        else:
+            load_dotenv()
+    except ImportError:
+        pass
+
+
 # ── Session ────────────────────────────────────────────────────
 SESSION_ID = os.getenv("HYPERDOCS_SESSION_ID", "")
 SESSION_SHORT = SESSION_ID[:8] if SESSION_ID else ""

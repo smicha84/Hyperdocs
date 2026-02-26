@@ -320,7 +320,7 @@ def show_status():
     logger.info(f"Phase 0 LLM Pass Status")
     logger.info(f"{'=' * 60}")
     logger.info(f"Total sessions with enriched_session.json: {len(sessions)}")
-    logger.info()
+    logger.info("")
 
     for pass_num in [1, 2, 3, 4]:
         output_file = PASS_OUTPUT_FILES[pass_num]
@@ -347,7 +347,7 @@ def show_status():
             by_pass[p] = by_pass.get(p, 0) + e["cost"]
         for p in sorted(by_pass):
             logger.info(f"    Pass {p}: ${by_pass[p]:.4f}")
-    logger.info()
+    logger.info("")
 
 
 def run_validation(dry_run: bool = False):
@@ -373,7 +373,7 @@ def run_validation(dry_run: bool = False):
     logger.info(f"{'=' * 60}")
     for s in val_sessions:
         logger.info(f"  {s.name}")
-    logger.info()
+    logger.info("")
 
     total_cost = 0.0
     for pass_num in [1, 2, 3, 4]:

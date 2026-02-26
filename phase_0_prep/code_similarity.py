@@ -467,7 +467,7 @@ def main():
     logger.info(f"Source:    {source_dir}")
     logger.info(f"Output:    {output_path}")
     logger.info(f"Threshold: {args.threshold}")
-    logger.info()
+    logger.info("")
 
     results = scan_directory(source_dir, threshold=args.threshold)
 
@@ -479,7 +479,7 @@ def main():
     file_size = output_path.stat().st_size / 1024
 
     # Print summary
-    logger.info()
+    logger.info("")
     logger.info("=" * 60)
     logger.info("RESULTS")
     logger.info("=" * 60)
@@ -488,11 +488,11 @@ def main():
     logger.info(f"Text comparisons:  {results['text_comparisons_performed']:,}")
     logger.info(f"Non-trivial:       {results['non_trivial_matches']}")
     logger.info(f"Parse errors:      {len(results['files_with_parse_errors'])}")
-    logger.info()
+    logger.info("")
     logger.info("Pattern distribution:")
     for pattern, count in results['pattern_distribution'].items():
         logger.info(f"  {pattern:25s} {count:4d}")
-    logger.info()
+    logger.info("")
 
     # Top 10 strongest matches
     logger.info("Top 10 strongest matches:")
@@ -508,7 +508,7 @@ def main():
         results['file_stats'].items(),
         key=lambda x: -x[1]['isolation_score']
     )[:10]
-    logger.info()
+    logger.info("")
     logger.info("Most isolated files (potential disconnects):")
     for name, stats in isolated:
         logger.info(f"  isolation:{stats['isolation_score']:.2f} | matches:{stats['total_matches']} | {name}")

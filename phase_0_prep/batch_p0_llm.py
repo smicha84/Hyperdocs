@@ -480,7 +480,7 @@ def main():
     status["total_cost"] = total_cost
     save_status(status)
 
-    logger.info()
+    logger.info("")
     logger.info("=" * 70)
     logger.info(f"Batch complete")
     logger.info(f"  Sessions:  {len(sessions)}")

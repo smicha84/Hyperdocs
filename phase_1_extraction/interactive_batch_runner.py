@@ -84,7 +84,7 @@ def show_status():
     logger.info(f"Phase 0 complete: {p0}")
     logger.info(f"Phase 1 complete: {p1}/{p0} ({p0-p1} remaining)")
     logger.info(f"Phase 2 complete: {p2}/{p0} ({p0-p2} remaining)")
-    logger.info()
+    logger.info("")
 
     # Estimate remaining work
     need_p1 = p0 - p1
@@ -111,18 +111,18 @@ def show_next():
         logger.info(f"\n--- PHASE 2 READY ({len(need_p2)} sessions have P1 done, need P2) ---")
         for s in need_p2[:5]:
             logger.info(f"  {s['short']}  {s['total']} msgs  {s['tier4']} tier4  {s['files']} files")
-        logger.info()
+        logger.info("")
         s = need_p2[0]
         logger.info(f"LAUNCH PHASE 2 for {s['short']}:")
         logger.info(f"  Agent 1: Idea Graph Builder — read P1 outputs from {s['path']}/")
         logger.info(f"  Agent 2: Synthesizer — read P1 outputs, write synthesis.json + grounded_markers.json")
-        logger.info()
+        logger.info("")
 
     if need_p1:
         logger.info(f"\n--- PHASE 1 NEEDED ({len(need_p1)} sessions) ---")
         for s in need_p1[:5]:
             logger.info(f"  {s['short']}  {s['total']} msgs  {s['tier4']} tier4  {s['files']} files")
-        logger.info()
+        logger.info("")
         s = need_p1[0]
         base = s['path']
         logger.info(f"LAUNCH PHASE 1 for {s['short']}:")
@@ -131,7 +131,7 @@ def show_next():
         logger.info(f"  Agent 3: Primitives Tagger")
         logger.info(f"  Agent 4: Free Explorer")
         logger.info(f"  All agents read: session_metadata.json, safe_tier4.json, safe_condensed.json")
-        logger.info()
+        logger.info("")
 
     if not need_p1 and not need_p2:
         logger.info("ALL SESSIONS COMPLETE through Phase 2!")
@@ -142,7 +142,7 @@ def show_queue():
     need_p1 = [s for s in sessions if not s["p1_done"]]
 
     logger.info(f"Full queue — {len(need_p1)} sessions needing Phase 1:")
-    logger.info()
+    logger.info("")
     logger.info(f"{'Session':<16} {'Msgs':>6} {'T4':>5} {'Files':>6} {'Size':>8}")
     logger.info("-" * 45)
 
@@ -176,7 +176,7 @@ def main():
         show_queue()
     else:
         show_status()
-        logger.info()
+        logger.info("")
         show_next()
 
 

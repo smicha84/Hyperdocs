@@ -198,22 +198,123 @@ for m in condensed:
     if m.get("c"):
         m["c"] = _sanitize_text(m["c"])
 
-# ── 9. Create safe files with FULL sanitized content for agents ──────
-# Content is now profanity-free. No truncation. Agents get the complete picture.
+# ── 9. Create safe files — ALL 7 cleaning rules applied ──────────────
+# These are the ONLY files that Opus/LLM agents should ever read.
+# 7 cleaning rules from before_after_cleaning.html analysis:
+#   1. Char-per-line encoding decode
+#   2. Triple newline collapse
+#   3. Decorative Unicode stripping
+#   4. Profanity sanitization (already done in step 8)
+#   5. Protocol message exclusion
+#   6. Duplicate removal
+#   7. Continuation summary tagging
+import re as _re
+import hashlib as _hashlib
+
+# Box-drawing and decorative Unicode characters to strip
+_DECORATIVE_PATTERN = _re.compile(
+    r'[─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┘├┤┬┴┼╌╍╎╏═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬'
+    r'▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏▐░▒▓▔▕■□▢▣▤▥▦▧▨▩▪▫▬▭▮▯'
+    r'★☆●○◆◇◈◉◊►◄▲△▼▽◀▶'
+    r'✓✗✘✔✕✖✚✛✜✝✞✟✠✡✢✣✤✥✦✧✨✩✪✫✬✭✮✯✰✱✲✳✴✵✶✷✸✹✺✻✼✽✾✿'
+    r'❀❁❂❃❄❅❆❇❈❉❊❋]+'
+)
+
+
+def _clean_for_agents(text, was_char_encoded=False):
+    """Apply all 7 cleaning rules to message content for agent consumption."""
+    if not text:
+        return ""
+    # Rule 1: Char-per-line decode
+    if was_char_encoded:
+        lines = text.split('\n')
+        single_char = sum(1 for l in lines if len(l) <= 1)
+        if len(lines) > 6 and single_char / len(lines) > 0.7:
+            text = ''.join(lines)
+    # Rule 2: Triple newline collapse (3+ consecutive newlines → 2)
+    text = _re.sub(r'\n{3,}', '\n\n', text)
+    # Rule 3: Decorative Unicode stripping
+    text = _DECORATIVE_PATTERN.sub('', text)
+    # Strip lines that are only dashes, equals, or spaces (decorative separators)
+    text = _re.sub(r'^[\s\-=]{10,}$', '', text, flags=_re.MULTILINE)
+    # Collapse resulting blank lines
+    text = _re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
+# Build cleaned message list, applying rules 1-4 + filtering by rules 5-7
+seen_hashes = set()
+cleaning_stats = {"original": len(condensed), "protocol_excluded": 0,
+                  "duplicates_removed": 0, "continuation_tagged": 0}
+
+safe_condensed = []
+for m in condensed:
+    # Rule 5: Protocol message exclusion — do not send to agents
+    if m.get("is_protocol", False):
+        cleaning_stats["protocol_excluded"] += 1
+        continue
+
+    raw_content = m.get("c", "")
+
+    # Rule 6: Duplicate removal — skip messages with identical content
+    content_hash = _hashlib.sha256(raw_content.encode(errors="replace")).hexdigest()[:16]
+    if content_hash in seen_hashes and len(raw_content) > 10:
+        cleaning_stats["duplicates_removed"] += 1
+        continue
+    seen_hashes.add(content_hash)
+
+    # Apply rules 1-3 (rule 4 already done in step 8)
+    cleaned = _clean_for_agents(raw_content, m.get("was_char_encoded", False))
+
+    # Rule 7: Tag continuation summaries (don't exclude, but mark them)
+    is_continuation = m.get("protocol_type") == "clear_continuation"
+
+    safe_condensed.append({
+        "i": m.get("i", 0),
+        "r": m.get("r", ""),
+        "c": cleaned,
+        "cl": len(cleaned),
+        "t": m.get("t", 0),
+        "ts": m.get("ts", ""),
+        "meta": m.get("meta", {}),
+        "signals": m.get("signals", []),
+        "behavior": m.get("behavior", {}),
+        "was_char_encoded": m.get("was_char_encoded", False),
+        "content_ref": m.get("content_ref", False),
+        "is_continuation": is_continuation,
+        "llm_behavior": m.get("llm_behavior"),
+    })
+
+safe_cond_file = OUT_DIR / "safe_condensed.json"
+with open(safe_cond_file, "w") as f:
+    json.dump({"count": len(safe_condensed), "messages": safe_condensed}, f, indent=2, default=str)
+print(f"  safe_condensed.json: {len(safe_condensed)} msgs "
+      f"(from {cleaning_stats['original']} original, "
+      f"-{cleaning_stats['protocol_excluded']} protocol, "
+      f"-{cleaning_stats['duplicates_removed']} duplicates)")
+
+# Build safe_tier4 with same cleaning rules (but only from non-protocol tier 4 messages)
+seen_hashes_t4 = set()
 safe_tier4 = []
 for m in tier4:
+    if m.get("is_protocol", False):
+        continue
+    raw_content = str(m.get("content", ""))
+    content_hash = _hashlib.sha256(raw_content.encode(errors="replace")).hexdigest()[:16]
+    if content_hash in seen_hashes_t4 and len(raw_content) > 10:
+        continue
+    seen_hashes_t4.add(content_hash)
+    cleaned = _clean_for_agents(raw_content, m.get("was_char_encoded", False))
     safe_tier4.append({
         "index": m.get("index", 0),
         "role": m.get("role", ""),
         "timestamp": m.get("timestamp", ""),
-        "content_length": m.get("content_length", 0),
+        "content_length": len(cleaned),
         "filter_tier": m.get("filter_tier", 0),
         "filter_signals": m.get("filter_signals", []),
         "behavior_flags": m.get("behavior_flags", {}),
         "metadata": m.get("metadata", {}),
-        "content": _collapse_preview(str(m.get("content", ""))),
-        "is_protocol": m.get("is_protocol", False),
-        "protocol_type": m.get("protocol_type"),
+        "content": cleaned,
         "was_char_encoded": m.get("was_char_encoded", False),
         "content_ref": m.get("filter_signals_content_referential", False),
         "llm_behavior": m.get("llm_behavior"),
@@ -222,31 +323,7 @@ for m in tier4:
 safe_t4_file = OUT_DIR / "safe_tier4.json"
 with open(safe_t4_file, "w") as f:
     json.dump({"count": len(safe_tier4), "messages": safe_tier4}, f, indent=2, default=str)
-logger.info(f"  safe_tier4.json: {len(safe_tier4)} msgs (full sanitized content)")
-
-safe_condensed = []
-for m in condensed:
-    safe_condensed.append({
-        "i": m.get("i", m.get("index", 0)),
-        "r": m.get("r", m.get("role", "")),
-        "c": m.get("c", ""),
-        "cl": m.get("cl", m.get("content_length", 0)),
-        "t": m.get("t", m.get("filter_tier", 0)),
-        "ts": m.get("ts", m.get("timestamp", "")),
-        "meta": m.get("meta", m.get("metadata", {})),
-        "signals": m.get("signals", m.get("filter_signals", [])),
-        "behavior": m.get("behavior", m.get("behavior_flags", {})),
-        "is_protocol": m.get("is_protocol", False),
-        "protocol_type": m.get("protocol_type"),
-        "was_char_encoded": m.get("was_char_encoded", False),
-        "content_ref": m.get("content_ref", False),
-        "llm_behavior": m.get("llm_behavior"),
-    })
-
-safe_cond_file = OUT_DIR / "safe_condensed.json"
-with open(safe_cond_file, "w") as f:
-    json.dump({"count": len(safe_condensed), "messages": safe_condensed}, f, indent=2, default=str)
-logger.info(f"  safe_condensed.json: {len(safe_condensed)} msgs (full sanitized content)")
+print(f"  safe_tier4.json: {len(safe_tier4)} msgs (cleaned for agents)")
 
 logger.info(f"\nDone. All files in: {OUT_DIR}")
 

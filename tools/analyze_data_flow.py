@@ -418,12 +418,12 @@ def analyze():
     logger.info("POSITIONING ANALYZER — Data Flow Graph + Phase Positioning")
     logger.info("=" * 70)
     logger.info(f"Repository: {REPO}")
-    logger.info()
+    logger.info("")
 
     # ── Step 1: Discover all Python files ──
     py_files = discover_python_files()
     logger.info(f"Found {len(py_files)} Python files (excluding v5_compat/, output/)")
-    logger.info()
+    logger.info("")
 
     # ── Step 2: Extract I/O patterns from each file ──
     scripts = {}
@@ -538,7 +538,7 @@ def analyze():
 
     logger.info(f"Output written: {OUTPUT_FILE}")
     logger.info(f"  File size: {OUTPUT_FILE.stat().st_size:,} bytes")
-    logger.info()
+    logger.info("")
 
     # ── Step 7: Print human-readable summary ──
     logger.info("=" * 70)
@@ -571,7 +571,7 @@ def analyze():
             logger.info(f"  {mp['script']}")
             logger.info(f"    Current: Phase {mp['current']}  |  Earliest possible: Phase {mp['earliest']}")
             logger.info(f"    Reason: {mp['reason']}")
-            logger.info()
+            logger.info("")
     else:
         logger.info("  All scripts are in their earliest possible phase (or Meta).")
 

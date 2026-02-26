@@ -125,7 +125,7 @@ def main():
                     logger.info(f"  {b['session']}: {b['files']} files, {b['bytes']:,} bytes")
                 if len(backups) > 10:
                     logger.info(f"  ... and {len(backups) - 10} more")
-            logger.info()
+            logger.info("")
 
     if args.orphans or not (args.backups or args.orphans):
         orphans = scan_orphan_files()
@@ -136,7 +136,7 @@ def main():
                 logger.info(f"  {o['session']}/{o['file']} ({o['bytes']:,} bytes)")
             if len(orphans) > 20:
                 logger.info(f"  ... and {len(orphans) - 20} more")
-            logger.info()
+            logger.info("")
 
     if not (args.backups or args.orphans):
         large = scan_large_files()
@@ -145,7 +145,7 @@ def main():
             logger.info(f"Large files (>10MB): {len(large)}")
             for l in large:
                 logger.info(f"  {l['path']} ({l['bytes']:,} bytes)")
-            logger.info()
+            logger.info("")
 
         empty = scan_empty_sessions()
         report["empty_sessions"] = empty
@@ -153,7 +153,7 @@ def main():
             logger.info(f"Empty session directories: {len(empty)}")
             for e in empty:
                 logger.info(f"  {e}")
-            logger.info()
+            logger.info("")
 
         locks = scan_lock_files()
         report["lock_files"] = locks
@@ -162,7 +162,7 @@ def main():
                 logger.info(f"Stale lock files: {len(locks)}")
                 for l in locks:
                     logger.info(f"  {l}")
-                logger.info()
+                logger.info("")
 
     if args.json:
         logger.info(json.dumps(report, indent=2))
